@@ -1,0 +1,510 @@
+<div id="video-editor-wireframes">
+  <style>
+    #video-editor-wireframes {
+      color: var(--foreground);
+      width: 100%;
+    }
+
+    #video-editor-wireframes .wf-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    #video-editor-wireframes .wf-view[hidden] {
+      display: none;
+    }
+
+    #video-editor-wireframes .wf-screen {
+      display: grid;
+      min-height: 500px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 35%, transparent);
+      overflow: hidden;
+    }
+
+    #video-editor-wireframes .wf-region {
+      min-width: 0;
+      padding: 10px;
+      border-color: var(--border);
+    }
+
+    #video-editor-wireframes .wf-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #video-editor-wireframes .wf-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+
+    #video-editor-wireframes .wf-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    #video-editor-wireframes .wf-label {
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    #video-editor-wireframes .wf-subtle {
+      color: var(--muted-foreground);
+    }
+
+    #video-editor-wireframes .wf-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    #video-editor-wireframes .wf-field,
+    #video-editor-wireframes .wf-upload,
+    #video-editor-wireframes .wf-setting {
+      min-height: 34px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--background) 55%, transparent);
+    }
+
+    #video-editor-wireframes .wf-upload {
+      display: grid;
+      place-items: center;
+      min-height: 62px;
+      text-align: center;
+      border-style: dashed;
+    }
+
+    #video-editor-wireframes .wf-preview-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 290px;
+      padding: 16px;
+      background:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+
+    #video-editor-wireframes .wf-preview {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      width: min(210px, 70%);
+      aspect-ratio: 9 / 16;
+      border: 2px solid var(--foreground);
+      background: var(--card);
+      color: var(--card-foreground);
+      padding: 12px;
+    }
+
+    #video-editor-wireframes .wf-preview.wide {
+      width: min(390px, 90%);
+      aspect-ratio: 16 / 9;
+    }
+
+    #video-editor-wireframes .wf-hook {
+      align-self: center;
+      padding: 8px;
+      border-left: 4px solid var(--viz-series-1);
+      background: color-mix(in srgb, var(--viz-series-1) 14%, transparent);
+      font-weight: 500;
+    }
+
+    #video-editor-wireframes .wf-cta {
+      justify-self: center;
+      padding: 5px 10px;
+      background: var(--primary);
+      color: var(--primary-foreground);
+    }
+
+    #video-editor-wireframes .wf-timeline {
+      display: grid;
+      grid-template-columns: 2fr 10fr 3fr;
+      gap: 4px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    #video-editor-wireframes .wf-clip {
+      min-width: 0;
+      padding: 8px 6px;
+      border: 1px solid var(--border);
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    #video-editor-wireframes .wf-timeline .wf-clip {
+      padding-inline: 2px;
+      overflow-wrap: normal;
+    }
+
+    #video-editor-wireframes .wf-clip.is-active {
+      background: color-mix(in srgb, var(--viz-series-1) 18%, transparent);
+      border-color: var(--viz-series-1);
+    }
+
+    #video-editor-wireframes .wf-a {
+      grid-template:
+        "header header header" auto
+        "left preview right" 1fr
+        "left timeline right" auto /
+        minmax(160px, 0.8fr) minmax(280px, 1.8fr) minmax(160px, 0.8fr);
+    }
+
+    #video-editor-wireframes .wf-a .wf-header { grid-area: header; }
+    #video-editor-wireframes .wf-a .wf-left {
+      grid-area: left;
+      border-right: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-a .wf-preview-wrap { grid-area: preview; }
+    #video-editor-wireframes .wf-a .wf-right {
+      grid-area: right;
+      border-left: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-a .wf-timeline { grid-area: timeline; }
+
+    #video-editor-wireframes .wf-b {
+      grid-template:
+        "header header" auto
+        "mode mode" auto
+        "form preview" 1fr
+        "export export" auto /
+        minmax(230px, 0.9fr) minmax(300px, 1.7fr);
+    }
+
+    #video-editor-wireframes .wf-b .wf-header { grid-area: header; }
+    #video-editor-wireframes .wf-b .wf-mode {
+      grid-area: mode;
+      display: flex;
+      gap: 6px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-b .wf-form {
+      grid-area: form;
+      border-right: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-b .wf-preview-wrap { grid-area: preview; }
+    #video-editor-wireframes .wf-b .wf-export {
+      grid-area: export;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    #video-editor-wireframes .wf-c {
+      grid-template:
+        "header" auto
+        "steps" auto
+        "stage" 1fr
+        "nav" auto /
+        1fr;
+    }
+
+    #video-editor-wireframes .wf-c .wf-header { grid-area: header; }
+    #video-editor-wireframes .wf-c .wf-steps {
+      grid-area: steps;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-c .wf-step {
+      padding: 10px 6px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-c .wf-step:last-child {
+      border-right: 0;
+    }
+    #video-editor-wireframes .wf-c .wf-step.is-active {
+      background: color-mix(in srgb, var(--viz-series-1) 18%, transparent);
+      font-weight: 500;
+    }
+    #video-editor-wireframes .wf-c .wf-stage {
+      grid-area: stage;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.8fr);
+      gap: 18px;
+      padding: 18px;
+      align-items: start;
+    }
+    #video-editor-wireframes .wf-c .wf-stage-preview {
+      min-height: 310px;
+      border-left: 1px solid var(--border);
+    }
+    #video-editor-wireframes .wf-c .wf-nav {
+      grid-area: nav;
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    #video-editor-wireframes .wf-note {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    #video-editor-wireframes .wf-note > div {
+      min-width: 0;
+      padding: 8px 0;
+      border-top: 2px solid var(--border);
+    }
+
+    #video-editor-wireframes .wf-note strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    @media (max-width: 640px) {
+      #video-editor-wireframes .wf-screen {
+        min-height: 0;
+      }
+
+      #video-editor-wireframes .wf-a,
+      #video-editor-wireframes .wf-b {
+        grid-template: none;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #video-editor-wireframes .wf-a .wf-header,
+      #video-editor-wireframes .wf-a .wf-left,
+      #video-editor-wireframes .wf-a .wf-preview-wrap,
+      #video-editor-wireframes .wf-a .wf-right,
+      #video-editor-wireframes .wf-a .wf-timeline,
+      #video-editor-wireframes .wf-b .wf-header,
+      #video-editor-wireframes .wf-b .wf-mode,
+      #video-editor-wireframes .wf-b .wf-form,
+      #video-editor-wireframes .wf-b .wf-preview-wrap,
+      #video-editor-wireframes .wf-b .wf-export {
+        grid-area: auto;
+      }
+
+      #video-editor-wireframes .wf-a .wf-left,
+      #video-editor-wireframes .wf-a .wf-right,
+      #video-editor-wireframes .wf-b .wf-form {
+        border-left: 0;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #video-editor-wireframes .wf-c .wf-steps {
+        grid-template-columns: 1fr;
+      }
+
+      #video-editor-wireframes .wf-c .wf-step {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #video-editor-wireframes .wf-c .wf-stage {
+        grid-template-columns: 1fr;
+      }
+
+      #video-editor-wireframes .wf-c .wf-stage-preview {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+
+      #video-editor-wireframes .wf-note {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div class="wf-tabs" role="tablist" aria-label="편집기 레이아웃 비교">
+    <button class="btn btn-primary" type="button" role="tab" aria-selected="true" aria-controls="wf-option-a" data-wf-target="a">A · 영상 편집형</button>
+    <button class="btn" type="button" role="tab" aria-selected="false" aria-controls="wf-option-b" data-wf-target="b">B · Banner 계승형</button>
+    <button class="btn" type="button" role="tab" aria-selected="false" aria-controls="wf-option-c" data-wf-target="c">C · 단계형 Wizard</button>
+  </div>
+
+  <section class="wf-view" id="wf-option-a" role="tabpanel" data-wf-view="a">
+    <div class="wf-screen wf-a" aria-label="영상 편집형 와이어프레임">
+      <div class="wf-header">
+        <div class="wf-brand"><i data-lucide="clapperboard"></i> UA Video Designer</div>
+        <div class="wf-actions text-small">
+          <span>15초 · 9:16 · KO · 60fps</span>
+          <button class="btn" type="button"><i data-lucide="save"></i> 저장</button>
+          <button class="btn btn-primary" type="button"><i data-lucide="download"></i> 출력</button>
+        </div>
+      </div>
+      <aside class="wf-region wf-left">
+        <div class="wf-label">소재 · 문구</div>
+        <div class="wf-stack text-small">
+          <div class="wf-upload"><span><i data-lucide="upload"></i><br>원본 영상</span></div>
+          <div class="wf-field">언어 · 한국어</div>
+          <div class="wf-field">Hook 문구</div>
+          <div class="wf-field">보조 문구</div>
+          <div class="wf-setting">Hook 후보 분석<br><span class="wf-subtle">A 기본 · B-lite Beta</span></div>
+          <div class="wf-setting">TTS · 기본 음성</div>
+        </div>
+      </aside>
+      <main class="wf-preview-wrap">
+        <div class="wf-preview">
+          <span class="text-small wf-subtle">Scene 1 · Impact</span>
+          <div class="wf-hook">지금 시작하면<br>SSR 영웅 지급</div>
+          <div class="wf-cta text-small">무료 플레이</div>
+        </div>
+      </main>
+      <aside class="wf-region wf-right">
+        <div class="wf-label">장면 속성</div>
+        <div class="wf-stack text-small">
+          <div class="wf-setting">Trim · 00:04–00:06</div>
+          <div class="wf-setting">Scale · 108%</div>
+          <div class="wf-setting">Position · X 0 / Y −6</div>
+          <div class="wf-setting">모션 · Impact</div>
+          <div class="wf-setting">강조 색상</div>
+          <div class="wf-setting">장면 음량 · 80%</div>
+        </div>
+      </aside>
+      <div class="wf-timeline text-small" aria-label="3장면 타임라인">
+        <div class="wf-clip is-active">Hook<br>2초</div>
+        <div class="wf-clip">Gameplay / Proof<br>10초</div>
+        <div class="wf-clip">CTA<br>3초</div>
+      </div>
+    </div>
+    <div class="wf-note text-small">
+      <div><strong>작업 속도</strong><span class="wf-subtle">장면과 속성을 한 화면에서 반복 조정</span></div>
+      <div><strong>강점</strong><span class="wf-subtle">Trim·화면비별 보정·타임라인 편집에 가장 적합</span></div>
+      <div><strong>주의</strong><span class="wf-subtle">처음 보는 사용자에게 컨트롤 수가 많아 보일 수 있음</span></div>
+    </div>
+  </section>
+
+  <section class="wf-view" id="wf-option-b" role="tabpanel" data-wf-view="b" hidden>
+    <div class="wf-screen wf-b" aria-label="Banner Designer 계승형 와이어프레임">
+      <div class="wf-header">
+        <div class="wf-brand"><i data-lucide="clapperboard"></i> UA Video Designer</div>
+        <div class="wf-actions text-small"><span>15초 · 60fps</span><button class="btn" type="button"><i data-lucide="folder-open"></i> 프로젝트</button></div>
+      </div>
+      <div class="wf-mode text-small">
+        <button class="btn btn-primary" type="button"><i data-lucide="square-play"></i> Single</button>
+        <button class="btn" type="button"><i data-lucide="layers-3"></i> Batch</button>
+      </div>
+      <aside class="wf-region wf-form">
+        <div class="wf-label">입력 패널</div>
+        <div class="wf-stack text-small">
+          <div class="wf-field">템플릿 · 3-Scene UA</div>
+          <div class="wf-field">언어 · 한국어</div>
+          <div class="wf-field">규격 · 9:16</div>
+          <div class="wf-upload">원본 영상 또는 장면별 소재</div>
+          <div class="wf-setting">Scene 1 · Hook · 2초</div>
+          <div class="wf-field">Hook 문구</div>
+          <div class="wf-field">보조 문구</div>
+          <div class="wf-setting">Hook 분석 · 후보 4개</div>
+          <div class="wf-setting">Scene 2 · Gameplay · 10초</div>
+          <div class="wf-setting">Scene 3 · CTA · 3초</div>
+          <div class="wf-setting">TTS · 기본 음성</div>
+        </div>
+      </aside>
+      <main class="wf-preview-wrap">
+        <div class="wf-preview">
+          <span class="text-small wf-subtle">실시간 미리보기</span>
+          <div class="wf-hook">강렬한 첫 2초로<br>시선을 확보</div>
+          <div class="wf-cta text-small">지금 설치</div>
+        </div>
+      </main>
+      <div class="wf-export text-small">
+        <span class="wf-subtle">mvp_15s_9x16_ko_60fps.mp4</span>
+        <button class="btn btn-primary" type="button"><i data-lucide="download"></i> MP4 다운로드</button>
+      </div>
+    </div>
+    <div class="wf-note text-small">
+      <div><strong>학습 부담</strong><span class="wf-subtle">기존 Banner Designer 사용자에게 가장 익숙함</span></div>
+      <div><strong>강점</strong><span class="wf-subtle">Single·Batch 전환과 입력→출력이 단순함</span></div>
+      <div><strong>주의</strong><span class="wf-subtle">장면·화면비 옵션이 늘면 좌측 패널이 길어짐</span></div>
+    </div>
+  </section>
+
+  <section class="wf-view" id="wf-option-c" role="tabpanel" data-wf-view="c" hidden>
+    <div class="wf-screen wf-c" aria-label="단계형 Wizard 와이어프레임">
+      <div class="wf-header">
+        <div class="wf-brand"><i data-lucide="clapperboard"></i> UA Video Designer</div>
+        <div class="wf-actions text-small"><span>새 프로젝트 · 자동 저장됨</span></div>
+      </div>
+      <div class="wf-steps text-small" aria-label="제작 단계">
+        <div class="wf-step is-active">1. 소재</div>
+        <div class="wf-step">2. Hook</div>
+        <div class="wf-step">3. 자막·음성</div>
+        <div class="wf-step">4. 화면비</div>
+        <div class="wf-step">5. 출력</div>
+      </div>
+      <main class="wf-stage">
+        <div>
+          <div class="wf-label">원본 소재를 추가하세요</div>
+          <div class="wf-stack text-small">
+            <div class="wf-upload"><span><i data-lucide="upload"></i><br>영상 1개를 세 장면에 빠르게 연결</span></div>
+            <div class="wf-field">또는 장면별 개별 소재 사용</div>
+            <div class="wf-setting">Hook · 영상 선택 안 됨</div>
+            <div class="wf-setting">Gameplay · 영상 선택 안 됨</div>
+            <div class="wf-setting">CTA · 이미지 선택 안 됨</div>
+          </div>
+        </div>
+        <div class="wf-region wf-stage-preview">
+          <div class="wf-label">구성 미리보기</div>
+          <div class="wf-timeline text-small">
+            <div class="wf-clip is-active">Hook<br>2초</div>
+            <div class="wf-clip">Gameplay<br>10초</div>
+            <div class="wf-clip">CTA<br>3초</div>
+          </div>
+          <div class="wf-preview-wrap">
+            <div class="wf-preview wide">
+              <span class="text-small wf-subtle">소재 프리뷰</span>
+              <div class="wf-hook">다음 단계에서<br>Hook 후보 분석</div>
+              <div class="wf-cta text-small">계속</div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <div class="wf-nav">
+        <button class="btn" type="button" disabled><i data-lucide="arrow-left"></i> 이전</button>
+        <button class="btn btn-primary" type="button">Hook 설정 <i data-lucide="arrow-right"></i></button>
+      </div>
+    </div>
+    <div class="wf-note text-small">
+      <div><strong>초기 진입</strong><span class="wf-subtle">순서가 명확해 신규 사용자가 실수하기 어려움</span></div>
+      <div><strong>강점</strong><span class="wf-subtle">필수 입력과 검증을 단계별로 안내</span></div>
+      <div><strong>주의</strong><span class="wf-subtle">반복 수정 시 단계 사이를 계속 이동해야 함</span></div>
+    </div>
+  </section>
+
+  <script>
+    (() => {
+      const root = document.getElementById('video-editor-wireframes');
+      const tabs = Array.from(root.querySelectorAll('[data-wf-target]'));
+      const views = Array.from(root.querySelectorAll('[data-wf-view]'));
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const target = tab.dataset.wfTarget;
+          tabs.forEach((item) => {
+            const selected = item === tab;
+            item.setAttribute('aria-selected', String(selected));
+            item.classList.toggle('btn-primary', selected);
+          });
+          views.forEach((view) => {
+            view.hidden = view.dataset.wfView !== target;
+          });
+        });
+      });
+
+      if (window.lucide) {
+        window.lucide.createIcons({ attrs: { 'aria-hidden': 'true' } });
+      }
+    })();
+  </script>
+</div>

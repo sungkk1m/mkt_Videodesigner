@@ -1,0 +1,53 @@
+# GitHub Pages deployment for the static editor.
+#
+# GATE: this workflow is manual (`workflow_dispatch`) on purpose. Design §2.4 and
+# §7 require Remotion commercial-use approval before any internal deployment, and
+# docs/03-analysis/browser-video-mvp.remotion-license-review.md records that the
+# project is still under the evaluation clause. Do not add a `push` trigger until
+# that review is closed.
+name: Deploy to GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `base: './'` in vite.config.ts keeps every asset, worker, and font URL
+      # relative, so the app also works from a repository subpath. Design §8.4 #9.
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,1844 @@
+{
+  "version": "3.0",
+  "lastUpdated": "2026-07-28T10:30:00.000Z",
+  "activeFeatures": [
+    "browser-video-mvp",
+    "editor",
+    "timeline",
+    "media",
+    "render",
+    "compositions",
+    "mkt_videodesigner",
+    "e2e",
+    "errors",
+    "ports",
+    "test",
+    "persistence",
+    "fixtures",
+    "scenes",
+    "hook",
+    "hook-analysis",
+    "audio",
+    "config",
+    "tts",
+    "output"
+  ],
+  "primaryFeature": "browser-video-mvp",
+  "features": {
+    "browser-video-mvp": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "static-github-pages",
+        "chrome-only",
+        "remotion-web-renderer",
+        "three-scene-template",
+        "four-locales",
+        "tts-provider",
+        "single-and-batch",
+        "default-60fps"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/browser-video-mvp.plan.md",
+        "design": "docs/02-design/features/browser-video-mvp.design.md",
+        "module2Evidence": "docs/03-analysis/browser-video-mvp.module-2-benchmark.md",
+        "module3aEvidence": "docs/03-analysis/browser-video-mvp.module-3a-evidence.md",
+        "conventions": "docs/01-plan/conventions.md",
+        "module1Evidence": "docs/03-analysis/browser-video-mvp.module-1-foundation.md",
+        "licenseReview": "docs/03-analysis/browser-video-mvp.remotion-license-review.md",
+        "module3Evidence": "docs/03-analysis/browser-video-mvp.module-3-persistence.md",
+        "module4Evidence": "docs/03-analysis/browser-video-mvp.module-4-editor.md",
+        "module5Evidence": "docs/03-analysis/browser-video-mvp.module-5-hook.md",
+        "module6Evidence": "docs/03-analysis/browser-video-mvp.module-6-audio-tts.md",
+        "module7Evidence": "docs/03-analysis/browser-video-mvp.module-7-render-release.md"
+      },
+      "timestamps": {
+        "started": "2026-07-27T07:36:48.139Z",
+        "lastUpdated": "2026-07-28T10:30:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "projectLevel": "Starter",
+        "defaultFps": 60,
+        "locales": [
+          "ko",
+          "en",
+          "ja",
+          "zh-TW"
+        ],
+        "tts": "Transformers.js + Supertonic Beta + uploaded audio fallback",
+        "architecture": "Option C - Pragmatic Modules",
+        "editorLayout": "Option A - Video Editor",
+        "hookScope": "B + C-lite",
+        "designApprovedAt": "2026-07-27T13:17:00.905Z",
+        "currentScope": "module-7",
+        "completedModules": [
+          "module-1",
+          "module-2",
+          "module-3a-editor-vertical-slice",
+          "module-3",
+          "module-4",
+          "module-5",
+          "module-6",
+          "module-7"
+        ],
+        "module1Status": "completed-pragmatic-scope",
+        "renderPoc": {
+          "remotionVersion": "4.0.499",
+          "browser": "Chrome 150.0.7871.182",
+          "fifteenSecond60FpsArrayBufferMs": 7769.5,
+          "fifteenSecond60FpsWebFsMs": 9324.1,
+          "sixtySecond60FpsWebFsMs": 31025.5,
+          "licenseGate": "blocked-before-deployment"
+        },
+        "doStartedAt": "2026-07-27T14:10:04.394Z",
+        "lastUpdatedAt": "2026-07-28T10:30:00.000Z",
+        "module3aEvidence": "docs/03-analysis/browser-video-mvp.module-3a-evidence.md",
+        "module3aStatus": "implemented-and-verified",
+        "licenseReview": {
+          "subject": "remotion",
+          "question": "individual-vs-company-license",
+          "finding": "free-license-not-applicable-commercial-use",
+          "currentCoverage": "evaluation-clause",
+          "decision": "stay-in-evaluation-revisit-before-deployment",
+          "companyLicenseCost": "USD 25 per seat per month (Remotion for Creators)",
+          "document": "docs/03-analysis/browser-video-mvp.remotion-license-review.md",
+          "reviewedAt": "2026-07-28T00:50:00.000Z"
+        },
+        "doCompletedAt": "2026-07-28T10:30:00.000Z",
+        "verification": {
+          "unitTests": "164 passed (21 files)",
+          "e2eTests": "15 passed",
+          "build": "tsc -b + vite build clean",
+          "verifiedAt": "2026-07-28T10:30:00.000Z"
+        },
+        "openRisks": [
+          "supertonic-generation-unverified",
+          "beta-object-detector-not-implemented",
+          "github-pages-subpath-unverified",
+          "remotion-license-gate-open"
+        ],
+        "deployment": {
+          "status": "not-deployed",
+          "workflow": ".github/workflows/deploy-pages.yml",
+          "trigger": "workflow_dispatch-only",
+          "gate": "remotion-commercial-license-approval"
+        }
+      },
+      "stateMachine": {
+        "currentState": "do",
+        "previousState": "design",
+        "stateHistory": [
+          {
+            "from": "plan",
+            "to": "design",
+            "at": "2026-07-27T13:17:00.905Z"
+          },
+          {
+            "from": "design",
+            "to": "do",
+            "scope": "module-2",
+            "at": "2026-07-27T14:10:04.394Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-3a-editor-vertical-slice",
+            "at": "2026-07-28T00:20:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-1",
+            "at": "2026-07-28T00:50:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-3",
+            "at": "2026-07-28T10:30:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-4",
+            "at": "2026-07-28T10:30:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-5",
+            "at": "2026-07-28T10:30:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-6",
+            "at": "2026-07-28T10:30:00.000Z"
+          },
+          {
+            "from": "do",
+            "to": "do",
+            "scope": "module-7",
+            "at": "2026-07-28T10:30:00.000Z"
+          }
+        ],
+        "retryCount": 0,
+        "maxRetries": 5,
+        "circuitBreakerOpen": false
+      },
+      "metrics": {
+        "qualityScore": null,
+        "conventionCompliance": null,
+        "apiCompliance": null,
+        "cycleTimeMs": null,
+        "iterationEfficiency": null
+      },
+      "phaseTimestamps": {},
+      "automationLevel": 2
+    },
+    "editor": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:37:52.511Z",
+        "lastUpdated": "2026-07-28T01:20:33.832Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/features/editor/BatchDialog.tsx"
+    },
+    "timeline": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:38:11.327Z",
+        "lastUpdated": "2026-07-27T14:38:31.336Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/timeline/timeline.test.ts"
+    },
+    "media": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:38:50.037Z",
+        "lastUpdated": "2026-07-28T00:54:40.618Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/media/browserMediaResolver.ts"
+    },
+    "render": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:39:22.175Z",
+        "lastUpdated": "2026-07-28T01:21:52.579Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/render/queue.test.ts"
+    },
+    "compositions": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:40:31.413Z",
+        "lastUpdated": "2026-07-28T01:09:22.332Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/compositions/ThreeSceneComposition.tsx"
+    },
+    "mkt_videodesigner": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:51:25.739Z",
+        "lastUpdated": "2026-07-28T01:05:15.586Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/app/App.tsx"
+    },
+    "e2e": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T14:52:20.147Z",
+        "lastUpdated": "2026-07-28T01:22:43.163Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/tests/e2e/batch-render.spec.ts"
+    },
+    "errors": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T15:36:37.968Z",
+        "lastUpdated": "2026-07-28T01:04:28.598Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/shared/errors/appError.ts"
+    },
+    "ports": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T15:38:08.728Z",
+        "lastUpdated": "2026-07-28T01:04:27.081Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/ports/index.ts"
+    },
+    "test": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T15:41:22.458Z",
+        "lastUpdated": "2026-07-27T15:41:22.458Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/test/architecture.test.ts"
+    },
+    "persistence": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-27T16:00:48.738Z",
+        "lastUpdated": "2026-07-28T00:44:51.319Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/persistence/projectRepository.test.ts"
+    },
+    "fixtures": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T00:43:04.060Z",
+        "lastUpdated": "2026-07-28T00:43:04.060Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/test/fixtures/media.ts"
+    },
+    "scenes": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T00:50:53.745Z",
+        "lastUpdated": "2026-07-28T00:51:10.716Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/compositions/scenes/CtaScene.tsx"
+    },
+    "hook": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:02:32.016Z",
+        "lastUpdated": "2026-07-28T01:03:10.900Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/hook/scoring.test.ts"
+    },
+    "hook-analysis": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:03:27.443Z",
+        "lastUpdated": "2026-07-28T01:03:55.164Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/hook-analysis/heuristicHookAnalyzer.ts"
+    },
+    "audio": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:08:02.704Z",
+        "lastUpdated": "2026-07-28T01:13:43.303Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/audio/mix.test.ts"
+    },
+    "config": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:09:49.986Z",
+        "lastUpdated": "2026-07-28T01:09:49.986Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/shared/config/models.ts"
+    },
+    "tts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:09:56.901Z",
+        "lastUpdated": "2026-07-28T01:14:25.292Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/tts/synthesize.test.ts"
+    },
+    "output": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-07-28T01:18:34.826Z",
+        "lastUpdated": "2026-07-28T01:18:34.826Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/output/browserOutputWriter.ts"
+    }
+  },
+  "pipeline": {
+    "currentPhase": 3,
+    "level": "Starter",
+    "phaseHistory": [
+      {
+        "feature": "browser-video-mvp",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-07-27T13:17:00.905Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "design",
+        "to": "do",
+        "scope": "module-2",
+        "at": "2026-07-27T14:10:04.394Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-3a-editor-vertical-slice",
+        "at": "2026-07-28T00:20:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-1",
+        "at": "2026-07-28T00:50:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-3",
+        "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-4",
+        "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-5",
+        "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-6",
+        "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "browser-video-mvp",
+        "from": "do",
+        "to": "do",
+        "scope": "module-7",
+        "at": "2026-07-28T10:30:00.000Z"
+      }
+    ]
+  },
+  "session": {
+    "startedAt": "2026-07-27T07:36:48.139Z",
+    "onboardingCompleted": false,
+    "lastActivity": "2026-07-28T10:30:00.000Z"
+  },
+  "history": [
+    {
+      "timestamp": "2026-07-27T07:36:48.141Z",
+      "feature": "browser-video-mvp",
+      "phase": "plan",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T13:17:00.907Z",
+      "feature": "browser-video-mvp",
+      "phase": "design",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:10:04.396Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:37:52.512Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:38:11.327Z",
+      "feature": "timeline",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:38:31.336Z",
+      "feature": "timeline",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:38:50.037Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:39:03.172Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:39:22.175Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:39:45.006Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:40:12.389Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:40:31.413Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:40:45.727Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:41:11.174Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:41:29.910Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:42:58.102Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:50:21.194Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:51:14.521Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:51:25.739Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:52:11.878Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:52:20.147Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:52:59.891Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:53:33.821Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:54:40.854Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:54:51.671Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:55:00.794Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:55:08.207Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:57:29.061Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:57:38.478Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T14:57:46.463Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:01:29.395Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:04:31.523Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:20:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-3a-editor-vertical-slice"
+    },
+    {
+      "timestamp": "2026-07-27T15:35:55.099Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:36:13.027Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:36:25.822Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:36:37.968Z",
+      "feature": "errors",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:36:51.616Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:36:58.274Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:37:03.188Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:37:10.373Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:37:15.205Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:37:29.398Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:37:44.866Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:38:08.728Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:38:18.658Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:38:22.082Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:38:35.549Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:38:57.524Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:39:00.226Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:39:09.760Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:39:41.911Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:40:17.450Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:40:22.881Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:40:41.081Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:40:52.562Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:41:22.458Z",
+      "feature": "test",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:42:24.352Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:50:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-1"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:16.823Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:27.529Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:34.146Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:36.045Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:42.974Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:45.023Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:58:50.944Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:04.995Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:09.467Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:14.059Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:16.863Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:22.189Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:23.394Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:41.525Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:47.994Z",
+      "feature": "errors",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T15:59:54.966Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:00.998Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:23.883Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:28.671Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:33.385Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:36.327Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-27T16:00:48.738Z",
+      "feature": "persistence",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:38:08.875Z",
+      "feature": "persistence",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:38:18.059Z",
+      "feature": "persistence",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:38:36.315Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:39:09.875Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:39:24.028Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:39:47.105Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:40:03.922Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:40:38.481Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:40:52.619Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:40:55.522Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:09.106Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:17.840Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:19.118Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:24.496Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:26.967Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:35.868Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:43.523Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:45.029Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:50.385Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:41:58.905Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:42:03.813Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:42:06.550Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:42:16.512Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:42:18.240Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:42:50.515Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:43:04.060Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:43:56.179Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:43:59.245Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:44:22.173Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:44:33.151Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:44:51.319Z",
+      "feature": "persistence",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:44:54.974Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:46:05.320Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:47:40.414Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:48:14.408Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:48:27.571Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:48:38.602Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:49:56.093Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:50:20.665Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:50:30.291Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:50:39.901Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:50:53.745Z",
+      "feature": "scenes",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:10.716Z",
+      "feature": "scenes",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:23.959Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:33.371Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:37.929Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:43.834Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:46.976Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:51:50.094Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:52:13.622Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:52:32.335Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:53:07.794Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:53:25.200Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:53:51.184Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:07.391Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:09.345Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:15.898Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:17.400Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:30.623Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:32.844Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:38.822Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:40.618Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:43.130Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:52.096Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:57.143Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:54:57.202Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:04.130Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:07.492Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:16.052Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:17.642Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:23.768Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:26.213Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:47.033Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:55:50.450Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:02.772Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:12.771Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:15.378Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:23.682Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:25.595Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:30.898Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:56:46.687Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:57:18.645Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:57:56.867Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:58:21.712Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:58:53.723Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T00:59:41.182Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:00:13.261Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:00:56.726Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:02:32.019Z",
+      "feature": "hook",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:02:38.970Z",
+      "feature": "hook",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:02:56.180Z",
+      "feature": "hook",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:03:10.900Z",
+      "feature": "hook",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:03:27.444Z",
+      "feature": "hook-analysis",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:03:55.165Z",
+      "feature": "hook-analysis",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:24.723Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:27.081Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:28.598Z",
+      "feature": "errors",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:50.775Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:56.343Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:04:58.159Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:00.041Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:01.965Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:10.111Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:12.429Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:14.427Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:05:15.587Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:06:09.867Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:07:28.955Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:08:02.704Z",
+      "feature": "audio",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:08:16.734Z",
+      "feature": "audio",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:09:16.788Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:09:22.332Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:09:49.987Z",
+      "feature": "config",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:09:56.902Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:10:07.959Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:10:43.349Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:11:46.107Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:12:20.415Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:13:43.303Z",
+      "feature": "audio",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:13:48.993Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:14:13.806Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:14:25.293Z",
+      "feature": "tts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:15:37.809Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:17:09.162Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:17:54.238Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:18:34.827Z",
+      "feature": "output",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:19:50.789Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:20:33.832Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:21:52.580Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T01:22:43.163Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T10:30:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-3"
+    },
+    {
+      "timestamp": "2026-07-28T10:30:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-4"
+    },
+    {
+      "timestamp": "2026-07-28T10:30:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-5"
+    },
+    {
+      "timestamp": "2026-07-28T10:30:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-6"
+    },
+    {
+      "timestamp": "2026-07-28T10:30:00.000Z",
+      "feature": "browser-video-mvp",
+      "phase": "do",
+      "action": "updated",
+      "scope": "module-7"
+    }
+  ],
+  "stateMachine": {
+    "defaultWorkflow": "default",
+    "activeWorkflows": {},
+    "totalTransitions": 0
+  },
+  "automation": {
+    "globalLevel": 2,
+    "trustScore": 38,
+    "pendingApprovals": 0,
+    "lastGateResult": null
+  },
+  "team": {
+    "enabled": true,
+    "stateFile": ".bkit/runtime/agent-state.json",
+    "eventsFile": ".bkit/runtime/agent-events.jsonl"
+  }
+}

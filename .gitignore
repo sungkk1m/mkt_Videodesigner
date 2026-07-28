@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+artifacts/render-poc/*.mp4
+artifacts/render-poc/*.json
+.DS_Store
+artifacts/module-3a/
+tests/fixtures/*.mp4
+artifacts/module-4/
+artifacts/module-5/
+tests/fixtures/*.wav
+*.tsbuildinfo
+
+# bkit local session state. `pdca-status.json` is kept as project state; audit
+# logs and session history are machine-local and contain absolute paths.
+.bkit/audit/
+.bkit/state/session-history.json
+.bkit/state/memory.json
+.bkit/runtime/

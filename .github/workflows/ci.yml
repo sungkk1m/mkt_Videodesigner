@@ -1,0 +1,32 @@
+# Design Ref: §10.4 — "Dependency lockfile, exact Remotion versions, and CI audit
+# retained." Browser E2E is not run here: it needs the local H.264 fixtures, which
+# are deliberately not committed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
