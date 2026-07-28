@@ -47,7 +47,7 @@
 ```bash
 npm test                              # 164 passed (21 files)
 npm run build                         # tsc -b + vite build, clean
-npx playwright test                   # 15 passed (all specs)
+npx playwright test                   # 17 passed (all specs)
 ```
 
 ### New L1 suite (`src/domain/render/queue.test.ts`)
@@ -81,6 +81,8 @@ restores the §5.3 "no layout shifts" requirement.
 - `.github/workflows/ci.yml` runs typecheck, build, unit tests, and a non-blocking
   `npm audit` on every push and pull request. Browser E2E is not in CI because the
   H.264 fixtures are deliberately not committed.
+- GitHub Pages is **not enabled** on the repository yet (`GET /pages` returns 404).
+  Enabling it is a repository-settings change and belongs to the runbook.
 - `.github/workflows/deploy-pages.yml` builds and publishes to GitHub Pages but is
   **`workflow_dispatch` only**. Design §2.4 and §7 require Remotion commercial-use
   approval first, and `browser-video-mvp.remotion-license-review.md` records that the
@@ -88,9 +90,12 @@ restores the §5.3 "no layout shifts" requirement.
 
 ## 5. Known Limitations
 
-1. §8.4 scenario 9 (loading from a real Pages subpath) is unverified because nothing
-   has been deployed. `base: './'` is the mechanism; the check belongs to the first
-   approved deployment.
+1. §8.4 scenario 9 is verified locally, not on real hosting. The production bundle
+   is served under `/mkt_Videodesigner/` by `scripts/serve-dist-subpath.mjs` and
+   `tests/e2e/pages-subpath.spec.ts` confirms asset resolution, refresh, the Hook
+   worker chunk, and a real MP4 render with no failed requests. Only HTTPS behaviour
+   on `github.io` itself remains, and it is blocked by the Remotion license gate.
+   See `docs/01-plan/pages-deployment-runbook.md`.
 2. Parallel batch rendering stays disabled, matching §2.4.
 3. The queue does not yet persist across a reload; an interrupted batch restarts from
    the dialog.

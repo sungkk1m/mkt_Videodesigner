@@ -65,11 +65,17 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 
 ## Status
 
-Do 단계 모듈 1~7 구현 및 검증 완료 (유닛 164, E2E 15).
+Do 단계 모듈 1~7 구현 및 검증 완료 (유닛 164, E2E 17).
 
-**배포는 아직 하지 않았습니다.** Remotion 상용 라이선스 검토가 끝나기 전까지
-`.github/workflows/deploy-pages.yml`은 수동 실행 전용으로 유지합니다. 자세한 내용은
-`docs/03-analysis/browser-video-mvp.remotion-license-review.md`를 참고하세요.
+**배포는 아직 하지 않았습니다.** 기술 준비는 끝났고 Remotion 상용 라이선스
+승인만 남았습니다. Superplanet은 직원 4명 이상 영리법인이라 Free License 대상이
+아니며, 현재는 "평가 중" 조항으로만 커버됩니다.
+
+- 라이선스 근거: `docs/03-analysis/browser-video-mvp.remotion-license-review.md`
+- 승인 후 배포 절차: `docs/01-plan/pages-deployment-runbook.md`
+
+Pages 서브패스 레이아웃은 실제 프로덕션 번들로 로컬 검증했습니다
+(`npm run serve:pages-preview`, `tests/e2e/pages-subpath.spec.ts`).
 
 미검증 항목: Supertonic 음성 생성(업로드 음성이 검증된 경로), Beta 객체 감지
-(미구현), GitHub Pages 서브패스 로딩.
+(미구현), 실제 `github.io` 호스팅 동작.

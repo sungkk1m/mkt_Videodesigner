@@ -11,7 +11,8 @@
     "test:e2e": "playwright test",
     "benchmark:render": "node scripts/run-render-benchmark.mjs",
     "generate:poc-audio": "node scripts/generate-poc-audio.mjs",
-    "generate:editor-fixture": "node scripts/generate-editor-fixture.mjs"
+    "generate:editor-fixture": "node scripts/generate-editor-fixture.mjs",
+    "serve:pages-preview": "npm run build && node scripts/serve-dist-subpath.mjs"
   },
   "dependencies": {
     "@remotion/media": "4.0.499",

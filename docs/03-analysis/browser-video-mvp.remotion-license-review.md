@@ -108,7 +108,20 @@ depends on. At $25 per seat per month, replacement is unlikely to be the
 economical choice; this section exists so the option stays open, not because it
 is recommended.
 
-## 9. Follow-up
+## 9. Deployment Readiness (2026-07-28)
+
+Everything except this license is ready. The Pages subpath layout was verified
+locally with the real production bundle — worker chunk, asset resolution, refresh,
+and a real MP4 render — in `tests/e2e/pages-subpath.spec.ts`. The deploy workflow
+exists and is manual-only.
+
+The step-by-step path from license approval to a live URL is in
+[docs/01-plan/pages-deployment-runbook.md](../01-plan/pages-deployment-runbook.md).
+
+**Blocking owner: Superplanet (purchase decision). Not resolvable by the developer
+or by tooling.**
+
+## 10. Follow-up
 
 - Remotion 5.0 changes telemetry behavior. Re-read the terms before upgrading
   past `4.0.499`.
