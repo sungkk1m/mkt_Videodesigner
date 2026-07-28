@@ -10,17 +10,25 @@ import {mediaReferenceSchema} from '../media/reference';
 import {FRAME_RATES, RENDER_PROFILES, fpsForProfile} from '../render/profile';
 import {
   ASPECT_RATIOS,
+  DAY1_CARD_MOTIONS,
+  DAY1_ICON_ANIMATIONS,
+  DAY1_SECTION_ORDER,
   DURATION_PRESETS,
   HOOK_MOTION_PRESETS,
   LOCALES,
   MAX_BATCH_JOBS,
   MAX_COPY_LENGTH,
   MAX_CTA_BACKGROUND_BLUR,
+  MAX_ICON_ADJUST,
+  MAX_ICON_SCALE,
+  MAX_LABEL_OUTLINE_WIDTH_PX,
   MAX_OFFSET_PERCENT,
   MAX_PROJECT_NAME_LENGTH,
   MAX_SCALE,
+  MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
+  MIN_ICON_SCALE,
   MIN_SCALE,
   MIN_SCENE_MS,
   MAX_TTS_SPEED,
@@ -31,10 +39,12 @@ import {
   SCENE_ORDER,
   SUBTITLE_ALIGNMENTS,
   SUBTITLE_POSITIONS,
+  TEMPLATE_KINDS,
   TRANSITION_KINDS,
 } from './constants';
 
 export const sceneKindSchema = z.enum(SCENE_ORDER);
+export const templateKindSchema = z.enum(TEMPLATE_KINDS);
 export const localeSchema = z.enum(LOCALES);
 export const aspectRatioSchema = z.enum(ASPECT_RATIOS);
 export const transitionKindSchema = z.enum(TRANSITION_KINDS);
@@ -46,7 +56,7 @@ export const durationPresetSchema = z.union([
   z.literal(DURATION_PRESETS[2]),
 ]);
 
-const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, {
+export const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, {
   message: 'Color must be a #rrggbb value.',
 });
 
@@ -166,11 +176,21 @@ export const localizedCopySchema = z.object({
   sceneSubtitles: z.record(sceneKindSchema, copyTextSchema),
   ctaText: copyTextSchema,
   ctaSubcopy: copyTextSchema,
+  /**
+   * Day1 panel labels. Day1 Design Ref: §3.3 — optional so a v1 copy block
+   * parses untouched and three-scene projects never carry the field.
+   */
+  day1Labels: z
+    .object({a: copyTextSchema, b: copyTextSchema})
+    .optional(),
 });
 
-export const editorSceneSchema = z.object({
+/**
+ * Day1 Design Ref: §3.2 — per-scene settings without `durationMs`, which now
+ * lives on the shared `sections` axis so the two never drift apart.
+ */
+export const sceneSettingsSchema = z.object({
   kind: sceneKindSchema,
-  durationMs: z.number().min(MIN_SCENE_MS),
   trim: mediaTrimSchema,
   transforms: ratioTransformsSchema,
   subtitle: subtitleStyleSchema,
@@ -178,6 +198,195 @@ export const editorSceneSchema = z.object({
   hook: hookSceneSettingsSchema.optional(),
   cta: ctaSceneSettingsSchema.optional(),
 });
+
+/** Day1 Design Ref: §3.1 — the time axis every template shares. */
+export const sectionSchema = z.object({
+  /** `hook`|`gameplay`|`cta` for three-scene, `panel-a`|`panel-b`|`endcard` for Day1. */
+  id: z.string().min(1),
+  /** Shown on the timeline clip. */
+  label: z.string().min(1),
+  durationMs: z.number().min(MIN_SCENE_MS),
+});
+
+export const sectionsSchema = z.tuple([
+  sectionSchema,
+  sectionSchema,
+  sectionSchema,
+]);
+
+export const threeSceneSettingsSchema = z.object({
+  template: z.literal('three-scene'),
+  source: mediaReferenceSchema.nullable(),
+  scenes: z.tuple([
+    sceneSettingsSchema,
+    sceneSettingsSchema,
+    sceneSettingsSchema,
+  ]),
+});
+
+/** Day1 Design Ref: §3.2 — one half of the split frame. */
+export const day1PanelSchema = z.object({
+  source: mediaReferenceSchema.nullable(),
+  trim: mediaTrimSchema,
+  /** Cover fill plus per-ratio reframing. Day1 Plan D5. */
+  transforms: ratioTransformsSchema,
+});
+
+export const day1SettingsSchema = z.object({
+  template: z.literal('day1'),
+  panelA: day1PanelSchema,
+  panelB: day1PanelSchema,
+  split: z.object({
+    lineColor: hexColorSchema,
+    lineWidthPx: z.number().min(0).max(MAX_SPLIT_LINE_WIDTH_PX),
+  }),
+  /** Label wording lives in `copy.day1Labels`; only the styling is here. */
+  labelStyle: z.object({
+    fontSize: z.number().min(MIN_SUBTITLE_FONT_SIZE).max(MAX_SUBTITLE_FONT_SIZE),
+    textColor: hexColorSchema,
+    outlineColor: hexColorSchema,
+    outlineWidthPx: z.number().min(0).max(MAX_LABEL_OUTLINE_WIDTH_PX),
+    position: z.enum(SUBTITLE_POSITIONS),
+  }),
+  endCard: z.object({
+    /** Finished bannerdesigner export used as the card background. */
+    banner: mediaReferenceSchema.nullable(),
+    /** Same app icon as a separate layer so it can animate. Day1 Plan D4. */
+    appIcon: mediaReferenceSchema.nullable(),
+    iconAdjust: z.object({
+      dx: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
+      dy: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
+      scale: z.number().min(MIN_ICON_SCALE).max(MAX_ICON_SCALE),
+    }),
+    iconAnimation: z.enum(DAY1_ICON_ANIMATIONS),
+    cardMotion: z.enum(DAY1_CARD_MOTIONS),
+  }),
+});
+
+export const templateSettingsSchema = z.discriminatedUnion('template', [
+  threeSceneSettingsSchema,
+  day1SettingsSchema,
+]);
+
+/** The section ids each template expects, in order. Day1 Design Ref: §3.5. */
+export const SECTION_IDS_BY_TEMPLATE = {
+  'three-scene': SCENE_ORDER,
+  day1: DAY1_SECTION_ORDER,
+} as const;
+
+interface SectionedProject {
+  sections: z.infer<typeof sectionsSchema>;
+}
+
+/** A trim window that reaches past its own source is unplayable. */
+const refineTrimInSource = (
+  trim: z.infer<typeof mediaTrimSchema>,
+  source: z.infer<typeof mediaReferenceSchema> | null,
+  path: PropertyKey[],
+  context: z.RefinementCtx,
+) => {
+  if (source && trim.outMs > (source.durationMs ?? 0)) {
+    context.addIssue({
+      code: 'custom',
+      path: [...path, 'outMs'],
+      message: 'Trim out must stay inside the source duration.',
+    });
+  }
+};
+
+const refineThreeScene = (
+  project: SectionedProject,
+  settings: z.infer<typeof threeSceneSettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  const base: PropertyKey[] = ['templateSettings', 'scenes'];
+
+  settings.scenes.forEach((scene, index) => {
+    if (scene.kind !== SCENE_ORDER[index]) {
+      context.addIssue({
+        code: 'custom',
+        path: [...base, index, 'kind'],
+        message: `Scene ${index} must be ${SCENE_ORDER[index]}.`,
+      });
+    }
+  });
+
+  if (!settings.scenes[0].hook) {
+    context.addIssue({
+      code: 'custom',
+      path: [...base, 0, 'hook'],
+      message: 'The Hook scene must carry Hook settings.',
+    });
+  }
+
+  if (!settings.scenes[2].cta) {
+    context.addIssue({
+      code: 'custom',
+      path: [...base, 2, 'cta'],
+      message: 'The CTA scene must carry CTA settings.',
+    });
+  }
+
+  if (settings.source && !settings.source.durationMs) {
+    context.addIssue({
+      code: 'custom',
+      path: ['templateSettings', 'source', 'durationMs'],
+      message: 'The project source must be a video with a duration.',
+    });
+  }
+
+  settings.scenes.forEach((scene, index) => {
+    refineTrimInSource(
+      scene.trim,
+      settings.source,
+      [...base, index, 'trim'],
+      context,
+    );
+
+    // Design Ref: §3.5 — a transition may not exceed half of its own section.
+    if (scene.transitionOut.kind !== 'cut') {
+      const limit = (project.sections[index]?.durationMs ?? 0) / 2;
+
+      if (scene.transitionOut.durationMs > limit) {
+        context.addIssue({
+          code: 'custom',
+          path: [...base, index, 'transitionOut', 'durationMs'],
+          message: `Transition must not exceed half of the scene (${limit}ms).`,
+        });
+      }
+    }
+  });
+};
+
+/**
+ * Day1 Design Ref: §3.5. A missing panel source is *not* a schema error — the
+ * user must be able to save mid-upload — so FR-D03 is a render preflight gate
+ * instead. Only the trim window is bounded here.
+ */
+const refineDay1 = (
+  _project: SectionedProject,
+  settings: z.infer<typeof day1SettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  (['panelA', 'panelB'] as const).forEach((key) => {
+    const panel = settings[key];
+
+    if (panel.source && !panel.source.durationMs) {
+      context.addIssue({
+        code: 'custom',
+        path: ['templateSettings', key, 'source', 'durationMs'],
+        message: 'A Day1 panel source must be a video with a duration.',
+      });
+    }
+
+    refineTrimInSource(
+      panel.trim,
+      panel.source,
+      ['templateSettings', key, 'trim'],
+      context,
+    );
+  });
+};
 
 export const editorProjectSchema = z
   .object({
@@ -188,8 +397,8 @@ export const editorProjectSchema = z
     updatedAt: z.iso.datetime(),
     durationPreset: durationPresetSchema,
     fps: z.union([z.literal(FRAME_RATES[0]), z.literal(FRAME_RATES[1])]),
-    scenes: z.tuple([editorSceneSchema, editorSceneSchema, editorSceneSchema]),
-    source: mediaReferenceSchema.nullable(),
+    sections: sectionsSchema,
+    templateSettings: templateSettingsSchema,
     copy: z.record(localeSchema, localizedCopySchema),
     audio: audioMixSchema,
     render: renderSettingsSchema,
@@ -197,59 +406,39 @@ export const editorProjectSchema = z
     selectedRatio: aspectRatioSchema,
   })
   .superRefine((project, context) => {
-    project.scenes.forEach((scene, index) => {
-      if (scene.kind !== SCENE_ORDER[index]) {
-        context.addIssue({
-          code: 'custom',
-          path: ['scenes', index, 'kind'],
-          message: `Scene ${index} must be ${SCENE_ORDER[index]}.`,
-        });
-      }
-    });
+    const settings = project.templateSettings;
 
-    if (!project.scenes[0].hook) {
-      context.addIssue({
-        code: 'custom',
-        path: ['scenes', 0, 'hook'],
-        message: 'The Hook scene must carry Hook settings.',
-      });
-    }
-
-    if (!project.scenes[2].cta) {
-      context.addIssue({
-        code: 'custom',
-        path: ['scenes', 2, 'cta'],
-        message: 'The CTA scene must carry CTA settings.',
-      });
-    }
-
-    const totalMs = project.scenes.reduce(
-      (sum, scene) => sum + scene.durationMs,
+    // Day1 Design Ref: §3.5 — common invariants first, template ones after.
+    const totalMs = project.sections.reduce(
+      (sum, section) => sum + section.durationMs,
       0,
     );
 
     if (totalMs !== project.durationPreset * 1000) {
       context.addIssue({
         code: 'custom',
-        path: ['scenes'],
-        message: `Scene durations must total ${project.durationPreset} seconds, received ${totalMs / 1000}.`,
+        path: ['sections'],
+        message: `Section durations must total ${project.durationPreset} seconds, received ${totalMs / 1000}.`,
       });
     }
 
-    // Design Ref: §3.5 — a transition may not exceed half of its own scene.
-    project.scenes.forEach((scene, index) => {
-      if (scene.transitionOut.kind !== 'cut') {
-        const limit = scene.durationMs / 2;
+    const expectedIds = SECTION_IDS_BY_TEMPLATE[settings.template];
 
-        if (scene.transitionOut.durationMs > limit) {
-          context.addIssue({
-            code: 'custom',
-            path: ['scenes', index, 'transitionOut', 'durationMs'],
-            message: `Transition must not exceed half of the scene (${limit}ms).`,
-          });
-        }
+    project.sections.forEach((section, index) => {
+      if (section.id !== expectedIds[index]) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sections', index, 'id'],
+          message: `Section ${index} of a ${settings.template} project must be ${expectedIds[index]}.`,
+        });
       }
     });
+
+    if (settings.template === 'three-scene') {
+      refineThreeScene(project, settings, context);
+    } else {
+      refineDay1(project, settings, context);
+    }
 
     const jobCount =
       project.render.selectedLocales.length *
@@ -271,28 +460,10 @@ export const editorProjectSchema = z
       });
     }
 
-    if (project.source) {
-      if (!project.source.durationMs) {
-        context.addIssue({
-          code: 'custom',
-          path: ['source', 'durationMs'],
-          message: 'The project source must be a video with a duration.',
-        });
-      }
-
-      project.scenes.forEach((scene, index) => {
-        if (scene.trim.outMs > (project.source?.durationMs ?? 0)) {
-          context.addIssue({
-            code: 'custom',
-            path: ['scenes', index, 'trim', 'outMs'],
-            message: 'Trim out must stay inside the source duration.',
-          });
-        }
-      });
-    }
   });
 
 export type SceneKind = z.infer<typeof sceneKindSchema>;
+export type TemplateKind = z.infer<typeof templateKindSchema>;
 export type Locale = z.infer<typeof localeSchema>;
 export type AspectRatio = z.infer<typeof aspectRatioSchema>;
 export type TransitionKind = z.infer<typeof transitionKindSchema>;
@@ -310,6 +481,12 @@ export type AudioTrack = z.infer<typeof audioTrackSchema>;
 export type NarrationTrack = z.infer<typeof narrationTrackSchema>;
 export type AudioMix = z.infer<typeof audioMixSchema>;
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
-export type EditorScene = z.infer<typeof editorSceneSchema>;
+export type EditorScene = z.infer<typeof sceneSettingsSchema>;
 export type EditorProject = z.infer<typeof editorProjectSchema>;
-export type EditorScenes = EditorProject['scenes'];
+export type Section = z.infer<typeof sectionSchema>;
+export type Sections = z.infer<typeof sectionsSchema>;
+export type TemplateSettings = z.infer<typeof templateSettingsSchema>;
+export type ThreeSceneSettings = z.infer<typeof threeSceneSettingsSchema>;
+export type Day1Settings = z.infer<typeof day1SettingsSchema>;
+export type Day1Panel = z.infer<typeof day1PanelSchema>;
+export type EditorScenes = ThreeSceneSettings['scenes'];

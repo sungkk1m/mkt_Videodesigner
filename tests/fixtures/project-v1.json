@@ -1,0 +1,189 @@
+{
+  "kind": "mkt-videodesigner/project",
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-01T09:00:00.000Z",
+  "project": {
+    "schemaVersion": 1,
+    "id": "project_v1_regression_fixture",
+    "name": "v1-regression",
+    "createdAt": "2026-07-01T09:00:00.000Z",
+    "updatedAt": "2026-07-01T09:05:00.000Z",
+    "durationPreset": 15,
+    "fps": 60,
+    "scenes": [
+      {
+        "kind": "hook",
+        "durationMs": 2500,
+        "trim": { "inMs": 1000, "outMs": 3500 },
+        "transforms": {
+          "base": { "fit": "cover", "scale": 1.2, "x": -5, "y": 3 },
+          "overrides": {
+            "1:1": { "fit": "cover", "scale": 1.5, "x": 0, "y": -10 }
+          }
+        },
+        "subtitle": {
+          "position": "top",
+          "align": "center",
+          "fontSize": 56,
+          "textColor": "#ffffff",
+          "emphasisColor": "#ffd54a",
+          "showBackground": true,
+          "backgroundColor": "#000000",
+          "backgroundOpacity": 0.5
+        },
+        "transitionOut": { "kind": "fade", "durationMs": 300 },
+        "hook": {
+          "motionPreset": "caption",
+          "emphasizedText": "3일 만에",
+          "dimBackground": true
+        }
+      },
+      {
+        "kind": "gameplay",
+        "durationMs": 9500,
+        "trim": { "inMs": 4000, "outMs": 13500 },
+        "transforms": {
+          "base": { "fit": "cover", "scale": 1, "x": 0, "y": 0 },
+          "overrides": {}
+        },
+        "subtitle": {
+          "position": "bottom",
+          "align": "center",
+          "fontSize": 48,
+          "textColor": "#ffffff",
+          "emphasisColor": "#ffd54a",
+          "showBackground": true,
+          "backgroundColor": "#000000",
+          "backgroundOpacity": 0.5
+        },
+        "transitionOut": { "kind": "zoom", "durationMs": 400 }
+      },
+      {
+        "kind": "cta",
+        "durationMs": 3000,
+        "trim": { "inMs": 0, "outMs": 3000 },
+        "transforms": {
+          "base": { "fit": "cover", "scale": 1, "x": 0, "y": 0 },
+          "overrides": {}
+        },
+        "subtitle": {
+          "position": "center",
+          "align": "center",
+          "fontSize": 60,
+          "textColor": "#ffffff",
+          "emphasisColor": "#ffd54a",
+          "showBackground": false,
+          "backgroundColor": "#000000",
+          "backgroundOpacity": 0.5
+        },
+        "transitionOut": { "kind": "cut", "durationMs": 300 },
+        "cta": {
+          "media": null,
+          "appIcon": {
+            "id": "media_app_icon_v1",
+            "kind": "image",
+            "name": "app-icon.png",
+            "mimeType": "image/png",
+            "sizeBytes": 20480,
+            "lastModified": 1751328000000,
+            "width": 512,
+            "height": 512,
+            "fingerprint": "fp-app-icon-v1",
+            "status": "available"
+          },
+          "logo": null,
+          "storeBadge": null,
+          "useGeneratedBackground": true,
+          "backgroundBlur": 20,
+          "backgroundDim": 0.4
+        }
+      }
+    ],
+    "source": {
+      "id": "media_source_v1",
+      "kind": "video",
+      "name": "gameplay-sample.mp4",
+      "mimeType": "video/mp4",
+      "sizeBytes": 4194304,
+      "lastModified": 1751328000000,
+      "durationMs": 20000,
+      "width": 1080,
+      "height": 1920,
+      "fingerprint": "fp-gameplay-sample-v1",
+      "status": "available"
+    },
+    "copy": {
+      "ko": {
+        "hook": "3일 만에 최강자",
+        "hookSubcopy": "지금 시작하세요",
+        "sceneSubtitles": {
+          "hook": "이렇게 시작했습니다",
+          "gameplay": "이렇게 성장했습니다",
+          "cta": "지금 다운로드"
+        },
+        "ctaText": "무료로 시작",
+        "ctaSubcopy": "앱스토어에서 만나보세요"
+      },
+      "en": {
+        "hook": "Strongest in 3 days",
+        "hookSubcopy": "Start now",
+        "sceneSubtitles": {
+          "hook": "This is how it started",
+          "gameplay": "This is how it grew",
+          "cta": "Download now"
+        },
+        "ctaText": "Play free",
+        "ctaSubcopy": "Available on the App Store"
+      },
+      "ja": {
+        "hook": "",
+        "hookSubcopy": "",
+        "sceneSubtitles": { "hook": "", "gameplay": "", "cta": "" },
+        "ctaText": "",
+        "ctaSubcopy": ""
+      },
+      "zh-TW": {
+        "hook": "",
+        "hookSubcopy": "",
+        "sceneSubtitles": { "hook": "", "gameplay": "", "cta": "" },
+        "ctaText": "",
+        "ctaSubcopy": ""
+      }
+    },
+    "audio": {
+      "originalVolume": 0.8,
+      "bgm": {
+        "source": {
+          "id": "media_bgm_v1",
+          "kind": "audio",
+          "name": "bgm-loop.mp3",
+          "mimeType": "audio/mpeg",
+          "sizeBytes": 1048576,
+          "lastModified": 1751328000000,
+          "durationMs": 30000,
+          "fingerprint": "fp-bgm-v1",
+          "status": "available"
+        },
+        "volume": 0.5,
+        "startMs": 0,
+        "loop": true
+      },
+      "narration": {},
+      "ducking": {
+        "enabled": true,
+        "targetGain": 0.25,
+        "attackMs": 150,
+        "releaseMs": 300
+      }
+    },
+    "render": {
+      "profile": "standard",
+      "fps": 60,
+      "selectedLocales": ["ko", "en"],
+      "selectedRatios": ["9:16", "1:1"],
+      "filePrefix": "day1-regression"
+    },
+    "selectedLocale": "ko",
+    "selectedRatio": "9:16"
+  }
+}

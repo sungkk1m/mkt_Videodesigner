@@ -19,6 +19,11 @@ import {
   testMediaReference,
   testUrlResolver,
 } from '../../test/fixtures/media';
+import {
+  scenesOf,
+  sectionDurations,
+  sourceOf,
+} from '../../test/fixtures/project';
 
 const source = testMediaReference();
 
@@ -30,15 +35,18 @@ describe('createProject', () => {
     const project = createProject();
 
     expect(project.fps).toBe(EDITOR_FPS);
-    expect(project.scenes.map((scene) => scene.kind)).toEqual([
+    expect(scenesOf(project).map((scene) => scene.kind)).toEqual([
       'hook',
       'gameplay',
       'cta',
     ]);
-    expect(project.scenes.map((scene) => scene.durationMs)).toEqual([
-      2000, 10000, 3000,
+    expect(sectionDurations(project)).toEqual([2000, 10000, 3000]);
+    expect(project.sections.map((section) => section.id)).toEqual([
+      'hook',
+      'gameplay',
+      'cta',
     ]);
-    expect(project.source).toBeNull();
+    expect(sourceOf(project)).toBeNull();
   });
 });
 
@@ -46,8 +54,8 @@ describe('applySourceToAllScenes', () => {
   it('gives all three scenes a source interval from the uploaded footage', () => {
     const project = withSource();
 
-    expect(project.source?.name).toBe('gameplay.mp4');
-    expect(project.scenes.map((scene) => scene.trim)).toEqual([
+    expect(sourceOf(project)?.name).toBe('gameplay.mp4');
+    expect(scenesOf(project).map((scene) => scene.trim)).toEqual([
       {inMs: 0, outMs: 2000},
       {inMs: 0, outMs: 10000},
       {inMs: 0, outMs: 3000},
@@ -57,9 +65,9 @@ describe('applySourceToAllScenes', () => {
   it('resets previously adjusted trims when the footage is re-applied', () => {
     const edited = setSceneTrimInMs(withSource(), 'gameplay', 8000);
 
-    expect(edited.scenes[1].trim.inMs).toBe(8000);
+    expect(scenesOf(edited)[1].trim.inMs).toBe(8000);
     expect(
-      applySourceToAllScenes(edited, source).scenes[1].trim.inMs,
+      scenesOf(applySourceToAllScenes(edited, source))[1].trim.inMs,
     ).toBe(0);
   });
 });
@@ -71,36 +79,32 @@ describe('applyDurationPreset', () => {
       30,
     );
 
-    expect(project.scenes.map((scene) => scene.durationMs)).toEqual([
-      3000, 24000, 3000,
-    ]);
-    expect(project.scenes[1].trim).toEqual({inMs: 0, outMs: 24000});
+    expect(sectionDurations(project)).toEqual([3000, 24000, 3000]);
+    expect(scenesOf(project)[1].trim).toEqual({inMs: 0, outMs: 24000});
   });
 });
 
 describe('moveTimelineBoundary', () => {
   it('keeps the total duration and grows the trim window with the scene', () => {
     const project = moveTimelineBoundary(withSource(), 0, 5000);
-    const total = project.scenes.reduce(
-      (sum, scene) => sum + scene.durationMs,
+    const total = sectionDurations(project).reduce(
+      (sum, durationMs) => sum + durationMs,
       0,
     );
 
-    expect(project.scenes.map((scene) => scene.durationMs)).toEqual([
-      5000, 7000, 3000,
-    ]);
+    expect(sectionDurations(project)).toEqual([5000, 7000, 3000]);
     expect(total).toBe(15_000);
-    expect(project.scenes[0].trim).toEqual({inMs: 0, outMs: 5000});
+    expect(scenesOf(project)[0].trim).toEqual({inMs: 0, outMs: 5000});
   });
 
   it('pulls the trim in point back when the scene no longer fits the source', () => {
     const project = setSceneTrimInMs(withSource(), 'gameplay', 22_000);
-    expect(project.scenes[1].trim).toEqual({inMs: 20_000, outMs: 30_000});
+    expect(scenesOf(project)[1].trim).toEqual({inMs: 20_000, outMs: 30_000});
 
     const widened = moveTimelineBoundary(project, 1, 14_000);
 
-    expect(widened.scenes[1].durationMs).toBe(12_000);
-    expect(widened.scenes[1].trim).toEqual({inMs: 18_000, outMs: 30_000});
+    expect(widened.sections[1].durationMs).toBe(12_000);
+    expect(scenesOf(widened)[1].trim).toEqual({inMs: 18_000, outMs: 30_000});
   });
 });
 
@@ -108,13 +112,13 @@ describe('scene trim commands', () => {
   it('clamps a trim in point to the end of the source', () => {
     const project = setSceneTrimInMs(withSource(), 'hook', 999_999);
 
-    expect(project.scenes[0].trim).toEqual({inMs: 28_000, outMs: 30_000});
+    expect(scenesOf(project)[0].trim).toEqual({inMs: 28_000, outMs: 30_000});
   });
 
   it('moves the interval when the out point is edited', () => {
     const project = setSceneTrimOutMs(withSource(), 'gameplay', 25_000);
 
-    expect(project.scenes[1].trim).toEqual({inMs: 15_000, outMs: 25_000});
+    expect(scenesOf(project)[1].trim).toEqual({inMs: 15_000, outMs: 25_000});
   });
 
   it('flags scenes whose source window is shorter than the scene', () => {
@@ -123,7 +127,7 @@ describe('scene trim commands', () => {
     expect(scenesShorterThanSource(project).map((scene) => scene.kind)).toEqual([
       'gameplay',
     ]);
-    expect(project.scenes[1].trim).toEqual({inMs: 0, outMs: 4000});
+    expect(scenesOf(project)[1].trim).toEqual({inMs: 0, outMs: 4000});
   });
 });
 
@@ -135,7 +139,7 @@ describe('scene transform commands', () => {
       y: 12,
     });
 
-    expect(activeTransform(project.scenes[0], '9:16')).toEqual({
+    expect(activeTransform(scenesOf(project)[0], '9:16')).toEqual({
       fit: 'cover',
       scale: 3,
       x: -50,
@@ -154,7 +158,7 @@ describe('scene transform commands', () => {
       '9:16',
     );
 
-    expect(activeTransform(project.scenes[2], '9:16')).toEqual({
+    expect(activeTransform(scenesOf(project)[2], '9:16')).toEqual({
       fit: 'cover',
       scale: 1,
       x: 0,

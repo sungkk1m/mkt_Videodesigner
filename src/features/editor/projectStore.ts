@@ -33,6 +33,7 @@ import {
   toggleRenderLocale,
   toggleRenderRatio,
   setSourceStatus,
+  threeSceneOf,
   updateCtaSettings,
   updateHookSettings,
   updateSceneTransform,
@@ -118,11 +119,15 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   applySource: (source) =>
     set((state) => ({project: applySourceToAllScenes(state.project, source)})),
   reapplySource: () =>
-    set((state) => ({
-      project: state.project.source
-        ? applySourceToAllScenes(state.project, state.project.source)
-        : state.project,
-    })),
+    set((state) => {
+      const source = threeSceneOf(state.project)?.source;
+
+      return {
+        project: source
+          ? applySourceToAllScenes(state.project, source)
+          : state.project,
+      };
+    }),
   relink: (source) =>
     set((state) => ({project: relinkSource(state.project, source)})),
   setSourceStatus: (status) =>

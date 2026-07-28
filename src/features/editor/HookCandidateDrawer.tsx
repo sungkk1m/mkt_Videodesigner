@@ -77,9 +77,8 @@ export const HookCandidateDrawer = ({
   return (
     <section aria-label="Hook 후보" className="hook" data-testid="hook-drawer">
       <div className="hook__bar">
-        <h3>Hook 후보</h3>
         <button
-          className="button button--secondary"
+          className="button button--primary"
           data-testid="hook-analyze"
           disabled={disabled || !ready || analyzing}
           onClick={() => void analyze()}
@@ -87,27 +86,27 @@ export const HookCandidateDrawer = ({
         >
           Hook 후보 분석
         </button>
-        <button
-          className="button button--ghost"
-          data-testid="hook-cancel"
-          disabled={!analyzing}
-          onClick={() => controllerRef.current?.abort()}
-          type="button"
-        >
-          분석 취소
-        </button>
         {analyzing ? (
           <>
+            <button
+              className="button button--secondary"
+              data-testid="hook-cancel"
+              onClick={() => controllerRef.current?.abort()}
+              type="button"
+            >
+              분석 취소
+            </button>
             <progress max="1" value={state.progress} />
             <span data-testid="hook-progress">
               분석 중 {Math.round(state.progress * 100)}%
             </span>
           </>
         ) : null}
-        <span className="hook__note">
-          시각적 두드러짐 기준 추천입니다. 성과 예측이 아닙니다.
-        </span>
       </div>
+
+      <p className="hook__note">
+        시각적 두드러짐 기준 추천입니다. 성과 예측이 아닙니다.
+      </p>
 
       {state.status === 'failed' ? (
         <p className="notice notice--warning" data-testid="hook-error">
@@ -116,7 +115,7 @@ export const HookCandidateDrawer = ({
       ) : null}
 
       {state.status === 'ready' && state.candidates.length === 0 ? (
-        <p className="panel__readout">
+        <p className="panel__hint">
           두드러지는 구간을 찾지 못했습니다. 아래에서 직접 지정하세요.
         </p>
       ) : null}
@@ -158,7 +157,7 @@ export const HookCandidateDrawer = ({
         </ul>
       ) : null}
 
-      <label className="field field--range hook__manual">
+      <label className="field field--range">
         <span>
           Hook 시작 직접 지정
           <strong>{formatSeconds(selectedStartMs)}s</strong>

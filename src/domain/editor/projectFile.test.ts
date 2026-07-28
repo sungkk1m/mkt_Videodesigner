@@ -9,6 +9,7 @@ import {
   projectFileName,
   serializeProjectFile,
 } from './projectFile';
+import {scenesOf, sourceOf} from '../../test/fixtures/project';
 
 const projectWithSource = () =>
   applySourceToAllScenes(createProject(30), testMediaReference());
@@ -23,7 +24,10 @@ describe('serializeProjectFile', () => {
       // The source cannot resolve in a new session, so it comes back missing.
       expect(result.value).toEqual({
         ...project,
-        source: {...testMediaReference(), status: 'missing'},
+        templateSettings: {
+          ...project.templateSettings,
+          source: {...testMediaReference(), status: 'missing'},
+        },
       });
     }
   });
@@ -84,7 +88,7 @@ describe('parseProjectFile', () => {
 
   it('rejects a project whose scenes break the timeline invariant', () => {
     const project = createProject(15);
-    project.scenes[0].durationMs = 9000;
+    project.sections[0].durationMs = 9000;
 
     const result = parseProjectFile(
       serializeProjectFile(project),

@@ -3,7 +3,7 @@
 // starts, and a failure never stops the queue.
 import {useCallback, useRef, useState} from 'react';
 
-import {buildCompositionProps} from '../../domain/editor/project';
+import {buildCompositionProps, threeSceneOf} from '../../domain/editor/project';
 import {narrationBlockers} from '../../domain/audio/mix';
 import type {
   EditorProject,
@@ -67,7 +67,9 @@ export const preflightIssues = (
 ): string[] => {
   const issues: string[] = [];
 
-  if (!project.source) {
+  const source = threeSceneOf(project)?.source ?? null;
+
+  if (!source) {
     issues.push('영상 소재가 없습니다.');
   } else if (!sourceResolved) {
     issues.push('원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');

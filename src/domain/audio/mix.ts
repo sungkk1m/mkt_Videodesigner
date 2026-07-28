@@ -141,7 +141,7 @@ export const narrationBlockers = (
     for (const [kind, track] of Object.entries(tracks) as Array<
       [SceneKind, NarrationTrack]
     >) {
-      const sceneMs = project.scenes[sceneIndexOf(kind)].durationMs;
+      const sceneMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
 
       if (track.durationMs > sceneMs) {
         blockers.push({locale, kind, narrationMs: track.durationMs, sceneMs});

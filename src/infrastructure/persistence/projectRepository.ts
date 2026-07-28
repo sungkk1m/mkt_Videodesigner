@@ -1,7 +1,8 @@
 // Design Ref: §4.1 ProjectRepository and §3.6 IndexedDB `projects` — stored
 // documents are validated on the way out so a corrupted or hand-edited record
 // can never enter the editor as a valid project.
-import {parseProject} from '../../domain/editor/project';
+import {migrateProject} from '../../domain/editor/migrate';
+import {threeSceneOf} from '../../domain/editor/project';
 import type {EditorProject} from '../../domain/editor/types';
 import type {
   ProjectRepository,
@@ -38,7 +39,7 @@ const toRecord = (project: EditorProject): ProjectRecord => ({
   id: project.id,
   name: project.name,
   updatedAt: project.updatedAt,
-  sourceName: project.source?.name ?? null,
+  sourceName: threeSceneOf(project)?.source?.name ?? null,
   project,
 });
 
@@ -66,7 +67,9 @@ export const createProjectRepository = (): ProjectRepository => ({
       return ok(null);
     }
 
-    const parsed = parseProject(record.project);
+    // Day1 Design Ref: §3.6 — one of the two migration entry points. A failure
+    // is returned to the caller and the stored record is left untouched.
+    const parsed = migrateProject(record.project);
 
     return parsed.ok ? ok(parsed.value) : parsed;
   },

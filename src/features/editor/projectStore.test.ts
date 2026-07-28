@@ -7,6 +7,7 @@ import {
 } from '../../domain/editor/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {useProjectStore} from './projectStore';
+import {scenesOf, sourceOf} from '../../test/fixtures/project';
 
 const source = testMediaReference();
 
@@ -41,18 +42,18 @@ describe('projectStore', () => {
       testMediaReference({id: 'media_second', name: 'second.mp4'}),
     );
 
-    expect(store().project.source?.id).toBe('media_second');
-    expect(store().project.source?.name).toBe('second.mp4');
+    expect(sourceOf(store().project)?.id).toBe('media_second');
+    expect(sourceOf(store().project)?.name).toBe('second.mp4');
   });
 
   it('resets trims when the same source is re-applied', () => {
     store().applySource(source);
     store().setTrimIn('gameplay', 9000);
-    expect(store().project.scenes[1].trim.inMs).toBe(9000);
+    expect(scenesOf(store().project)[1].trim.inMs).toBe(9000);
 
     store().reapplySource();
 
-    expect(store().project.scenes[1].trim.inMs).toBe(0);
+    expect(scenesOf(store().project)[1].trim.inMs).toBe(0);
   });
 
   it('ignores re-apply when no source is loaded', () => {
@@ -68,7 +69,7 @@ describe('projectStore', () => {
     store().setTransform('cta', {scale: 2.5, x: 30, y: -30});
     store().resetTransform('cta');
 
-    expect(activeTransform(store().project.scenes[2], '9:16')).toEqual({
+    expect(activeTransform(scenesOf(store().project)[2], '9:16')).toEqual({
       fit: 'cover',
       scale: 1,
       x: 0,

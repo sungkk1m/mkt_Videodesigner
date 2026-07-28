@@ -7,7 +7,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
 } from 'react';
 
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
@@ -18,11 +17,12 @@ import {
   hasRatioOverride,
   outputDimensions,
   projectTotalFrames,
+  threeSceneOf,
 } from '../../domain/editor/project';
 import {
   ASPECT_RATIOS,
+  DEFAULT_TRANSFORM,
   DURATION_PRESETS,
-  SCENE_LABELS,
   type DurationPreset,
   type EditorProject,
   type LocalizedCopy,
@@ -49,7 +49,9 @@ import type {
 import {msToFrames, sceneIndexOf} from '../../domain/timeline/timeline';
 import {AudioPanel} from './AudioPanel';
 import {BatchDialog} from './BatchDialog';
+import './editor.css';
 import {CopyPanel} from './CopyPanel';
+import {Dropzone} from './Dropzone';
 import {HookCandidateDrawer} from './HookCandidateDrawer';
 import {ProjectMenu} from './ProjectMenu';
 import {useProjectStore} from './projectStore';
@@ -73,15 +75,25 @@ type RenderState =
   | {status: 'cancelled'}
   | {status: 'failed'; message: string};
 
-const formatTimecode = (ms: number) => {
-  const totalSeconds = ms / 1000;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds - minutes * 60;
-
-  return `${String(minutes).padStart(2, '0')}:${seconds.toFixed(1).padStart(4, '0')}`;
-};
-
 const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+type LeftTab = 'assets' | 'copy' | 'audio' | 'hook';
+
+// Design Ref: §5.1 — the Hook drawer used to own a permanent full-width band.
+// Folding it into the rail returns that vertical space to the preview.
+const LEFT_TABS: {kind: LeftTab; icon: string; label: string}[] = [
+  {kind: 'assets', icon: '🎬', label: '소재'},
+  {kind: 'copy', icon: '🅣', label: '카피'},
+  {kind: 'audio', icon: '🔊', label: '오디오'},
+  {kind: 'hook', icon: '✨', label: 'Hook'},
+];
+
+const LEFT_TAB_TITLES: Record<LeftTab, string> = {
+  assets: '소재',
+  copy: '카피',
+  audio: '오디오',
+  hook: 'Hook 후보',
+};
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) {
@@ -122,9 +134,8 @@ export const EditorWorkspace = ({
 }: EditorWorkspaceProps) => {
   const project = useProjectStore((state) => state.project);
   const [selectedKind, setSelectedKind] = useState<SceneKind>('hook');
-  const [leftTab, setLeftTab] = useState<'assets' | 'copy' | 'audio'>(
-    'assets',
-  );
+  const [leftTab, setLeftTab] = useState<LeftTab>('assets');
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [outputDestination, setOutputDestination] = useState<
     'directory' | 'download'
@@ -173,7 +184,15 @@ export const EditorWorkspace = ({
   const totalFrames = projectTotalFrames(project);
   const totalMs = project.durationPreset * 1000;
   const currentMs = (currentFrame / project.fps) * 1000;
-  const selectedScene = project.scenes[sceneIndexOf(selectedKind)];
+  // Day1 Design Ref: §3.2 — this editor only renders the three-scene template.
+  // The Day1 inspector and its own narrowing arrive with module 5; until then a
+  // Day1 document can only reach here through a hand-made JSON import, which the
+  // notice at the top of the render tree catches.
+  const threeScene = threeSceneOf(project);
+  const selectedIndex = sceneIndexOf(selectedKind);
+  const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
+  const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
+  const projectSource = threeScene?.source ?? null;
   const isRendering = renderState.status === 'rendering';
 
   const audio = useEditorAudio({
@@ -200,12 +219,13 @@ export const EditorWorkspace = ({
   });
 
   // Design Ref: §7 — revoke object URLs the project no longer references.
+  const ctaAssets = threeScene?.scenes[2].cta;
   const referencedIds = [
-    project.source?.id,
-    project.scenes[2].cta?.media?.id,
-    project.scenes[2].cta?.appIcon?.id,
-    project.scenes[2].cta?.logo?.id,
-    project.scenes[2].cta?.storeBadge?.id,
+    projectSource?.id,
+    ctaAssets?.media?.id,
+    ctaAssets?.appIcon?.id,
+    ctaAssets?.logo?.id,
+    ctaAssets?.storeBadge?.id,
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -232,7 +252,9 @@ export const EditorWorkspace = ({
   );
 
   const output = outputDimensions(project.selectedRatio);
-  const selectedTransform = activeTransform(selectedScene, project.selectedRatio);
+  const selectedTransform = selectedScene
+    ? activeTransform(selectedScene, project.selectedRatio)
+    : DEFAULT_TRANSFORM;
 
   useEffect(() => {
     void videoRenderer.probe().then(setCapabilities);
@@ -284,14 +306,7 @@ export const EditorWorkspace = ({
     [project.fps, totalFrames],
   );
 
-  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
+  const handleUpload = async (file: File) => {
     await source.upload(file);
     setSelectedKind('hook');
     seekToMs(0);
@@ -413,11 +428,29 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
+  if (!threeScene || !selectedScene) {
+    return (
+      <div className="workspace workspace--notice">
+        <p className="notice notice--error" data-testid="template-unsupported">
+          이 프로젝트는 아직 편집기가 지원하지 않는 템플릿입니다. 원본은 그대로
+          두었습니다.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="editor">
+    <div
+      className={`editor${panelCollapsed ? ' editor--panel-collapsed' : ''}`}
+    >
+      {/* Identity and the final action only. Everything that shapes the output
+          moved to the floating toolbar over the preview. Design Ref: §5.1. */}
       <header className="editor__header">
         <div className="editor__brand">
-          <span>UA Video Designer</span>
+          <span aria-hidden="true" className="editor__mark">
+            V
+          </span>
+          <span className="editor__title">UA Video Designer</span>
           <input
             aria-label="프로젝트 이름"
             className="editor__name"
@@ -437,86 +470,15 @@ export const EditorWorkspace = ({
           />
         </div>
 
-        <div className="editor__settings">
-          <div aria-label="전체 길이" className="segmented" role="group">
-            {DURATION_PRESETS.map((preset) => (
-              <button
-                aria-pressed={project.durationPreset === preset}
-                className={`segmented__item${
-                  project.durationPreset === preset ? ' segmented__item--on' : ''
-                }`}
-                disabled={isRendering}
-                key={preset}
-                onClick={() => handlePreset(preset)}
-                type="button"
-              >
-                {preset}초
-              </button>
-            ))}
-          </div>
-          <div aria-label="비율" className="segmented" role="group">
-            {ASPECT_RATIOS.map((ratio) => (
-              <button
-                aria-pressed={project.selectedRatio === ratio}
-                className={`segmented__item${
-                  project.selectedRatio === ratio ? ' segmented__item--on' : ''
-                }`}
-                data-testid={`ratio-${ratio}`}
-                disabled={isRendering}
-                key={ratio}
-                onClick={() => store().setRatio(ratio)}
-                type="button"
-              >
-                {ratio}
-              </button>
-            ))}
-          </div>
-          <span className="editor__chip" data-testid="output-size">
-            {output.width}×{output.height}
-          </span>
-          <span className="editor__chip">60fps</span>
-        </div>
-
         <div className="editor__actions">
           {narrationTooLong.length > 0 ? (
             <span className="editor__blocker" data-testid="render-blocker">
               나레이션 {narrationTooLong.length}개가 장면보다 깁니다
             </span>
           ) : null}
-          <span data-testid="editor-render-status">{renderStatusText}</span>
-          {isRendering ? (
-            <progress max="1" value={renderState.progress} />
-          ) : null}
-          <button
-            className="button button--primary"
-            disabled={
-              isRendering ||
-              !capabilities?.ready ||
-              !source.sourceUrl ||
-              narrationTooLong.length > 0
-            }
-            onClick={() => void startRender()}
-            type="button"
-          >
-            MP4 렌더
-          </button>
-          <button
-            className="button button--secondary"
-            data-testid="open-batch"
-            disabled={isRendering}
-            onClick={() => setBatchOpen(true)}
-            type="button"
-          >
-            Batch
-          </button>
-          <button
-            className="button button--ghost"
-            disabled={!isRendering}
-            onClick={() => controllerRef.current?.abort()}
-            type="button"
-          >
-            취소
-          </button>
+          <span className="editor__status" data-testid="editor-render-status">
+            {renderStatusText}
+          </span>
           {renderState.status === 'completed' ? (
             <button
               className="button button--secondary"
@@ -526,30 +488,106 @@ export const EditorWorkspace = ({
               다운로드
             </button>
           ) : null}
+          <button
+            className="button button--secondary"
+            data-testid="open-batch"
+            disabled={isRendering}
+            onClick={() => setBatchOpen(true)}
+            type="button"
+          >
+            Batch
+          </button>
+          {isRendering ? (
+            <button
+              className="button button--danger"
+              onClick={() => controllerRef.current?.abort()}
+              type="button"
+            >
+              취소
+            </button>
+          ) : null}
+          {/* The button carries its own progress fill so the header keeps a
+              stable width while rendering. */}
+          <button
+            className="button button--primary render-button"
+            disabled={
+              isRendering ||
+              !capabilities?.ready ||
+              !source.sourceUrl ||
+              narrationTooLong.length > 0
+            }
+            onClick={() => void startRender()}
+            type="button"
+          >
+            {isRendering ? (
+              <span
+                className="render-button__fill"
+                style={{width: `${renderState.progress * 100}%`}}
+              />
+            ) : null}
+            <span className="render-button__label">
+              {isRendering
+                ? `${Math.round(renderState.progress * 100)}%`
+                : 'MP4 렌더'}
+            </span>
+          </button>
         </div>
       </header>
 
-      <aside aria-label="입력" className="panel panel--assets">
-        <div className="panel__title">
-          <div aria-label="입력 탭" className="segmented" role="group">
-            {(['assets', 'copy', 'audio'] as const).map((tab) => (
-              <button
-                aria-pressed={leftTab === tab}
-                className={`segmented__item${
-                  leftTab === tab ? ' segmented__item--on' : ''
-                }`}
-                data-testid={`tab-${tab}`}
-                key={tab}
-                onClick={() => setLeftTab(tab)}
-                type="button"
-              >
-                {tab === 'assets' ? '소재' : tab === 'copy' ? '카피' : '오디오'}
-              </button>
-            ))}
-          </div>
+      <nav aria-label="입력 탭" className="rail">
+        {LEFT_TABS.map((tab) => (
+          <button
+            aria-pressed={leftTab === tab.kind && !panelCollapsed}
+            className={`rail__tab${
+              leftTab === tab.kind && !panelCollapsed ? ' rail__tab--on' : ''
+            }`}
+            data-testid={`tab-${tab.kind}`}
+            key={tab.kind}
+            onClick={() => {
+              setLeftTab(tab.kind);
+              setPanelCollapsed(false);
+            }}
+            type="button"
+          >
+            <span aria-hidden="true" className="rail__icon">
+              {tab.icon}
+            </span>
+            {tab.label}
+          </button>
+        ))}
+        <span className="rail__spacer" />
+        <button
+          aria-label={panelCollapsed ? '패널 펼치기' : '패널 접기'}
+          className="rail__collapse"
+          data-testid="panel-collapse"
+          onClick={() => setPanelCollapsed((value) => !value)}
+          title={panelCollapsed ? '패널 펼치기' : '패널 접기'}
+          type="button"
+        >
+          {panelCollapsed ? '❯' : '❮'}
+        </button>
+      </nav>
+
+      <aside aria-label={LEFT_TAB_TITLES[leftTab]} className="panel" hidden={panelCollapsed}>
+        <div className="panel__head">
+          <h2>{LEFT_TAB_TITLES[leftTab]}</h2>
         </div>
 
-        {leftTab === 'audio' ? (
+        <div className="panel__body">
+        {leftTab === 'hook' ? (
+          <HookCandidateDrawer
+            analyzer={hookAnalyzer}
+            candidateDurationMs={hookCandidateDurationMs(project.durationPreset)}
+            disabled={isRendering}
+            onSelect={(startMs) => {
+              setSelectedKind('hook');
+              store().setTrimIn('hook', startMs);
+            }}
+            selectedStartMs={threeScene?.scenes[0].trim.inMs ?? 0}
+            sourceDurationMs={projectSource?.durationMs ?? null}
+            sourceUrl={source.sourceUrl}
+          />
+        ) : leftTab === 'audio' ? (
           <AudioPanel
             capabilities={audio.capabilities}
             disabled={isRendering}
@@ -588,117 +626,168 @@ export const EditorWorkspace = ({
           />
         ) : (
           <>
-        <label className="upload">
-          <input
-            accept="video/*"
-            data-testid="source-input"
-            disabled={isRendering}
-            onChange={(event) => void handleUpload(event)}
-            type="file"
-          />
-        </label>
+            <Dropzone
+              disabled={isRendering}
+              fileName={projectSource?.name ?? null}
+              hint="영상을 끌어다 놓거나 클릭해 선택"
+              inputTestId="source-input"
+              kind="video"
+              onFile={(file) => void handleUpload(file)}
+              previewUrl={source.sourceUrl}
+              prompt="게임플레이 영상"
+            />
 
-        {source.supportsFilePicker ? (
-          <>
+            {source.supportsFilePicker ? (
+              <>
+                <button
+                  className="button button--secondary"
+                  data-testid="source-picker"
+                  disabled={isRendering}
+                  onClick={() => void handlePickFile()}
+                  type="button"
+                >
+                  파일 선택 (다음 실행에서도 복구)
+                </button>
+                <p className="panel__hint">
+                  이 버튼으로 선택하면 파일 접근 권한이 저장되어 새로고침 후에도
+                  같은 영상을 다시 연결할 수 있습니다.
+                </p>
+              </>
+            ) : null}
+
+            <p className="panel__hint">
+              영상 1개를 업로드하면 Hook · Gameplay · CTA에 함께 적용됩니다.
+            </p>
+
+            {source.busy ? <p className="panel__hint">확인 중…</p> : null}
+
+            {source.uploadError ? (
+              <p className="notice notice--error" data-testid="source-error">
+                {source.uploadError.message}
+              </p>
+            ) : null}
+
+            {projectSource && projectSource.status !== 'available' ? (
+              <SourceRepair
+                busy={source.busy}
+                error={source.relinkError}
+                onGrantPermission={
+                  source.canGrantPermission
+                    ? () => void source.grantPermission()
+                    : null
+                }
+                onRelink={(file) => void source.relinkFromFile(file)}
+                reference={projectSource}
+                verdict={source.relinkVerdict}
+              />
+            ) : null}
+
+            {persistence.saveState.status === 'failed' ? (
+              <p className="notice notice--error" data-testid="autosave-error">
+                {persistence.saveState.error.message}
+              </p>
+            ) : null}
+
+            {projectSource ? (
+              <dl className="metadata" data-testid="source-metadata">
+                <div>
+                  <dt>이름</dt>
+                  <dd>{projectSource.name}</dd>
+                </div>
+                <div>
+                  <dt>형식</dt>
+                  <dd>{projectSource.mimeType}</dd>
+                </div>
+                <div>
+                  <dt>길이</dt>
+                  <dd>
+                    {((projectSource.durationMs ?? 0) / 1000).toFixed(2)}초
+                  </dd>
+                </div>
+                <div>
+                  <dt>해상도</dt>
+                  <dd>
+                    {projectSource.width ?? '-'}×{projectSource.height ?? '-'}
+                  </dd>
+                </div>
+                <div>
+                  <dt>재생</dt>
+                  <dd>{source.sourceUrl ? '디코딩 확인됨' : '연결 필요'}</dd>
+                </div>
+              </dl>
+            ) : null}
+
             <button
               className="button button--secondary"
-              data-testid="source-picker"
-              disabled={isRendering}
-              onClick={() => void handlePickFile()}
+              disabled={!projectSource || isRendering}
+              onClick={() => store().reapplySource()}
               type="button"
             >
-              파일 선택 (다음 실행에서도 복구)
+              세 장면에 다시 적용
             </button>
             <p className="panel__hint">
-              이 버튼으로 선택하면 파일 접근 권한이 저장되어 새로고침 후에도 같은
-              영상을 다시 연결할 수 있습니다.
+              다시 적용하면 모든 장면의 Trim이 0초로 돌아갑니다.
             </p>
-          </>
-        ) : null}
 
-        <p className="panel__hint">
-          영상 1개를 업로드하면 Hook · Gameplay · CTA에 함께 적용됩니다.
-        </p>
-
-        {source.busy ? <p className="panel__readout">확인 중…</p> : null}
-
-        {source.uploadError ? (
-          <p className="notice notice--error" data-testid="source-error">
-            {source.uploadError.message}
-          </p>
-        ) : null}
-
-        {project.source && project.source.status !== 'available' ? (
-          <SourceRepair
-            busy={source.busy}
-            error={source.relinkError}
-            onGrantPermission={
-              source.canGrantPermission
-                ? () => void source.grantPermission()
-                : null
-            }
-            onRelink={(file) => void source.relinkFromFile(file)}
-            reference={project.source}
-            verdict={source.relinkVerdict}
-          />
-        ) : null}
-
-        {persistence.saveState.status === 'failed' ? (
-          <p className="notice notice--error" data-testid="autosave-error">
-            {persistence.saveState.error.message}
-          </p>
-        ) : null}
-
-        {project.source ? (
-          <dl className="metadata" data-testid="source-metadata">
-            <div>
-              <dt>이름</dt>
-              <dd>{project.source.name}</dd>
-            </div>
-            <div>
-              <dt>형식</dt>
-              <dd>{project.source.mimeType}</dd>
-            </div>
-            <div>
-              <dt>길이</dt>
-              <dd>{((project.source.durationMs ?? 0) / 1000).toFixed(2)}초</dd>
-            </div>
-            <div>
-              <dt>해상도</dt>
-              <dd>
-                {project.source.width ?? '-'}×{project.source.height ?? '-'}
-              </dd>
-            </div>
-            <div>
-              <dt>재생</dt>
-              <dd>{source.sourceUrl ? '디코딩 확인됨' : '연결 필요'}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p className="panel__readout">업로드된 영상이 없습니다.</p>
-        )}
-
-        <button
-          className="button button--secondary"
-          disabled={!project.source || isRendering}
-          onClick={() => store().reapplySource()}
-          type="button"
-        >
-          세 장면에 다시 적용
-        </button>
-        <p className="panel__hint">다시 적용하면 모든 장면의 Trim이 0초로 돌아갑니다.</p>
-
-        {capabilities?.blockers.map((message) => (
-          <p className="notice notice--error" key={message}>
-            {message}
-          </p>
-        ))}
+            {capabilities?.blockers.map((message) => (
+              <p className="notice notice--error" key={message}>
+                {message}
+              </p>
+            ))}
           </>
         )}
+        </div>
       </aside>
 
       <main className="stage">
-        <div className="stage__frame">
+        {/* Output shape lives over the preview, Clipchamp-style, so changing it
+            is done while looking at the frame it affects. */}
+        <div className="stage__toolbar">
+          <div aria-label="비율" className="segmented" role="group">
+            {ASPECT_RATIOS.map((ratio) => (
+              <button
+                aria-pressed={project.selectedRatio === ratio}
+                className={`segmented__item${
+                  project.selectedRatio === ratio ? ' segmented__item--on' : ''
+                }`}
+                data-testid={`ratio-${ratio}`}
+                disabled={isRendering}
+                key={ratio}
+                onClick={() => store().setRatio(ratio)}
+                type="button"
+              >
+                {ratio}
+              </button>
+            ))}
+          </div>
+          <span className="stage__divider" />
+          <div aria-label="전체 길이" className="segmented" role="group">
+            {DURATION_PRESETS.map((preset) => (
+              <button
+                aria-pressed={project.durationPreset === preset}
+                className={`segmented__item${
+                  project.durationPreset === preset ? ' segmented__item--on' : ''
+                }`}
+                disabled={isRendering}
+                key={preset}
+                onClick={() => handlePreset(preset)}
+                type="button"
+              >
+                {preset}초
+              </button>
+            ))}
+          </div>
+          <span className="stage__divider" />
+          <span className="stage__chip" data-testid="output-size">
+            {output.width}×{output.height}
+          </span>
+          <span className="stage__chip">60fps</span>
+        </div>
+
+        <div
+          className="stage__frame"
+          style={{aspectRatio: `${output.width} / ${output.height}`}}
+        >
           <Player
             acknowledgeRemotionLicense
             component={ThreeSceneComposition}
@@ -712,38 +801,15 @@ export const EditorWorkspace = ({
           />
         </div>
 
-        <div className="transport">
-          <button
-            className="button button--secondary"
-            onClick={() => playerRef.current?.toggle()}
-            type="button"
-          >
-            {isPlaying ? '일시정지' : '재생'}
-          </button>
-          <input
-            aria-label="재생 위치"
-            className="transport__seek"
-            max={totalFrames - 1}
-            min={0}
-            onChange={(event) =>
-              seekToMs((Number(event.target.value) / project.fps) * 1000)
-            }
-            step={1}
-            type="range"
-            value={Math.min(currentFrame, totalFrames - 1)}
-          />
-          <span className="transport__time" data-testid="transport-time">
-            {formatTimecode(currentMs)} / {formatTimecode(totalMs)}
-          </span>
-          <span className="transport__scene">
-            {SCENE_LABELS[selectedKind]} 선택됨
-          </span>
-        </div>
       </main>
 
       <SceneInspector
         disabled={isRendering}
-        hasRatioOverride={hasRatioOverride(selectedScene, project.selectedRatio)}
+        hasRatioOverride={
+          selectedScene
+            ? hasRatioOverride(selectedScene, project.selectedRatio)
+            : false
+        }
         onCta={(patch) => store().setCta(patch)}
         onCtaAsset={(slot, file) => void source.setCtaAsset(slot, file)}
         onHook={(patch) => store().setHook(patch)}
@@ -757,22 +823,11 @@ export const EditorWorkspace = ({
         onTrimInMs={(ms) => store().setTrimIn(selectedKind, ms)}
         onTrimOutMs={(ms) => store().setTrimOut(selectedKind, ms)}
         ratio={project.selectedRatio}
+        resolveCtaAssetUrl={(slot) => resolveUrl(selectedScene?.cta?.[slot])}
         scene={selectedScene}
-        sourceDurationMs={project.source?.durationMs ?? null}
+        sceneDurationMs={selectedSectionMs}
+        sourceDurationMs={projectSource?.durationMs ?? null}
         transform={selectedTransform}
-      />
-
-      <HookCandidateDrawer
-        analyzer={hookAnalyzer}
-        candidateDurationMs={hookCandidateDurationMs(project.durationPreset)}
-        disabled={isRendering}
-        onSelect={(startMs) => {
-          setSelectedKind('hook');
-          store().setTrimIn('hook', startMs);
-        }}
-        selectedStartMs={project.scenes[0].trim.inMs}
-        sourceDurationMs={project.source?.durationMs ?? null}
-        sourceUrl={source.sourceUrl}
       />
 
       {batchOpen ? (
@@ -813,15 +868,21 @@ export const EditorWorkspace = ({
       ) : null}
 
       <Timeline
+        currentFrame={currentFrame}
         currentMs={currentMs}
         disabled={isRendering}
+        isPlaying={isPlaying}
         onMoveBoundary={(boundary, positionMs) =>
           store().moveBoundary(boundary, positionMs)
         }
         onSeek={seekToMs}
-        onSelect={setSelectedKind}
-        scenes={project.scenes}
-        selectedKind={selectedKind}
+        onSeekFrame={(frame) => seekToMs((frame / project.fps) * 1000)}
+        onSelect={(sectionId) => setSelectedKind(sectionId as SceneKind)}
+        onTogglePlay={() => playerRef.current?.toggle()}
+        sections={project.sections}
+        selectedId={selectedKind}
+        totalDurationMs={totalMs}
+        totalFrames={totalFrames}
       />
     </div>
   );

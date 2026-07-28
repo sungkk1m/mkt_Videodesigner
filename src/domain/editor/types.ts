@@ -22,6 +22,8 @@ export type {
   AudioMix,
   AudioTrack,
   CtaSceneSettings,
+  Day1Panel,
+  Day1Settings,
   DurationPreset,
   EditorProject,
   EditorScene,
@@ -36,7 +38,12 @@ export type {
   RatioTransforms,
   SceneKind,
   SceneTransition,
+  Section,
+  Sections,
   SubtitleStyle,
+  TemplateKind,
+  TemplateSettings,
+  ThreeSceneSettings,
   TransitionKind,
 } from './schema';
 
@@ -45,6 +52,13 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
   gameplay: 'Gameplay',
   cta: 'CTA',
 };
+
+/** Timeline clip names per Day1 section. Day1 Design Ref: §3.1. */
+export const DAY1_SECTION_LABELS = {
+  'panel-a': '패널 A',
+  'panel-b': '패널 B',
+  endcard: '엔드카드',
+} as const;
 
 export const DEFAULT_TRANSFORM: MediaTransform = {
   fit: 'cover',

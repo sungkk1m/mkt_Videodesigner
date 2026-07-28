@@ -8,6 +8,7 @@ import type {
   MediaReference,
   MediaStatus,
 } from '../../domain/editor/types';
+import {threeSceneOf} from '../../domain/editor/project';
 import {compareForRelink, type RelinkVerdict} from '../../domain/media/relink';
 import type {MediaHandleStore, MediaResolver} from '../../domain/ports';
 import type {AppError} from '../../shared/errors/appError';
@@ -64,7 +65,7 @@ export const useEditorSource = ({
   const [relinkError, setRelinkError] = useState<AppError | null>(null);
   const [relinkVerdict, setRelinkVerdict] = useState<RelinkVerdict | null>(null);
 
-  const source = project.source;
+  const source = threeSceneOf(project)?.source ?? null;
   const sourceUrl = session.urlFor(source?.id);
   const commandsRef = useRef(commands);
   const restoreAttempts = useRef(new Set<string>());

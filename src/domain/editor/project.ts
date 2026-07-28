@@ -1,5 +1,6 @@
 // Design Ref: §10.2 — project state changes only through pure command functions.
 import {DEFAULT_AUDIO_MIX} from '../audio/mix';
+import {day1SectionDurations} from '../day1/playback';
 import {DEFAULT_PROFILE, fpsForProfile, type FrameRate, type RenderProfile} from '../render/profile';
 import type {MediaReference} from '../media/reference';
 import {
@@ -15,7 +16,7 @@ import {
   moveBoundary,
   msToFrames,
   reconcileTrim,
-  sceneDurationsOf,
+  sectionDurationsOf,
   sceneIndexOf,
   type BoundaryIndex,
 } from '../timeline/timeline';
@@ -36,6 +37,7 @@ import {
   MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
+  SCENE_LABELS,
   SCENE_ORDER,
   type AspectRatio,
   type AudioRenderProps,
@@ -53,8 +55,10 @@ import {
   type NarrationRenderProps,
   type SceneKind,
   type SceneRenderProps,
+  type Sections,
   type SubtitleStyle,
   type ThreeSceneProps,
+  type ThreeSceneSettings,
   type TransitionRenderProps,
 } from './types';
 import {editorProjectSchema} from './schema';
@@ -94,27 +98,42 @@ const DEFAULT_CTA: CtaSceneSettings = {
   backgroundDim: 0.35,
 };
 
-const buildScenes = (
-  preset: DurationPreset,
-  sourceDurationMs: number,
-): EditorScenes => {
+/**
+ * Narrows a project to its three-scene payload, or null for any other template.
+ *
+ * Day1 Design Ref: §3.2 — this is the single place the `templateSettings`
+ * discriminant is checked. Three-scene commands below no-op on a foreign
+ * template rather than throwing, matching how the other commands in this file
+ * already return the project unchanged when an edit does not apply.
+ */
+export const threeSceneOf = (
+  project: EditorProject,
+): ThreeSceneSettings | null =>
+  project.templateSettings.template === 'three-scene'
+    ? project.templateSettings
+    : null;
+
+/** Day1 Design Ref: §3.1 — the three-scene view of the shared time axis. */
+const buildSections = (preset: DurationPreset): Sections => {
   const durations = createSceneDurations(preset);
 
   return SCENE_ORDER.map((kind, index) => ({
-    kind,
+    id: kind,
+    label: SCENE_LABELS[kind],
     durationMs: durations[index] as number,
-    trim: reconcileTrim(
-      {inMs: 0, outMs: 0},
-      sourceDurationMs,
-      durations[index] as number,
-    ),
+  })) as Sections;
+};
+
+const buildScenes = (): EditorScenes =>
+  SCENE_ORDER.map((kind) => ({
+    kind,
+    trim: {inMs: 0, outMs: 0},
     transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
     subtitle: {...DEFAULT_SUBTITLE},
     transitionOut: {kind: 'cut' as const, durationMs: 300},
     ...(kind === 'hook' ? {hook: {...DEFAULT_HOOK}} : {}),
     ...(kind === 'cta' ? {cta: {...DEFAULT_CTA}} : {}),
   })) as EditorScenes;
-};
 
 export interface CreateProjectOptions {
   id?: string;
@@ -135,8 +154,12 @@ export const createProject = (
     updatedAt: timestamp,
     durationPreset: preset,
     fps: EDITOR_FPS,
-    scenes: buildScenes(preset, 0),
-    source: null,
+    sections: buildSections(preset),
+    templateSettings: {
+      template: 'three-scene',
+      source: null,
+      scenes: buildScenes(),
+    },
     copy: createCopy(),
     audio: structuredClone(DEFAULT_AUDIO_MIX),
     render: {
@@ -221,53 +244,93 @@ export const touchProject = (
 const withScenes = (
   project: EditorProject,
   scenes: EditorScenes,
-): EditorProject => ({...project, scenes});
+): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  return settings
+    ? {...project, templateSettings: {...settings, scenes}}
+    : project;
+};
+
+const withSectionDurations = (
+  project: EditorProject,
+  durations: readonly number[],
+): EditorProject => ({
+  ...project,
+  sections: project.sections.map((section, index) => ({
+    ...section,
+    durationMs: durations[index] as number,
+  })) as Sections,
+});
 
 const mapScene = (
   project: EditorProject,
   kind: SceneKind,
   update: (scene: EditorScene) => EditorScene,
 ): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
   const index = sceneIndexOf(kind);
 
   return withScenes(
     project,
-    project.scenes.map((scene, currentIndex) =>
+    settings.scenes.map((scene, currentIndex) =>
       currentIndex === index ? update(scene) : scene,
     ) as EditorScenes,
   );
 };
 
 /** Re-clamps every trim after a duration or source change. */
-const reconcileAllTrims = (project: EditorProject): EditorProject =>
-  withScenes(
+const reconcileAllTrims = (project: EditorProject): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return withScenes(
     project,
-    project.scenes.map((scene) => ({
+    settings.scenes.map((scene, index) => ({
       ...scene,
       trim: reconcileTrim(
         scene.trim,
-        project.source?.durationMs ?? 0,
-        scene.durationMs,
+        settings.source?.durationMs ?? 0,
+        project.sections[index]?.durationMs ?? 0,
       ),
     })) as EditorScenes,
   );
+};
 
-/** A transition may never exceed half of its own scene. Design Ref: §3.5. */
-const reconcileTransitions = (project: EditorProject): EditorProject =>
-  withScenes(
+/** A transition may never exceed half of its own section. Design Ref: §3.5. */
+const reconcileTransitions = (project: EditorProject): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return withScenes(
     project,
-    project.scenes.map((scene) => ({
+    settings.scenes.map((scene, index) => ({
       ...scene,
       transitionOut: {
         ...scene.transitionOut,
         durationMs: clamp(
           scene.transitionOut.durationMs,
           MIN_TRANSITION_MS,
-          Math.max(MIN_TRANSITION_MS, Math.floor(scene.durationMs / 2)),
+          Math.max(
+            MIN_TRANSITION_MS,
+            Math.floor((project.sections[index]?.durationMs ?? 0) / 2),
+          ),
         ),
       },
     })) as EditorScenes,
   );
+};
 
 const reconcile = (project: EditorProject) =>
   reconcileTransitions(reconcileAllTrims(project));
@@ -286,32 +349,50 @@ export const applyDurationPreset = (
   project: EditorProject,
   preset: DurationPreset,
 ): EditorProject => {
-  const durations = createSceneDurations(preset);
+  const resized = withSectionDurations(
+    {...project, durationPreset: preset},
+    project.templateSettings.template === 'day1'
+      ? day1SectionDurations(preset)
+      : createSceneDurations(preset),
+  );
+  const settings = threeSceneOf(resized);
 
-  return reconcile({
-    ...project,
-    durationPreset: preset,
-    scenes: project.scenes.map((scene, index) => ({
-      ...scene,
-      durationMs: durations[index] as number,
-      trim: {inMs: 0, outMs: 0},
-    })) as EditorScenes,
-  });
+  return reconcile(
+    settings
+      ? withScenes(
+          resized,
+          settings.scenes.map((scene) => ({
+            ...scene,
+            trim: {inMs: 0, outMs: 0},
+          })) as EditorScenes,
+        )
+      : resized,
+  );
 };
 
 /** Upload applies the same footage to Hook, Gameplay, and CTA at once. */
 export const applySourceToAllScenes = (
   project: EditorProject,
   source: MediaReference,
-): EditorProject =>
-  reconcile({
+): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return reconcile({
     ...project,
-    source,
-    scenes: project.scenes.map((scene) => ({
-      ...scene,
-      trim: {inMs: 0, outMs: 0},
-    })) as EditorScenes,
+    templateSettings: {
+      ...settings,
+      source,
+      scenes: settings.scenes.map((scene) => ({
+        ...scene,
+        trim: {inMs: 0, outMs: 0},
+      })) as EditorScenes,
+    },
   });
+};
 
 /**
  * Restores a missing source with a file the user picked. Trims are re-clamped
@@ -320,49 +401,57 @@ export const applySourceToAllScenes = (
 export const relinkSource = (
   project: EditorProject,
   source: MediaReference,
-): EditorProject => reconcile({...project, source});
+): EditorProject => {
+  const settings = threeSceneOf(project);
+
+  return settings
+    ? reconcile({...project, templateSettings: {...settings, source}})
+    : project;
+};
 
 export const setSourceStatus = (
   project: EditorProject,
   status: MediaStatus,
-): EditorProject =>
-  project.source ? {...project, source: {...project.source, status}} : project;
+): EditorProject => {
+  const settings = threeSceneOf(project);
 
+  return settings?.source
+    ? {
+        ...project,
+        templateSettings: {
+          ...settings,
+          source: {...settings.source, status},
+        },
+      }
+    : project;
+};
+
+/** Template-agnostic: boundaries move the shared section axis. */
 export const moveTimelineBoundary = (
   project: EditorProject,
   boundary: BoundaryIndex,
   positionMs: number,
-): EditorProject => {
-  const durations = moveBoundary(
-    sceneDurationsOf(project.scenes),
-    boundary,
-    positionMs,
-  );
-
-  return reconcile(
-    withScenes(
+): EditorProject =>
+  reconcile(
+    withSectionDurations(
       project,
-      project.scenes.map((scene, index) => ({
-        ...scene,
-        durationMs: durations[index] as number,
-      })) as EditorScenes,
+      moveBoundary(sectionDurationsOf(project.sections), boundary, positionMs),
     ),
   );
-};
 
 export const setSceneTrimInMs = (
   project: EditorProject,
   kind: SceneKind,
   inMs: number,
-): EditorProject =>
-  mapScene(project, kind, (scene) => ({
+): EditorProject => {
+  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
+  const sourceMs = threeSceneOf(project)?.source?.durationMs ?? 0;
+
+  return mapScene(project, kind, (scene) => ({
     ...scene,
-    trim: reconcileTrim(
-      {inMs, outMs: inMs},
-      project.source?.durationMs ?? 0,
-      scene.durationMs,
-    ),
+    trim: reconcileTrim({inMs, outMs: inMs}, sourceMs, sectionMs),
   }));
+};
 
 /**
  * Trim out is the same interval seen from its end, so setting it moves the in
@@ -373,10 +462,10 @@ export const setSceneTrimOutMs = (
   kind: SceneKind,
   outMs: number,
 ): EditorProject => {
-  const scene = project.scenes[sceneIndexOf(kind)];
+  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
   const windowMs = Math.min(
-    scene.durationMs,
-    project.source?.durationMs ?? scene.durationMs,
+    sectionMs,
+    threeSceneOf(project)?.source?.durationMs ?? sectionMs,
   );
 
   return setSceneTrimInMs(project, kind, outMs - windowMs);
@@ -484,18 +573,21 @@ export const setSceneTransition = (
   project: EditorProject,
   kind: SceneKind,
   patch: Partial<EditorScene['transitionOut']>,
-): EditorProject =>
-  mapScene(project, kind, (scene) => ({
+): EditorProject => {
+  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
+
+  return mapScene(project, kind, (scene) => ({
     ...scene,
     transitionOut: {
       kind: patch.kind ?? scene.transitionOut.kind,
       durationMs: clamp(
         patch.durationMs ?? scene.transitionOut.durationMs,
         MIN_TRANSITION_MS,
-        Math.min(MAX_TRANSITION_MS, Math.floor(scene.durationMs / 2)),
+        Math.min(MAX_TRANSITION_MS, Math.floor(sectionMs / 2)),
       ),
     },
   }));
+};
 
 export const updateHookSettings = (
   project: EditorProject,
@@ -591,8 +683,11 @@ export const projectTotalFrames = (project: EditorProject) =>
   project.durationPreset * project.fps;
 
 export const scenesShorterThanSource = (project: EditorProject) =>
-  project.scenes.filter((scene) =>
-    isTrimShorterThanScene(scene.trim, scene.durationMs),
+  (threeSceneOf(project)?.scenes ?? []).filter((scene, index) =>
+    isTrimShorterThanScene(
+      scene.trim,
+      project.sections[index]?.durationMs ?? 0,
+    ),
   );
 
 const NO_TRANSITION: TransitionRenderProps = {kind: 'cut', durationInFrames: 0};
@@ -607,18 +702,31 @@ export const buildCompositionProps = (
   project: EditorProject,
   resolveUrl: (reference: MediaReference | null | undefined) => string | null,
 ): ThreeSceneProps => {
+  const settings = threeSceneOf(project);
+
+  // Day1 renders through its own composition and prop builder (module 3). The
+  // editor gates on the template before it gets here, so this is a guard, not
+  // a code path a user can reach.
+  if (!settings) {
+    return Object.freeze({
+      src: null,
+      scenes: Object.freeze([] as SceneRenderProps[]) as SceneRenderProps[],
+      audio: buildAudioRenderProps(project, [], resolveUrl),
+    });
+  }
+
   const frames = allocateSceneFrames(
-    sceneDurationsOf(project.scenes),
+    sectionDurationsOf(project.sections),
     project.durationPreset,
     project.fps,
   );
   const copy = project.copy[project.selectedLocale] as LocalizedCopy;
-  const gameplay = project.scenes[1];
-  const sourceUrl = resolveUrl(project.source);
+  const gameplay = settings.scenes[1];
+  const sourceUrl = resolveUrl(settings.source);
   let cursor = 0;
 
   const transitionOf = (index: number): TransitionRenderProps => {
-    const scene = project.scenes[index];
+    const scene = settings.scenes[index];
 
     // Only the two inner boundaries carry a transition.
     if (!scene || index > 1 || scene.transitionOut.kind === 'cut') {
@@ -634,7 +742,7 @@ export const buildCompositionProps = (
     };
   };
 
-  const scenes: SceneRenderProps[] = project.scenes.map((scene, index) => {
+  const scenes: SceneRenderProps[] = settings.scenes.map((scene, index) => {
     const durationInFrames = frames[index] as number;
     const trimBeforeFrames = msToFrames(scene.trim.inMs, project.fps);
     const transform = activeTransform(scene, project.selectedRatio);
@@ -703,7 +811,7 @@ export const buildCompositionProps = (
   });
 
   return Object.freeze({
-    src: project.source ? sourceUrl : null,
+    src: settings.source ? sourceUrl : null,
     scenes: Object.freeze(scenes) as SceneRenderProps[],
     audio: buildAudioRenderProps(project, scenes, resolveUrl),
   });

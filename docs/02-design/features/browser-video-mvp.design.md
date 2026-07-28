@@ -544,22 +544,33 @@ Unsafe characters are replaced with `-`, repeated separators collapse, and empty
 
 ### 5.1 Screen Layout
 
+Revised 2026-07-28. The first layout put every output control in a 48px header, gave the Hook drawer a permanent full-width band, and left the inspector as one long scroll that clipped at the viewport edge. The arrangement below follows the Clipchamp convention instead: an icon rail with one expanding panel, a floating toolbar over the frame it affects, a stacked property panel, and a timeline that owns its own transport and zoom.
+
 ```text
 ┌──────────────────────────────────────────────────────────────────────────┐
-│ Project / Save state       Locale  Ratio  Single|Batch      Render       │
-├───────────────┬─────────────────────────────────────┬────────────────────┤
-│ Assets        │                                     │ Scene Inspector    │
-│ Copy          │          Remotion Preview           │ Transform          │
-│ Audio / TTS   │                                     │ Text / Transition  │
-│               │                                     │                    │
-├───────────────┴─────────────────────────────────────┴────────────────────┤
-│ Hook candidate drawer (when Hook analysis is open)                       │
-├──────────────────────────────────────────────────────────────────────────┤
-│ [Hook clip] [transition] [Gameplay clip] [transition] [CTA clip]         │
+│ Brand  Project name  Save state  Project▾        Status  Batch  Render   │ 56px
+├────┬─────────────┬──────────────────────────────────┬────────────────────┤
+│ 🎬 │             │  ┌ 9:16 1:1 16:9 │ 15 30 60초 │ 1080×1920 · 60fps ┐  │
+│소재│             │  └───────────── floating toolbar ─────────────────┘  │
+│ 🅣 │  Expanding  │                                   │ Scene Inspector   │
+│카피│  panel for  │        Remotion Preview           │ ▼ Trim            │
+│ 🔊 │  the active │        (fills the stage)          │ ▼ Transform       │
+│오디│  rail tab   │                                   │ ▶ 자막            │
+│ ✨ │             │                                   │ ▶ 전환            │
+│Hook│             │                                   │ ▶ Hook / CTA      │
+│ ❮  │             │                                   │                   │
+├────┴─────────────┴──────────────────────────────────┴────────────────────┤
+│ ⏪ ▶ ⏩  00:03.2 / 00:15.0  ──seek──  scene   [−][1×][＋][⤢]  [⌄]        │
+│ 0s────────5s────────10s────────15s                         (ruler)       │
+│ [Hook clip]│[Gameplay clip]│[CTA clip]        boundaries + playhead      │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 The app is a desktop work surface, not a landing page. Minimum supported viewport is 1280×720. Smaller viewports show an unsupported-width notice without destroying saved work.
+
+Two collapse controls trade chrome for preview area. The rail's `❮` hides the left panel; the timeline's `⌄` reduces the timeline to its toolbar. At 1280×720 collapsing the timeline grows the 9:16 preview from 419px to 531px tall (+27%). Portrait previews are height-bound, so collapsing the left panel only widens the stage margins — it is there for the 16:9 case and for focus.
+
+The Hook candidate drawer is the fourth rail tab rather than a permanent band, which returns roughly 130px of height to the preview at all times.
 
 ### 5.2 Primary User Flow
 
@@ -580,21 +591,30 @@ Capability check
 
 ### 5.3 Visual System
 
-| Token | Value |
-|-------|-------|
-| Workspace background | Neutral light gray |
-| Panels | White / near-white with 1px neutral border |
-| Navigation/timeline | Charcoal |
-| Primary action | Blue |
-| Warning | Amber |
-| Error | Red |
-| Success | Green |
-| Radius | 4px controls, maximum 8px dialogs/items |
-| Spacing | 4px base grid |
-| UI type | System sans; project content uses locale-specific font |
-| Tone | Dense, quiet, utilitarian UA production tool |
+Revised 2026-07-28 to a dark palette. The values are taken from the sibling `mkt_bannerdesigner` tool so the two marketing surfaces read as one product, and because a dark shell is the norm for video editors — a light chrome shifts the perceived brightness of the footage being graded.
 
-Icon buttons use Lucide icons and tooltips. Stable toolbar, timeline, preview, and inspector dimensions prevent layout shifts.
+| Token | Variable | Value |
+|-------|----------|-------|
+| App background | `--bg` | `#0b0c10` |
+| Panels | `--panel-bg` | `#0f1115` |
+| Panel border | `--panel-border` | `#1f2127` |
+| Inputs | `--input-bg` | `#17191f` |
+| Timeline / stage floor | `--surface-2` | `#14161b` |
+| Body text | `--text` | `#e5e7eb` |
+| Secondary text | `--muted` | `#9ca3af` |
+| Primary action | `--accent` | `#6366f1` (indigo) |
+| Warning | `--warning` | `#d49a27` |
+| Error | `--danger` | `#ef4444` |
+| Radius | `--radius` / `--radius-sm` | 8px / 6px |
+| Spacing | — | 4px base grid |
+| UI type | — | Pretendard; project content uses locale-specific font |
+| Tone | — | Dense, quiet, utilitarian UA production tool |
+
+Body text is 13px (was 11–12px). Tokens live in `src/app/styles.css`; editor layout and components live in `src/features/editor/editor.css`.
+
+The palette applies to the shell only. Remotion compositions are untouched, so render output is unchanged — the `#render-poc` preview still shows its light composition inside a dark frame.
+
+Icon buttons carry `aria-label` and `title` tooltips. Stable toolbar, timeline, preview, and inspector dimensions prevent layout shifts; the render button holds its width by drawing progress as an internal fill rather than appending text.
 
 ### 5.4 Component List
 
@@ -1112,6 +1132,16 @@ No functional requirement was dropped.
 | §4.2 TTS | `UploadedAudioProvider` implements `TtsProvider` | Upload is a first-class per-scene action for every locale, not a synthesising provider | A provider whose `synthesize` can never succeed is a misleading contract |
 | §5.4 | `BatchDialog` / `RenderQueuePanel` in `features/render` | Both live in `features/editor`; queue logic is pure in `domain/render/queue.ts` | §9.4 forbids cross-feature imports and the batch operates on the editor's store |
 | §3.1 | `MediaReference.durationMs` required | Optional, with the video source required to carry one | CTA still images share the same reference type |
+| §5.1, §5.3 | Light shell, 48px header holding every output control, permanent Hook band, flat inspector | Dark shell on banner-designer tokens; rail + expanding panel; output controls in a floating toolbar; Hook as a rail tab; accordion inspector; timeline owns transport, ruler and zoom | The first layout was reported as unworkable in use: the header held 16 controls at 48px, the inspector clipped below the fold, and the Hook band cost 130px whether or not it was used. §5.1 and §5.3 above are rewritten to match what shipped |
+
+The §5.1 rework changed navigation, so three E2E specs were updated to match — not to accommodate the implementation, but because the paths they exercise genuinely moved:
+
+| Spec | Change | Reason |
+|------|--------|--------|
+| `hook-analysis.spec.ts`, `pages-subpath.spec.ts` | Click `tab-hook` before using `hook-*` | The Hook drawer is a rail tab, exactly as `tab-copy` / `tab-audio` already were |
+| `editor-full.spec.ts` | Click `section-hook` / `section-transition` first | Only Trim and Transform open by default |
+
+All 70 pre-existing `data-testid` values were kept. New ids added: `tab-hook`, `section-*`, `panel-collapse`, `timeline-zoom-in`, `timeline-collapse`, `transport-play`, `{range}-number`.
 
 #### Not Implemented
 
@@ -1176,3 +1206,4 @@ No functional requirement was dropped.
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1 | 2026-07-27 | Initial Design. Option C architecture, A-layout editor, Hook B+C-lite, hybrid CTA, audio ducking, and sequential Batch confirmed. | 김성권 / Codex |
+| 0.2 | 2026-07-28 | §5.1 and §5.3 rewritten for the UI rework: dark banner-designer palette, icon rail with expanding panel, floating output toolbar, accordion inspector, timeline with ruler/zoom/transport, drag-and-drop uploads. No change to domain, infrastructure, compositions, or render output. | 김성권 / Claude |

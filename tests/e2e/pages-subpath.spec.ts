@@ -91,6 +91,7 @@ test.describe('GitHub Pages subpath layout', () => {
 
     // The Hook analyzer worker is bundled as its own chunk; a wrong base path
     // breaks it and nothing else.
+    await page.getByTestId('tab-hook').click();
     await page.getByTestId('hook-analyze').click();
     await expect(page.getByTestId('hook-candidates')).toBeVisible({
       timeout: 2 * 60 * 1000,

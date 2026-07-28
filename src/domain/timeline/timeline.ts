@@ -2,9 +2,9 @@
 // one-second minimum scene length, and trim ranges bounded by the source.
 import type {
   DurationPreset,
-  EditorScenes,
   MediaTrim,
   SceneKind,
+  Sections,
 } from '../editor/types';
 import {MIN_SCENE_MS} from '../editor/types';
 
@@ -28,10 +28,16 @@ export const presetTotalMs = (preset: DurationPreset) => preset * 1000;
 export const msToFrames = (ms: number, fps: number) =>
   Math.round((ms / 1000) * fps);
 
-export const sceneDurationsOf = (scenes: EditorScenes): SceneDurationsMs => [
-  scenes[0].durationMs,
-  scenes[1].durationMs,
-  scenes[2].durationMs,
+/**
+ * The only function here that ever touched a template-shaped value. It now
+ * reads the shared section axis, which makes the rest of this module — boundary
+ * dragging, frame allocation, presets — reusable by any template unchanged.
+ * Day1 Design Ref: §1.2.
+ */
+export const sectionDurationsOf = (sections: Sections): SceneDurationsMs => [
+  sections[0].durationMs,
+  sections[1].durationMs,
+  sections[2].durationMs,
 ];
 
 export const sumDurationsMs = (durations: SceneDurationsMs) =>
