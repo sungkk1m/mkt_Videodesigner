@@ -4,9 +4,9 @@
 > **Gate**: Design §2.4 item 5 — commercial-use approval before deployment
 > **Question asked**: 회사 라이선스가 아닌 개인 라이선스 기준으로 사용 가능한가
 > **Date**: 2026-07-28
-> **Status**: Reviewed. Free License does not cover the intended use. Currently
-> covered by the evaluation clause. Decision: stay in evaluation, revisit before
-> deployment.
+> **Status**: Reviewed. Free License covers this project **only** through the
+> evaluation clause. Decision (2026-07-28, revised): deploy for evaluation under
+> that clause; buy a Company License before any campaign use. See §6.
 > **Reviewer**: Claude Code, from Remotion's published terms. This is a reading
 > of the public license text, not legal advice.
 
@@ -71,21 +71,42 @@ performed.
 
 ## 6. Current Position
 
-The project is inside the evaluation clause today: no deployment, no shipped
-creative, no production traffic. The existing Module 2 gate ("Company production
-license: Blocked — do not deploy until approved") therefore stands unchanged and
-is now backed by the specific clauses above rather than a general caution.
+**Decision (user, 2026-07-28, revised): deploy under the Free License
+*evaluation clause* so the tool can be validated, then decide on a Company
+License based on that validation.**
 
-**Decision (user, 2026-07-28): remain in evaluation and revisit before deployment.**
+Of the four Free License eligibility criteria, exactly one applies to
+Superplanet: *"evaluating whether Remotion is a good fit, and are not yet using
+it in a commercial way."* The other three (individual, ≤3 employees, non-profit)
+do not, and an individual license held by the developer does not transfer (§4).
+
+The license text conditions eligibility on **commercial use**, not on whether the
+app is hosted. Deploying a build in order to evaluate it is therefore still inside
+the clause. The earlier revision of this document listed deployment itself as a
+trigger; that was a conservative reading by the reviewer, not language from the
+license, and it is corrected here.
+
+### What must stay true while deployed under this clause
+
+| Condition | Why it matters |
+|---|---|
+| No rendered MP4 is used in a live or paid UA campaign | This is the actual "commercial use" line in the license |
+| Use stays scoped to validating whether the tool is a good fit | The clause is about intent and phase, not headcount |
+| The evaluation has an end: a purchase decision follows it | An indefinite "evaluation" is not an evaluation |
+| The Company License is bought before the first campaign use | The obligation attaches to Superplanet, not to the developer |
+
+If any of those stops being true, the free path ends and
+[§5](#5-cost-if-a-company-license-is-obtained) applies ($25 per seat per month).
 
 ## 7. Trigger Conditions
 
 Obtain a Company License before any of these:
 
-- [ ] Deploying the app to GitHub Pages or any shared internal URL
-- [ ] Using a rendered MP4 in a live UA campaign
-- [ ] Another team member using the tool
+- [ ] **Using a rendered MP4 in a live or paid UA campaign** ← the decisive one
+- [ ] Rolling the tool out as standard team tooling rather than an evaluation
 - [ ] Any use that is no longer plausibly "evaluating whether it is a good fit"
+
+Deployment for evaluation is **not** on this list, per §6.
 
 ## 8. Contingency If the License Is Not Approved
 
@@ -118,8 +139,8 @@ exists and is manual-only.
 The step-by-step path from license approval to a live URL is in
 [docs/01-plan/pages-deployment-runbook.md](../01-plan/pages-deployment-runbook.md).
 
-**Blocking owner: Superplanet (purchase decision). Not resolvable by the developer
-or by tooling.**
+**Status: unblocked for evaluation deployment (§6). The Company License purchase
+decision remains with Superplanet and is due before the first campaign use.**
 
 ## 10. Follow-up
 
