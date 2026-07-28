@@ -101,9 +101,9 @@ Container durations reported by ffprobe were 15.082667 seconds and 60.074667 sec
 | web-fs and ArrayBuffer execution | Pass | Keep adaptive output target |
 | 60s 9:16 1080p60 | Pass | Keep 60-second preset |
 | web-fs memory advantage | Not proven | Repeat with real gameplay and larger bitrate output |
-| Company production license | Blocked | Do not deploy until Remotion license is internally approved |
+| Company production license | Open, non-blocking for evaluation | 2026-07-28: deployed under the Free License **evaluation clause**. A Company License is required before a rendered MP4 is used in a live or paid UA campaign. See `browser-video-mvp.remotion-license-review.md` §6. |
 
-Remotion emitted a company-license warning in local E2E. No `free-license` assertion, paid key, purchase, or production deployment was performed. The current official pricing page must be reviewed against company size and the intended internal automation use before deployment.
+Remotion emitted a company-license warning in local E2E. No paid key or purchase was performed; `4.0.499` does not verify a key. The licence was reviewed against company size and intended use on 2026-07-28, and the project deployed under the evaluation clause pending a purchase decision.
 
 ## Limitations
 

@@ -4,7 +4,7 @@
 > **Scope key**: `module-7`
 > **PDCA phase**: Do
 > **Date**: 2026-07-28
-> **Status**: Implemented and verified. Deployment intentionally not executed (license gate).
+> **Status**: Implemented and verified. Deployed to GitHub Pages 2026-07-28 under the Remotion Free License evaluation clause.
 
 ---
 
@@ -76,26 +76,45 @@ the timeline out of reach of pointer coordinates. The grid is back to a fixed
 `height: 100vh` with the drawer capped at 208px and scrolling internally, which also
 restores the §5.3 "no layout shifts" requirement.
 
-## 4. Release Status
+## 4. Release Status — Deployed 2026-07-28
+
+**Live: https://sungkk1m.github.io/mkt_Videodesigner/**
 
 - `.github/workflows/ci.yml` runs typecheck, build, unit tests, and a non-blocking
   `npm audit` on every push and pull request. Browser E2E is not in CI because the
   H.264 fixtures are deliberately not committed.
-- GitHub Pages is **not enabled** on the repository yet (`GET /pages` returns 404).
-  Enabling it is a repository-settings change and belongs to the runbook.
-- `.github/workflows/deploy-pages.yml` builds and publishes to GitHub Pages but is
-  **`workflow_dispatch` only**. Design §2.4 and §7 require Remotion commercial-use
-  approval first, and `browser-video-mvp.remotion-license-review.md` records that the
-  project is still under the evaluation clause. No deployment has been run.
+- GitHub Pages is enabled with `build_type=workflow` and HTTPS enforced.
+- `.github/workflows/deploy-pages.yml` stays **`workflow_dispatch` only**. During an
+  evaluation it is better that each publish is a deliberate, logged act; a push
+  trigger would read as operation rather than evaluation.
+- Licence basis: Free License **evaluation clause**. A Company License is required
+  before a rendered MP4 is used in a live or paid UA campaign
+  (`browser-video-mvp.remotion-license-review.md` §6).
+
+### Post-deployment smoke check
+
+`npm run verify:deployment` drives the live site in real Chrome. Run 2026-07-28:
+
+| Check | Result |
+|---|---|
+| HTTPS secure context | PASS |
+| Editor shell renders | PASS |
+| Capability probe | PASS — renderer reports `대기`, not `렌더 불가` |
+| Upload and probe a real file | PASS |
+| Hook analyzer worker chunk | PASS — 5 candidates |
+| Real MP4 render and download | PASS — `ua-video_ko_9x16_15s_60fps.mp4` |
+| Autosave, reload, restore | PASS |
+| Failed requests / console errors | 0 / 0 |
+
+**Finding: the absence of COOP/COEP on GitHub Pages does not block the renderer.**
+This was the main open risk about Pages as a host, and a real 15s 1080p60 render
+completed without cross-origin isolation.
 
 ## 5. Known Limitations
 
-1. §8.4 scenario 9 is verified locally, not on real hosting. The production bundle
-   is served under `/mkt_Videodesigner/` by `scripts/serve-dist-subpath.mjs` and
-   `tests/e2e/pages-subpath.spec.ts` confirms asset resolution, refresh, the Hook
-   worker chunk, and a real MP4 render with no failed requests. Only HTTPS behaviour
-   on `github.io` itself remains, and it is blocked by the Remotion license gate.
-   See `docs/01-plan/pages-deployment-runbook.md`.
+1. §8.4 scenario 9 is now verified twice: locally against the production bundle under
+   a subpath (`tests/e2e/pages-subpath.spec.ts`) and on the live deployment
+   (`npm run verify:deployment`). No open items remain for this scenario.
 2. Parallel batch rendering stays disabled, matching §2.4.
 3. The queue does not yet persist across a reload; an interrupted batch restarts from
    the dialog.

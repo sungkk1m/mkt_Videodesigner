@@ -12,7 +12,8 @@
     "benchmark:render": "node scripts/run-render-benchmark.mjs",
     "generate:poc-audio": "node scripts/generate-poc-audio.mjs",
     "generate:editor-fixture": "node scripts/generate-editor-fixture.mjs",
-    "serve:pages-preview": "npm run build && node scripts/serve-dist-subpath.mjs"
+    "serve:pages-preview": "npm run build && node scripts/serve-dist-subpath.mjs",
+    "verify:deployment": "node scripts/verify-live-deployment.mjs"
   },
   "dependencies": {
     "@remotion/media": "4.0.499",

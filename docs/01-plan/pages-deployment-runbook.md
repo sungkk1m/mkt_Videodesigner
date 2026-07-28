@@ -2,9 +2,9 @@
 
 > **Feature**: `browser-video-mvp`
 > **Repository**: https://github.com/sungkk1m/mkt_Videodesigner
-> **Target URL after deployment**: https://sungkk1m.github.io/mkt_Videodesigner/
-> **Current status**: **평가(evaluation) 조항으로 배포 진행.** 캠페인 실사용 전
-> Company License 구매 필요.
+> **Live URL**: https://sungkk1m.github.io/mkt_Videodesigner/
+> **Current status**: **배포 완료 (2026-07-28).** Free License 평가 조항 근거.
+> 캠페인 실사용 전 Company License 구매 필요.
 > **Date**: 2026-07-28
 
 ---
@@ -91,7 +91,7 @@ GitHub → 저장소 **Settings → Pages → Build and deployment → Source: G
 gh api -X POST repos/sungkk1m/mkt_Videodesigner/pages -f 'build_type=workflow'
 ```
 
-### 3.4 배포 실행
+### 3.4 배포 실행 — 완료 (2026-07-28)
 
 ```bash
 gh workflow run deploy-pages.yml --repo sungkk1m/mkt_Videodesigner
@@ -104,15 +104,17 @@ gh workflow run deploy-pages.yml --repo sungkk1m/mkt_Videodesigner
 가까워집니다. 상시 배포가 필요해지면 `.github/workflows/deploy-pages.yml`에
 `push` 트리거를 추가하면 됩니다.
 
-### 3.5 배포 후 확인
+### 3.5 배포 후 확인 — 자동화됨
 
-| 확인 항목 | 방법 |
-|---|---|
-| 앱 로드 및 새로고침 | https://sungkk1m.github.io/mkt_Videodesigner/ 접속 후 새로고침 |
-| Hook 분석 Worker | 영상 업로드 → `Hook 후보 분석` 실행 |
-| 실제 렌더 | `MP4 렌더` → 다운로드 파일 재생 |
-| 자동 저장·복구 | 편집 후 새로고침 → 프로젝트 복원 및 재연결 패널 |
-| 콘솔 오류 | DevTools Console 비어 있어야 함 |
+```bash
+npm run verify:deployment
+```
+
+실제 Chrome으로 라이브 사이트를 구동해 HTTPS 보안 컨텍스트, capability probe,
+업로드, Hook Worker, 실제 MP4 렌더·다운로드, 자동 저장·새로고침 복구를 확인하고
+실패 요청·콘솔 오류 수를 출력합니다. 다른 URL은 `DEPLOY_URL` 환경변수로 지정합니다.
+
+2026-07-28 실행 결과: 전 항목 PASS, 실패 요청 0, 콘솔 오류 0.
 
 ## 4. 이미 검증된 것 / 남는 것
 
@@ -138,17 +140,22 @@ npm run test:e2e -- tests/e2e/pages-subpath.spec.ts
 npm run serve:pages-preview   # http://127.0.0.1:4190/mkt_Videodesigner/
 ```
 
+라이브 배포에서도 동일 항목을 확인했습니다 (`npm run verify:deployment`,
+2026-07-28): HTTPS 보안 컨텍스트, capability probe `대기`, Hook 후보 5건,
+실제 MP4 렌더 `ua-video_ko_9x16_15s_60fps.mp4`, 새로고침 복구, 실패 요청 0.
+
+**주요 확인: GitHub Pages에 COOP/COEP 헤더가 없어도 렌더가 동작합니다.** Pages를
+호스트로 쓸 때 가장 큰 미지수였는데, cross-origin isolation 없이 15초 1080p60
+렌더가 완료됐습니다.
+
 ### 남는 것
 
-실제 `github.io` 호스팅에서만 확인 가능한 항목입니다.
-
-1. **HTTPS 보안 컨텍스트** — Pages는 HTTPS라 WebCodecs/OPFS 요건은 충족되지만,
-   실제 호스트에서 한 번 확인이 필요합니다.
-2. **COOP/COEP 헤더 부재** — GitHub Pages는 응답 헤더를 설정할 수 없어
-   cross-origin isolation이 불가능합니다. 로컬 검증 서버도 헤더를 보내지 않아
-   같은 조건으로 맞췄고, 그 상태에서 렌더가 성공했습니다. 다만 Remotion이 향후
-   `SharedArrayBuffer`를 요구하는 경로로 바뀌면 Pages로는 대응할 수 없고
-   Cloudflare Pages 등 헤더 설정이 가능한 호스팅으로 옮겨야 합니다.
-3. **모델 다운로드 경로** — Supertonic Beta 음성 생성은 아직 미검증입니다
+1. **Supertonic Beta 음성 생성** — 여전히 미검증입니다
    ([module-6 evidence](../03-analysis/browser-video-mvp.module-6-audio-tts.md) §4).
-   배포 여부와 무관한 별도 항목입니다.
+   배포와 무관한 별도 항목이며, 업로드 음성이 검증된 경로입니다.
+2. **향후 Remotion이 `SharedArrayBuffer`를 요구하는 경로로 바뀌는 경우** — Pages는
+   응답 헤더를 설정할 수 없어 대응이 불가능하고, Cloudflare Pages 등으로 이전해야
+   합니다. 현재 `4.0.499`에서는 문제되지 않습니다.
+3. **공개 URL** — 저장소와 Pages 모두 public입니다. 사내 전용이 필요하면 저장소를
+   private으로 전환(Pages는 GitHub Pro/Team 이상 필요)하거나 접근 제어가 가능한
+   호스팅으로 옮겨야 합니다.

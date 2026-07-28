@@ -1,5 +1,7 @@
 # mkt_videodesigner
 
+**https://sungkk1m.github.io/mkt_Videodesigner/**
+
 Chrome에서 서버 없이 3장면 UA 영상을 편집하고 다국어·다비율 MP4를 만드는 정적 웹 앱입니다.
 
 업로드한 영상과 문구는 애플리케이션 서버로 전송되지 않습니다. 편집, 미리보기,
@@ -67,15 +69,18 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 
 Do 단계 모듈 1~7 구현 및 검증 완료 (유닛 164, E2E 17).
 
-**배포는 아직 하지 않았습니다.** 기술 준비는 끝났고 Remotion 상용 라이선스
-승인만 남았습니다. Superplanet은 직원 4명 이상 영리법인이라 Free License 대상이
-아니며, 현재는 "평가 중" 조항으로만 커버됩니다.
+**GitHub Pages 배포 완료 (2026-07-28).** 라이브 사이트에서 업로드 → Hook 분석 →
+실제 MP4 렌더 → 자동 저장·복구까지 확인했습니다 (`npm run verify:deployment`).
 
-- 라이선스 근거: `docs/03-analysis/browser-video-mvp.remotion-license-review.md`
-- 승인 후 배포 절차: `docs/01-plan/pages-deployment-runbook.md`
+### 라이선스 상태 — 읽어주세요
 
-Pages 서브패스 레이아웃은 실제 프로덕션 번들로 로컬 검증했습니다
-(`npm run serve:pages-preview`, `tests/e2e/pages-subpath.spec.ts`).
+Remotion Free License의 **"평가 중" 조항**을 근거로 배포했습니다. Superplanet은
+직원 4명 이상 영리법인이라 나머지 자격 조건에는 해당하지 않습니다.
 
-미검증 항목: Supertonic 음성 생성(업로드 음성이 검증된 경로), Beta 객체 감지
-(미구현), 실제 `github.io` 호스팅 동작.
+> **렌더 결과물을 실제·유료 UA 캠페인에 사용하기 전에 Remotion Company License
+> ($25/seat·월) 구매가 필요합니다.**
+
+- 근거와 경계 조건: `docs/03-analysis/browser-video-mvp.remotion-license-review.md` §6
+- 배포 절차와 구매 후 처리: `docs/01-plan/pages-deployment-runbook.md`
+
+미검증 항목: Supertonic 음성 생성(업로드 음성이 검증된 경로), Beta 객체 감지(미구현).

@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-07-28T01:31:41.175Z",
+  "lastUpdated": "2026-07-28T01:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "editor",
@@ -56,7 +56,7 @@
       },
       "timestamps": {
         "started": "2026-07-27T07:36:48.139Z",
-        "lastUpdated": "2026-07-28T10:30:00.000Z"
+        "lastUpdated": "2026-07-28T01:45:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -94,7 +94,7 @@
           "licenseGate": "blocked-before-deployment"
         },
         "doStartedAt": "2026-07-27T14:10:04.394Z",
-        "lastUpdatedAt": "2026-07-28T10:30:00.000Z",
+        "lastUpdatedAt": "2026-07-28T01:45:00.000Z",
         "module3aEvidence": "docs/03-analysis/browser-video-mvp.module-3a-evidence.md",
         "module3aStatus": "implemented-and-verified",
         "licenseReview": {
@@ -102,10 +102,10 @@
           "question": "individual-vs-company-license",
           "finding": "free-license-not-applicable-commercial-use",
           "currentCoverage": "evaluation-clause",
-          "decision": "stay-in-evaluation-revisit-before-deployment",
+          "decision": "deploy-under-evaluation-clause-revisit-purchase-after-validation",
           "companyLicenseCost": "USD 25 per seat per month (Remotion for Creators)",
           "document": "docs/03-analysis/browser-video-mvp.remotion-license-review.md",
-          "reviewedAt": "2026-07-28T00:50:00.000Z"
+          "reviewedAt": "2026-07-28T01:45:00.000Z"
         },
         "doCompletedAt": "2026-07-28T10:30:00.000Z",
         "verification": {
@@ -117,14 +117,17 @@
         "openRisks": [
           "supertonic-generation-unverified",
           "beta-object-detector-not-implemented",
-          "github-pages-subpath-unverified",
-          "remotion-license-gate-open"
+          "remotion-company-license-required-before-campaign-use"
         ],
         "deployment": {
-          "status": "not-deployed",
+          "status": "deployed",
+          "url": "https://sungkk1m.github.io/mkt_Videodesigner/",
+          "deployedAt": "2026-07-28T01:45:00.000Z",
           "workflow": ".github/workflows/deploy-pages.yml",
           "trigger": "workflow_dispatch-only",
-          "gate": "remotion-commercial-license-approval"
+          "licenseBasis": "remotion-free-license-evaluation-clause",
+          "licenseFollowUp": "company-license-required-before-live-campaign-use",
+          "smokeCheck": "npm run verify:deployment — all checks passed, 0 failed requests"
         }
       },
       "stateMachine": {
@@ -518,7 +521,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-07-28T01:31:41.175Z"
+    "lastActivity": "2026-07-28T01:45:00.000Z"
   },
   "history": [
     {
