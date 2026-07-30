@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 5 — 템플릿 선택기, Day1 좌측 패널, Day1 인스펙터, 스포이트
 > **Date**: 2026-07-28
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §6.1~§6.4
+> **Design**: [day1-template.design.md](day1-template.design.md) §6.1~§6.4
 > **선행**: [module-1](day1-template.module-1-schema.md) ✅ · [module-2](day1-template.module-2-domain.md) ✅ · [module-3](day1-template.module-3-composition.md) ✅ · [module-4](day1-template.module-4-endcard.md) ✅
 
 ---
@@ -12,20 +12,20 @@
 
 | 파일 | 상태 | 내용 |
 |------|:----:|------|
-| [TemplateSelector.tsx](../../src/features/editor/TemplateSelector.tsx) | 신규 | 헤더 세그먼트 + 파괴적 전환 확인 다이얼로그 |
-| [Day1AssetPanel.tsx](../../src/features/editor/Day1AssetPanel.tsx) | 신규 | 패널 A·B Dropzone·메타데이터·차단 사유·relink |
-| [Day1Inspector.tsx](../../src/features/editor/Day1Inspector.tsx) | 신규 | 패널 2 + 분할선 + 라벨 + 엔드카드, 5섹션 |
-| [ColorField.tsx](../../src/features/editor/ColorField.tsx) | 신규 | 컬러 피커 + EyeDropper, 미지원 시 버튼 제거 |
-| [useDay1Assets.ts](../../src/features/editor/useDay1Assets.ts) | 신규 | 패널·엔드카드 업로드, relink, 복원 시 missing 표시 |
-| [inspectorFields.tsx](../../src/features/editor/inspectorFields.tsx) | 신규 | `SecondsField`·`RangeField`·`Percent/PlainField`·`AssetField` 공용화 |
-| [day1Commands.test.ts](../../src/domain/editor/day1Commands.test.ts) | 신규 | Day1 도메인 명령 유닛 26개 |
-| [project.ts](../../src/domain/editor/project.ts) | 수정 | `switchTemplate` + Day1 명령 13종, `writeTransform` 공용화 |
-| [projectStore.ts](../../src/features/editor/projectStore.ts) | 수정 | Day1 명령 13종 노출 |
-| [EditorWorkspace.tsx](../../src/features/editor/EditorWorkspace.tsx) | 수정 | 템플릿 분기 — 선택기·좌측 패널·인스펙터·Player·렌더 게이트·`retain` |
-| [SceneInspector.tsx](../../src/features/editor/SceneInspector.tsx) | 수정 | 필드 프리미티브를 공용 모듈에서 임포트 (동작 무변경) |
-| [SourceRepair.tsx](../../src/features/editor/SourceRepair.tsx) | 수정 | `testId`·`inputTestId` 선택 prop (기본값은 기존 3장면 id) |
-| [fixtures/project.ts](../../src/test/fixtures/project.ts) | 수정 | `day1ProjectFixture`가 실제 `switchTemplate` 위에서 만들어짐 |
-| [editor.css](../../src/features/editor/editor.css) | 수정 | 스포이트 행·라벨 2열·패널 소제목·좁은 다이얼로그 |
+| [TemplateSelector.tsx](../../../../src/features/editor/TemplateSelector.tsx) | 신규 | 헤더 세그먼트 + 파괴적 전환 확인 다이얼로그 |
+| [Day1AssetPanel.tsx](../../../../src/features/editor/Day1AssetPanel.tsx) | 신규 | 패널 A·B Dropzone·메타데이터·차단 사유·relink |
+| [Day1Inspector.tsx](../../../../src/features/editor/Day1Inspector.tsx) | 신규 | 패널 2 + 분할선 + 라벨 + 엔드카드, 5섹션 |
+| [ColorField.tsx](../../../../src/features/editor/ColorField.tsx) | 신규 | 컬러 피커 + EyeDropper, 미지원 시 버튼 제거 |
+| [useDay1Assets.ts](../../../../src/features/editor/useDay1Assets.ts) | 신규 | 패널·엔드카드 업로드, relink, 복원 시 missing 표시 |
+| [inspectorFields.tsx](../../../../src/features/editor/inspectorFields.tsx) | 신규 | `SecondsField`·`RangeField`·`Percent/PlainField`·`AssetField` 공용화 |
+| [day1Commands.test.ts](../../../../src/domain/editor/day1Commands.test.ts) | 신규 | Day1 도메인 명령 유닛 26개 |
+| [project.ts](../../../../src/domain/editor/project.ts) | 수정 | `switchTemplate` + Day1 명령 13종, `writeTransform` 공용화 |
+| [projectStore.ts](../../../../src/features/editor/projectStore.ts) | 수정 | Day1 명령 13종 노출 |
+| [EditorWorkspace.tsx](../../../../src/features/editor/EditorWorkspace.tsx) | 수정 | 템플릿 분기 — 선택기·좌측 패널·인스펙터·Player·렌더 게이트·`retain` |
+| [SceneInspector.tsx](../../../../src/features/editor/SceneInspector.tsx) | 수정 | 필드 프리미티브를 공용 모듈에서 임포트 (동작 무변경) |
+| [SourceRepair.tsx](../../../../src/features/editor/SourceRepair.tsx) | 수정 | `testId`·`inputTestId` 선택 prop (기본값은 기존 3장면 id) |
+| [fixtures/project.ts](../../../../src/test/fixtures/project.ts) | 수정 | `day1ProjectFixture`가 실제 `switchTemplate` 위에서 만들어짐 |
+| [editor.css](../../../../src/features/editor/editor.css) | 수정 | 스포이트 행·라벨 2열·패널 소제목·좁은 다이얼로그 |
 
 유닛 236 → **262** (+26).
 
@@ -50,7 +50,7 @@ Hook 숨김은 사용자 결정이지만 **카피 탭도 함께 숨겼다.** 카
 헤드라인·CTA 문구·장면별 자막으로 전부 3장면 개념이고, Day1의 문구는 패널 라벨
 2개뿐이다. 그 라벨은 Design §6.3이 인스펙터에 두라고 지정했으므로, 카피 탭을
 남기면 Day1에서 아무 효과 없는 입력칸만 4개 남는다. 판단 근거를 코드 주석에
-남겼다([EditorWorkspace.tsx](../../src/features/editor/EditorWorkspace.tsx) `DAY1_LEFT_TABS`).
+남겼다([EditorWorkspace.tsx](../../../../src/features/editor/EditorWorkspace.tsx) `DAY1_LEFT_TABS`).
 
 ### 3.2 라벨 4언어를 인스펙터에서 한 화면에 편집한다
 

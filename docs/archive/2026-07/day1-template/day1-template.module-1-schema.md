@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 1 — 스키마 v2 (`sections` + `templateSettings`), v1→v2 마이그레이션, 저장·가져오기 적용
 > **Date**: 2026-07-28
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §3, §11.3
+> **Design**: [day1-template.design.md](day1-template.design.md) §3, §11.3
 > **완료 조건 (Design §11.3)**: 기존 E2E 17개 통과 — **충족**
 
 ---
@@ -29,14 +29,14 @@ Option C (Design §1.3 D9) 그대로다. 프로젝트가 템플릿 무관 시간
 
 | 파일 | 내용 |
 |------|------|
-| [migrate.ts](../../src/domain/editor/migrate.ts) | `migrateProject()` — v1 승격, v2 통과, 그 외 `SCHEMA_UNSUPPORTED` |
-| [migrate.test.ts](../../src/domain/editor/migrate.test.ts) | 13개 유닛. 왕복 무손실, 손상 문서 거부 |
-| [project-v1.json](../../tests/fixtures/project-v1.json) | 모든 필드를 채운 실제 v1 문서 |
-| [test/fixtures/project.ts](../../src/test/fixtures/project.ts) | 테스트용 `scenesOf`/`sourceOf`/`sectionDurations` |
+| [migrate.ts](../../../../src/domain/editor/migrate.ts) | `migrateProject()` — v1 승격, v2 통과, 그 외 `SCHEMA_UNSUPPORTED` |
+| [migrate.test.ts](../../../../src/domain/editor/migrate.test.ts) | 13개 유닛. 왕복 무손실, 손상 문서 거부 |
+| [project-v1.json](../../../../tests/fixtures/project-v1.json) | 모든 필드를 채운 실제 v1 문서 |
+| [test/fixtures/project.ts](../../../../src/test/fixtures/project.ts) | 테스트용 `scenesOf`/`sourceOf`/`sectionDurations` |
 
 ### 회귀 방어선 — `threeSceneOf` 접근자
 
-판별자 확인을 한 곳에 모았다 ([project.ts](../../src/domain/editor/project.ts)).
+판별자 확인을 한 곳에 모았다 ([project.ts](../../../../src/domain/editor/project.ts)).
 
 ```ts
 export const threeSceneOf = (project) =>
@@ -85,7 +85,7 @@ npx playwright    18 passed               — 기존 17 + v1 가져오기 1
 
 ### v1 가져오기 E2E (Plan SC3)
 
-[persistence-recovery.spec.ts](../../tests/e2e/persistence-recovery.spec.ts) —
+[persistence-recovery.spec.ts](../../../../tests/e2e/persistence-recovery.spec.ts) —
 실제 가져오기 UI로 v1 파일을 열어 확인한다.
 
 - 구간 길이 2.5 / 9.5 / 3.0초가 타임라인에 그대로 (scene → section 이동 성공)

@@ -2,8 +2,8 @@
 
 > **Feature**: day1-template
 > **Date**: 2026-07-30
-> **Plan**: [day1-template.plan.md](../01-plan/features/day1-template.plan.md)
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md)
+> **Plan**: [day1-template.plan.md](day1-template.plan.md)
+> **Design**: [day1-template.design.md](day1-template.design.md)
 > **Do 증거**: [module-1](day1-template.module-1-schema.md) · [module-2](day1-template.module-2-domain.md) · [module-3](day1-template.module-3-composition.md) · [module-4](day1-template.module-4-endcard.md) · [module-5](day1-template.module-5-ui.md) · [module-6](day1-template.module-6-render.md)
 > **Match Rate**: 98% → **100% (Gap 전부 수정 후 재검증, §8)**
 

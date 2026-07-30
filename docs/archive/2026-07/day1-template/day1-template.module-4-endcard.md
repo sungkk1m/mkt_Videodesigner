@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 4 — `EndCardScene` + 아이콘 애니메이션 프리셋
 > **Date**: 2026-07-28
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §4.3, §5.3
+> **Design**: [day1-template.design.md](day1-template.design.md) §4.3, §5.3
 > **선행**: [module-1](day1-template.module-1-schema.md) ✅ · [module-2](day1-template.module-2-domain.md) ✅ · [module-3](day1-template.module-3-composition.md) ✅
 
 ---
@@ -12,13 +12,13 @@
 
 | 파일 | 상태 | 내용 |
 |------|:----:|------|
-| [day1/EndCardScene.tsx](../../src/compositions/day1/EndCardScene.tsx) | 신규 | 배너 배경 + 아이콘 오버레이 2레이어, 프리셋 7종 |
-| [domain/day1/endCard.ts](../../src/domain/day1/endCard.ts) | 수정 | `placedIconRect` — 16:9 중앙 축퇴 |
-| [types.ts](../../src/domain/editor/types.ts) | 수정 | `Day1EndCardRenderProps`, `Day1IconAnimation`, `Day1CardMotion`, `Day1Props.endCard` |
-| [project.ts](../../src/domain/editor/project.ts) | 수정 | `buildDay1Props`가 배너·아이콘 URL 해상 + 아이콘 사각형 확정 |
-| [Day1Composition.tsx](../../src/compositions/Day1Composition.tsx) | 수정 | 3번째 Sequence의 빈 캔버스 → `EndCardScene` |
-| [endCard.test.ts](../../src/domain/day1/endCard.test.ts) | 수정 | `placedIconRect` 유닛 4개 |
-| [day1Props.test.ts](../../src/domain/editor/day1Props.test.ts) | 수정 | 엔드카드 스냅샷 유닛 5개 |
+| [day1/EndCardScene.tsx](../../../../src/compositions/day1/EndCardScene.tsx) | 신규 | 배너 배경 + 아이콘 오버레이 2레이어, 프리셋 7종 |
+| [domain/day1/endCard.ts](../../../../src/domain/day1/endCard.ts) | 수정 | `placedIconRect` — 16:9 중앙 축퇴 |
+| [types.ts](../../../../src/domain/editor/types.ts) | 수정 | `Day1EndCardRenderProps`, `Day1IconAnimation`, `Day1CardMotion`, `Day1Props.endCard` |
+| [project.ts](../../../../src/domain/editor/project.ts) | 수정 | `buildDay1Props`가 배너·아이콘 URL 해상 + 아이콘 사각형 확정 |
+| [Day1Composition.tsx](../../../../src/compositions/Day1Composition.tsx) | 수정 | 3번째 Sequence의 빈 캔버스 → `EndCardScene` |
+| [endCard.test.ts](../../../../src/domain/day1/endCard.test.ts) | 수정 | `placedIconRect` 유닛 4개 |
+| [day1Props.test.ts](../../../../src/domain/editor/day1Props.test.ts) | 수정 | 엔드카드 스냅샷 유닛 5개 |
 
 유닛 226 → **236** (+10).
 

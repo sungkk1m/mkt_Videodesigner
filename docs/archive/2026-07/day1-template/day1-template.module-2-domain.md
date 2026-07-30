@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 2 — `domain/day1/` 순수 로직 3종 + 유닛
 > **Date**: 2026-07-28
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §4, §8.1
+> **Design**: [day1-template.design.md](day1-template.design.md) §4, §8.1
 > **선행**: [module-1](day1-template.module-1-schema.md) ✅
 
 ---
@@ -11,13 +11,13 @@
 ## 1. What Shipped
 
 Design §4 그대로 세 파일. React·Remotion·Zustand 임포트 없음
-([architecture.test.ts](../../src/test/architecture.test.ts) 통과).
+([architecture.test.ts](../../../../src/test/architecture.test.ts) 통과).
 
 | 파일 | 내용 |
 |------|------|
-| [layout.ts](../../src/domain/day1/layout.ts) | `splitLayout(ratio, lineWidthPx)` — 패널 2개 + 분할선 사각형 |
-| [playback.ts](../../src/domain/day1/playback.ts) | `activePanelForSection`, `day1SectionDurations` |
-| [endCard.ts](../../src/domain/day1/endCard.ts) | `APP_ICON_RECT`, `appIconRect(ratio, adjust)` |
+| [layout.ts](../../../../src/domain/day1/layout.ts) | `splitLayout(ratio, lineWidthPx)` — 패널 2개 + 분할선 사각형 |
+| [playback.ts](../../../../src/domain/day1/playback.ts) | `activePanelForSection`, `day1SectionDurations` |
+| [endCard.ts](../../../../src/domain/day1/endCard.ts) | `APP_ICON_RECT`, `appIconRect(ratio, adjust)` |
 
 ### 1.1 splitLayout — Design 표와 일치
 
@@ -104,7 +104,7 @@ npx playwright test               18 passed
 ### 함께 닫은 module-1 미결 사항
 
 module-1 증거 문서에 "Day1도 3장면 테이블을 쓴다 — module-2에서 분기 추가"로
-남겨둔 항목을 닫았다. [project.ts](../../src/domain/editor/project.ts)의
+남겨둔 항목을 닫았다. [project.ts](../../../../src/domain/editor/project.ts)의
 `applyDurationPreset`이 이제 템플릿에 따라 `day1SectionDurations`와
 `createSceneDurations`로 갈라진다.
 

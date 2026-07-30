@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 3 — `Day1Composition` + `SplitFrame` (흑백·분할선·라벨) + 2소스 렌더 재측정
 > **Date**: 2026-07-28
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §2.2, §5.1, §5.2
+> **Design**: [day1-template.design.md](day1-template.design.md) §2.2, §5.1, §5.2
 > **선행**: [module-1](day1-template.module-1-schema.md) ✅ · [module-2](day1-template.module-2-domain.md) ✅
 
 ---
@@ -12,14 +12,14 @@
 
 | 파일 | 상태 | 내용 |
 |------|:----:|------|
-| [Day1Composition.tsx](../../src/compositions/Day1Composition.tsx) | 신규 | 구간 3개 Sequence + AudioLayer |
-| [day1/SplitFrame.tsx](../../src/compositions/day1/SplitFrame.tsx) | 신규 | 패널 2개, 분할선, 라벨 오버레이 |
-| [shared/AudioLayer.tsx](../../src/compositions/shared/AudioLayer.tsx) | 신규 | ThreeSceneComposition 내부 정의를 추출 |
-| [types.ts](../../src/domain/editor/types.ts) | 수정 | `Day1Props` 렌더 계약 |
-| [project.ts](../../src/domain/editor/project.ts) | 수정 | `day1Of`, `DEFAULT_DAY1_SETTINGS`, `buildDay1Props` |
-| [ThreeSceneComposition.tsx](../../src/compositions/ThreeSceneComposition.tsx) | 수정 | AudioLayer import로 교체 (−38줄) |
-| [test/fixtures/project.ts](../../src/test/fixtures/project.ts) | 수정 | `day1ProjectFixture` |
-| [day1Props.test.ts](../../src/domain/editor/day1Props.test.ts) | 신규 | 유닛 13개 |
+| [Day1Composition.tsx](../../../../src/compositions/Day1Composition.tsx) | 신규 | 구간 3개 Sequence + AudioLayer |
+| [day1/SplitFrame.tsx](../../../../src/compositions/day1/SplitFrame.tsx) | 신규 | 패널 2개, 분할선, 라벨 오버레이 |
+| [shared/AudioLayer.tsx](../../../../src/compositions/shared/AudioLayer.tsx) | 신규 | ThreeSceneComposition 내부 정의를 추출 |
+| [types.ts](../../../../src/domain/editor/types.ts) | 수정 | `Day1Props` 렌더 계약 |
+| [project.ts](../../../../src/domain/editor/project.ts) | 수정 | `day1Of`, `DEFAULT_DAY1_SETTINGS`, `buildDay1Props` |
+| [ThreeSceneComposition.tsx](../../../../src/compositions/ThreeSceneComposition.tsx) | 수정 | AudioLayer import로 교체 (−38줄) |
+| [test/fixtures/project.ts](../../../../src/test/fixtures/project.ts) | 수정 | `day1ProjectFixture` |
+| [day1Props.test.ts](../../../../src/domain/editor/day1Props.test.ts) | 신규 | 유닛 13개 |
 | `tests/fixtures/gameplay-sample-b.mp4` | 신규 | 두 번째 소스 (gitignored) |
 
 ### 1.1 두 번째 소스 픽스처 — module-2 블로커 해제

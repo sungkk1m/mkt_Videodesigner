@@ -53,7 +53,7 @@
 
 | # | Criteria | Status | Evidence |
 |---|----------|:------:|----------|
-| SC1 | Day1으로 3규격 각각 실제 MP4가 나온다 | ✅ Met | [day1-template.spec.ts:339](../../tests/e2e/day1-template.spec.ts) — 1080×1080 · 1080×1920 · 1920×1080, h264+aac, 15.0초, `ffprobe` 확인 |
+| SC1 | Day1으로 3규격 각각 실제 MP4가 나온다 | ✅ Met | [day1-template.spec.ts:339](../../../../tests/e2e/day1-template.spec.ts) — 1080×1080 · 1080×1920 · 1920×1080, h264+aac, 15.0초, `ffprobe` 확인 |
 | SC2 | 흑백 전환이 렌더 결과물에 반영된다 | ✅ Met | 동 spec `:390` — 비활성 패널 평균 채도 < 8, 정지 회색이 **자기 소스** 첫 프레임 루마와 ±10, 두 패널 회색차 > 30 |
 | SC3 | 기존 3장면 프로젝트가 회귀 없이 열리고 렌더된다 | ✅ Met | 기존 E2E 18개 + 유닛 272개 통과, v1 JSON 가져오기 → 실제 렌더(동 spec `:689`), 기존 `data-testid` 무변경 |
 | SC4 | 분할선 색이 지정한 값으로 렌더된다 | ✅ Met | 동 spec `:390` — `#38bdf8` → (56,189,247), 1채널 오차 |
@@ -95,11 +95,11 @@
 | Phase | Document | Status |
 |-------|----------|--------|
 | PM | — | ⚪ 미실행 (`/pdca pm` 생략) |
-| Plan | [day1-template.plan.md](../01-plan/features/day1-template.plan.md) | ✅ v0.1.1 (D14·D15 반영) |
-| Design | [day1-template.design.md](../02-design/features/day1-template.design.md) | ✅ v0.1.1 (D12 폐기 반영) |
-| Spike | [day1-template.render-spike.md](../03-analysis/day1-template.render-spike.md) | ✅ 0.99× |
-| Do 증거 | [module-1](../03-analysis/day1-template.module-1-schema.md) · [module-2](../03-analysis/day1-template.module-2-domain.md) · [module-3](../03-analysis/day1-template.module-3-composition.md) · [module-4](../03-analysis/day1-template.module-4-endcard.md) · [module-5](../03-analysis/day1-template.module-5-ui.md) · [module-6](../03-analysis/day1-template.module-6-render.md) | ✅ 6/6 |
-| Check·Act | [day1-template.analysis.md](../03-analysis/day1-template.analysis.md) | ✅ 100% (§8 Act 포함) |
+| Plan | [day1-template.plan.md](day1-template.plan.md) | ✅ v0.1.1 (D14·D15 반영) |
+| Design | [day1-template.design.md](day1-template.design.md) | ✅ v0.1.1 (D12 폐기 반영) |
+| Spike | [day1-template.render-spike.md](day1-template.render-spike.md) | ✅ 0.99× |
+| Do 증거 | [module-1](day1-template.module-1-schema.md) · [module-2](day1-template.module-2-domain.md) · [module-3](day1-template.module-3-composition.md) · [module-4](day1-template.module-4-endcard.md) · [module-5](day1-template.module-5-ui.md) · [module-6](day1-template.module-6-render.md) | ✅ 6/6 |
+| Check·Act | [day1-template.analysis.md](day1-template.analysis.md) | ✅ 100% (§8 Act 포함) |
 | Report | 현재 문서 | ✅ |
 
 ---
@@ -164,7 +164,7 @@
 | 항목 | 사유 | 우선 | 예상 |
 |------|------|:----:|------|
 | **bannerdesigner v1.18 커밋** | 별개 저장소(`mkt_bannerdesigner`)의 워킹 트리에만 있다. 그 프로젝트의 PDCA·커밋 정책을 따라야 하므로 사용자 확인 대상 | **높음** | 즉시 (커밋 1회) |
-| MPEG-4 / HEVC 업로드 호환 확대 | 모든 템플릿 공통 영향. 사용자 결정으로 분리 ([media-codec-compat.plan.md](../01-plan/features/media-codec-compat.plan.md)) | 중간 | 별도 Plan 존재 |
+| MPEG-4 / HEVC 업로드 호환 확대 | 모든 템플릿 공통 영향. 사용자 결정으로 분리 ([media-codec-compat.plan.md](../../../01-plan/features/media-codec-compat.plan.md)) | 중간 | 별도 Plan 존재 |
 | Day1 나레이션·TTS | Plan §2.2 범위 밖. 오디오 경로는 이미 `duckedVolumeAt`을 타도록 준비됨 | 낮음 | — |
 | 핸들 복원 경로 자동 테스트 | OS 파일 피커를 Playwright가 열 수 없다. 3장면 소스도 동일 한계 | 낮음 | 도구 제약 |
 

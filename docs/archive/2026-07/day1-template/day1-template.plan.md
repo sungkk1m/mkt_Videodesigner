@@ -42,7 +42,7 @@
 ### 1.2 Background
 
 - 레퍼런스: 640×640 GIF. 가로형 영상 2개를 위아래로 쌓고, 가운데 하늘색 분할선, 각 패널에 굵은 흰 글씨 + 검은 외곽선으로 `DAY 1` / `DAY 30` 라벨.
-- 현재 스키마는 `scenes`가 3튜플로 고정되어 있고([schema.ts:191](../../../src/domain/editor/schema.ts:191)) `source`가 단일 영상이다([schema.ts:192](../../../src/domain/editor/schema.ts:192)). Day1은 이 두 전제를 모두 벗어난다.
+- 현재 스키마는 `scenes`가 3튜플로 고정되어 있고([schema.ts:191](../../../../src/domain/editor/schema.ts:191)) `source`가 단일 영상이다([schema.ts:192](../../../../src/domain/editor/schema.ts:192)). Day1은 이 두 전제를 모두 벗어난다.
 - bannerdesigner는 이미 템플릿 10종을 드롭다운으로 전환한다. 같은 개념을 영상 쪽에 들여온다.
 
 ### 1.3 Confirmed Product Decisions
@@ -138,7 +138,7 @@
 > **해소됨 (2026-07-30, Check 단계)**: Design은 이 항목을 별도 사이클로 분리했고 Do는 D12(수동
 > 배치)로 축퇴시켰다. Check 단계 사용자 결정으로 bannerdesigner에 app-badge 16:9(1920×1080)를
 > 추가해(v1.18) 좌표 상수를 확정했고, Day1은 3규격 모두 자동 배치가 된다. 근거와 실측은
-> [analysis §8](../../03-analysis/day1-template.analysis.md).
+> [analysis §8](day1-template.analysis.md).
 
 ---
 

@@ -3,7 +3,7 @@
 > **Feature**: day1-template
 > **Module**: 6 — 렌더·Batch 통합, E2E 6종, 문서 갱신 (**마지막 모듈**)
 > **Date**: 2026-07-30
-> **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md) §2.1 · §8.2 · §11.3
+> **Design**: [day1-template.design.md](day1-template.design.md) §2.1 · §8.2 · §11.3
 > **선행**: [module-1](day1-template.module-1-schema.md) ✅ · [module-2](day1-template.module-2-domain.md) ✅ · [module-3](day1-template.module-3-composition.md) ✅ · [module-4](day1-template.module-4-endcard.md) ✅ · [module-5](day1-template.module-5-ui.md) ✅
 
 ---
@@ -12,16 +12,16 @@
 
 | 파일 | 상태 | 내용 |
 |------|:----:|------|
-| [day1-template.spec.ts](../../tests/e2e/day1-template.spec.ts) | 신규 | E2E 6종. 렌더 결과물 MP4 픽셀 기준 SC1·SC2·SC4·SC5 |
-| [useRenderQueue.test.ts](../../src/features/editor/useRenderQueue.test.ts) | 신규 | `preflightIssues` 템플릿 분기 유닛 8개 |
-| [renderEditor.ts](../../src/infrastructure/render/renderEditor.ts) | 수정 | 템플릿 → 컴포지션 분기, `EditorRenderRequest` 유니온 |
-| [ports/index.ts](../../src/domain/ports/index.ts) | 수정 | `RenderRequest.snapshot`이 `EditorSnapshot` |
-| [types.ts](../../src/domain/editor/types.ts) | 수정 | `EditorSnapshot` 태그 유니온 |
-| [project.ts](../../src/domain/editor/project.ts) | 수정 | `buildEditorSnapshot()` — 템플릿 분기의 단일 지점 |
-| [useRenderQueue.ts](../../src/features/editor/useRenderQueue.ts) | 수정 | preflight Day1 분기, 잡별 스냅샷을 `buildEditorSnapshot`으로 |
-| [EditorWorkspace.tsx](../../src/features/editor/EditorWorkspace.tsx) | 수정 | Day1 렌더·Batch 차단 해제, `day1-render-pending` 제거 |
-| [renderEditor.test.ts](../../src/infrastructure/render/renderEditor.test.ts) | 수정 | Day1 요청 라우팅·규격별 레이아웃 유닛 +5 |
-| [generate-editor-fixture.mjs](../../scripts/generate-editor-fixture.mjs) | 수정 | 두 번째 소스 + 엔드카드 스틸 픽스처 생성 |
+| [day1-template.spec.ts](../../../../tests/e2e/day1-template.spec.ts) | 신규 | E2E 6종. 렌더 결과물 MP4 픽셀 기준 SC1·SC2·SC4·SC5 |
+| [useRenderQueue.test.ts](../../../../src/features/editor/useRenderQueue.test.ts) | 신규 | `preflightIssues` 템플릿 분기 유닛 8개 |
+| [renderEditor.ts](../../../../src/infrastructure/render/renderEditor.ts) | 수정 | 템플릿 → 컴포지션 분기, `EditorRenderRequest` 유니온 |
+| [ports/index.ts](../../../../src/domain/ports/index.ts) | 수정 | `RenderRequest.snapshot`이 `EditorSnapshot` |
+| [types.ts](../../../../src/domain/editor/types.ts) | 수정 | `EditorSnapshot` 태그 유니온 |
+| [project.ts](../../../../src/domain/editor/project.ts) | 수정 | `buildEditorSnapshot()` — 템플릿 분기의 단일 지점 |
+| [useRenderQueue.ts](../../../../src/features/editor/useRenderQueue.ts) | 수정 | preflight Day1 분기, 잡별 스냅샷을 `buildEditorSnapshot`으로 |
+| [EditorWorkspace.tsx](../../../../src/features/editor/EditorWorkspace.tsx) | 수정 | Day1 렌더·Batch 차단 해제, `day1-render-pending` 제거 |
+| [renderEditor.test.ts](../../../../src/infrastructure/render/renderEditor.test.ts) | 수정 | Day1 요청 라우팅·규격별 레이아웃 유닛 +5 |
+| [generate-editor-fixture.mjs](../../../../scripts/generate-editor-fixture.mjs) | 수정 | 두 번째 소스 + 엔드카드 스틸 픽스처 생성 |
 | README.md · conventions.md | 수정 | 템플릿 2종, §3.1 템플릿 규약, 픽스처 생성 커맨드 |
 
 유닛 262 → **274** (+12). E2E 18 → **24** (+6).
@@ -150,7 +150,7 @@ expect(Math.abs(grayOfA - grayOfB)).toBeGreaterThan(30);  // 두 소스가 구�
 
 `#ff00a0`(G=0)이 렌더 후 G=32로 나왔다. H.264 4:2:0 2세대를 거친 결과다.
 절대값 비교를 버리고 **최근접 팔레트 매칭**으로 바꿨다 — 기존
-[editor-vertical-slice.spec.ts](../../tests/e2e/editor-vertical-slice.spec.ts)의
+[editor-vertical-slice.spec.ts](../../../../tests/e2e/editor-vertical-slice.spec.ts)의
 `sourceSecondOf` 패턴과 같다. 더 견고하고, 주장도 더 강하다:
 "이 픽셀은 팔레트 3번" = "소스 3초 지점이 화면에 있다".
 
@@ -216,7 +216,7 @@ npx playwright test   24 tests               passed   (기존 18 + 신규 6)
 `day1-render-pending` 하나뿐이고, 그것을 참조하는 테스트는 없었다.
 
 v1 문서 회귀는 두 겹이다 — 기존 필드 단위 테스트
-([persistence-recovery.spec.ts](../../tests/e2e/persistence-recovery.spec.ts))에
+([persistence-recovery.spec.ts](../../../../tests/e2e/persistence-recovery.spec.ts))에
 더해, 이번에 **v1 가져오기 → relink → 실제 MP4 렌더**를 붙였다. 파일명
 `v1-regression_ko_9x16_15s_60fps.mp4`, 1080×1920 h264. **✅ 충족**
 

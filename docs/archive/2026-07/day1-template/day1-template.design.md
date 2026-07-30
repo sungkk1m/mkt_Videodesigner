@@ -5,7 +5,7 @@
 > **Author**: 김성권 / Claude
 > **Date**: 2026-07-28
 > **Status**: Approved for Do
-> **Plan**: [day1-template.plan.md](../../01-plan/features/day1-template.plan.md)
+> **Plan**: [day1-template.plan.md](day1-template.plan.md)
 > **Architecture**: **Option C — 공통 구간 + 템플릿 페이로드** (사용자 선택)
 
 ---
@@ -36,7 +36,7 @@
 
 Day1의 시간 구조는 `[영상A 활성 · 영상B 활성 · 엔드카드]` 3구간이고, **A|B 경계가 곧 컬러 전환 시점**(Plan D2)이다. 기존 3장면과 구간 수가 같다.
 
-타임라인 도메인([timeline.ts](../../../src/domain/timeline/timeline.ts))은 이미 `SceneDurationsMs`(순수 3튜플) 위에서만 동작한다. `EditorScenes` 형태에 묶인 함수는 `sceneDurationsOf` **하나뿐**이다. 따라서 경계 드래그·총길이 불변식·프레임 배분·프리셋은 **무수정 재사용**된다.
+타임라인 도메인([timeline.ts](../../../../src/domain/timeline/timeline.ts))은 이미 `SceneDurationsMs`(순수 3튜플) 위에서만 동작한다. `EditorScenes` 형태에 묶인 함수는 `sceneDurationsOf` **하나뿐**이다. 따라서 경계 드래그·총길이 불변식·프레임 배분·프리셋은 **무수정 재사용**된다.
 
 ### 1.3 Confirmed Decisions
 
@@ -48,7 +48,7 @@ Plan §1.3의 D1~D8에 더해 Design 단계에서 확정한 것:
 | D10 | `sections`는 당분간 **3튜플 고정** | 두 템플릿 모두 3구간이다. N구간 일반화는 실제로 필요한 템플릿이 생길 때 (YAGNI) |
 | D11 | 비활성 패널은 **자기 trim-in 프레임**에 정지 | Plan D1의 "첫 프레임" 문언 그대로. Do에서 육안 확인 후 이견 있으면 재논의 |
 | D12 | ~~16:9 엔드카드는 아이콘 **수동 배치**로 축퇴~~ → **폐기 (2026-07-30)** | bannerdesigner v1.18이 app-badge 1920×1080 레이아웃을 추가해 좌표가 생겼다. 3규격 모두 자동 배치. Plan D15 |
-| D13 | 스파이크 결과에 따라 **정지 프레임 사전 추출 설계는 폐기** | 실측 0.99×. [render-spike](../../03-analysis/day1-template.render-spike.md) |
+| D13 | 스파이크 결과에 따라 **정지 프레임 사전 추출 설계는 폐기** | 실측 0.99×. [render-spike](day1-template.render-spike.md) |
 
 ---
 
@@ -99,7 +99,7 @@ Day1Settings + sections + selectedRatio
 
 ### 2.3 Performance
 
-스파이크 실측 완료. 15초 1080×1920 60fps 기준 **baseline 10.92s / day1 10.75s = 0.99×**. 게이트 1.5× 대비 여유가 크다. 근거와 한계는 [day1-template.render-spike.md](../../03-analysis/day1-template.render-spike.md).
+스파이크 실측 완료. 15초 1080×1920 60fps 기준 **baseline 10.92s / day1 10.75s = 0.99×**. 게이트 1.5× 대비 여유가 크다. 근거와 한계는 [day1-template.render-spike.md](day1-template.render-spike.md).
 
 **남은 확인**: 스파이크는 같은 파일을 두 번 참조했다. Do 단계에서 **서로 다른 소스 2개**로 재측정한다(디코더 인스턴스 2개, 메모리 증가 가능).
 
@@ -308,7 +308,7 @@ non-nullable이 되고 중앙 정사각형 폴백(`placedIconRect`)은 제거했
   범위 밖이라 더킹 창이 빈 배열이므로 곡선은 평평하다. 그래도 같은 함수를 타는 이유는 나레이션이
   들어올 때 두 템플릿의 오디오 경로가 갈라지지 않게 하려는 것이다.
 - **비활성**: `<Freeze frame={0}>` + `<Video muted style={{filter:'grayscale(1)'}} trimBefore={trimInFrames}/>`
-  CTA 배경이 이미 쓰는 패턴이며([CtaScene.tsx:41](../../../src/compositions/scenes/CtaScene.tsx:41)) 스파이크로 성능까지 확인했다.
+  CTA 배경이 이미 쓰는 패턴이며([CtaScene.tsx:41](../../../../src/compositions/scenes/CtaScene.tsx:41)) 스파이크로 성능까지 확인했다.
 - 분할선은 두 패널 사이의 `div`, 색은 `split.lineColor`.
 - 라벨은 패널 위 오버레이. 외곽선은 `paint-order: stroke` + `-webkit-text-stroke`.
 
@@ -416,7 +416,7 @@ if ('EyeDropper' in window) {
 
 ## 9. Architecture Compliance
 
-- `domain/day1/**`는 순수 함수만. React·Remotion·Zustand 임포트 금지 ([architecture.test.ts](../../../src/test/architecture.test.ts))
+- `domain/day1/**`는 순수 함수만. React·Remotion·Zustand 임포트 금지 ([architecture.test.ts](../../../../src/test/architecture.test.ts))
 - `compositions/`는 `domain`과 `shared`만 참조
 - 기존 `data-testid` 70개 유지, Day1용은 추가만
 

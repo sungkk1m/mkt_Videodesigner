@@ -74,16 +74,15 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 |------|------|
 | `docs/01-plan/features/browser-video-mvp.plan.md` | 요구사항과 범위 |
 | `docs/02-design/features/browser-video-mvp.design.md` | 설계, 모듈 완료 로그, 의도적 설계 편차 |
-| `docs/01-plan/features/day1-template.plan.md` | Day1 템플릿 요구사항과 결정 |
-| `docs/02-design/features/day1-template.design.md` | Day1 설계, 세션 가이드 |
+| `docs/archive/2026-07/day1-template/` | Day1 템플릿 PDCA 전체 (Plan·Design·모듈 증거·Check·리포트) — 사이클 완료 후 아카이브 |
 | `docs/01-plan/conventions.md` | 코딩 컨벤션 (§3.1 템플릿 규약) |
 | `docs/03-analysis/*.md` | 모듈별 검증 증거와 알려진 한계 |
 
 ## Status
 
-browser-video-mvp Do 모듈 1~7, day1-template Do 모듈 1~6 구현 및 Check 완료
-(유닛 272, E2E 27 + 옵트인 60초 렌더 하네스 1). Day1 엔드카드는 9:16 · 1:1 · 16:9
-세 규격 모두 bannerdesigner 좌표에 자동 배치됩니다.
+browser-video-mvp Do 모듈 1~7 완료. day1-template은 **PDCA 사이클 완료**
+(Match Rate 100%, Success Criteria 6/6 — 유닛 272, E2E 27 + 옵트인 60초 렌더 하네스 1).
+Day1 엔드카드는 9:16 · 1:1 · 16:9 세 규격 모두 bannerdesigner 좌표에 자동 배치됩니다.
 
 **GitHub Pages 배포 완료 (2026-07-28).** 라이브 사이트에서 업로드 → Hook 분석 →
 실제 MP4 렌더 → 자동 저장·복구까지 확인했습니다 (`npm run verify:deployment`).

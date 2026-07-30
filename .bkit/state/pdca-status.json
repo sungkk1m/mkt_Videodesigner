@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-07-30T09:30:00.000Z",
+  "lastUpdated": "2026-07-30T09:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "editor",
@@ -22,10 +22,9 @@
     "config",
     "tts",
     "output",
-    "day1-template",
     "day1"
   ],
-  "primaryFeature": "day1-template",
+  "primaryFeature": "browser-video-mvp",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -452,29 +451,12 @@
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/output/browserOutputWriter.ts"
     },
     "day1-template": {
-      "phase": "completed",
-      "startedAt": "2026-07-28T05:21:54.642264Z",
+      "phase": "archived",
       "matchRate": 100,
       "iterationCount": 1,
-      "documents": {
-        "design": "docs/02-design/features/day1-template.design.md",
-        "module1Evidence": "docs/03-analysis/day1-template.module-1-schema.md",
-        "module2Evidence": "docs/03-analysis/day1-template.module-2-domain.md",
-        "module3Evidence": "docs/03-analysis/day1-template.module-3-composition.md",
-        "module4Evidence": "docs/03-analysis/day1-template.module-4-endcard.md",
-        "plan": "docs/01-plan/features/day1-template.plan.md",
-        "renderSpike": "docs/03-analysis/day1-template.render-spike.md",
-        "module5Evidence": "docs/03-analysis/day1-template.module-5-ui.md",
-        "module6Evidence": "docs/03-analysis/day1-template.module-6-render.md",
-        "analysis": "docs/03-analysis/day1-template.analysis.md",
-        "report": "docs/04-report/day1-template.report.md"
-      },
-      "timestamps": {
-        "created": "2026-07-28T05:22:06.983980Z",
-        "updated": "2026-07-30T09:30:00.000Z",
-        "completedAt": "2026-07-30T09:30:00.000Z"
-      },
-      "phaseNumber": 6
+      "startedAt": "2026-07-28T05:21:54.642264Z",
+      "archivedAt": "2026-07-30T09:45:00.000Z",
+      "archivedTo": "docs/archive/2026-07/day1-template/"
     },
     "day1": {
       "phase": "do",
@@ -561,7 +543,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-07-30T09:30:00.000Z"
+    "lastActivity": "2026-07-30T09:45:00.000Z"
   },
   "history": [
     {
@@ -3558,6 +3540,12 @@
       "feature": "day1-template",
       "phase": "completed",
       "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T09:45:00.000Z",
+      "feature": "day1-template",
+      "phase": "archived",
+      "action": "archived"
     }
   ],
   "stateMachine": {
