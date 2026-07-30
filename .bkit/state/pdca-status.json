@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-07-28T06:34:31.167717Z",
+  "lastUpdated": "2026-07-30T08:13:27.813041Z",
   "activeFeatures": [
     "browser-video-mvp",
     "editor",
@@ -213,9 +213,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T14:37:52.511Z",
-        "lastUpdated": "2026-07-28T06:32:21.843Z"
+        "lastUpdated": "2026-07-30T08:04:10.259Z"
       },
-      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/editor/project.ts"
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/features/editor/useRenderQueue.ts"
     },
     "timeline": {
       "phase": "do",
@@ -252,9 +252,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T14:39:22.175Z",
-        "lastUpdated": "2026-07-28T01:21:52.579Z"
+        "lastUpdated": "2026-07-30T07:15:07.553Z"
       },
-      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/render/queue.test.ts"
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/render/renderEditor.test.ts"
     },
     "compositions": {
       "phase": "do",
@@ -265,9 +265,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T14:40:31.413Z",
-        "lastUpdated": "2026-07-28T01:09:22.332Z"
+        "lastUpdated": "2026-07-28T07:24:51.455Z"
       },
-      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/compositions/ThreeSceneComposition.tsx"
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/compositions/Day1Composition.tsx"
     },
     "mkt_videodesigner": {
       "phase": "do",
@@ -278,7 +278,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T14:51:25.739Z",
-        "lastUpdated": "2026-07-28T05:28:55.975Z"
+        "lastUpdated": "2026-07-28T07:16:16.340Z"
       },
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/spike.tsx"
     },
@@ -291,9 +291,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T14:52:20.147Z",
-        "lastUpdated": "2026-07-28T06:15:33.740Z"
+        "lastUpdated": "2026-07-30T07:57:49.774Z"
       },
-      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/tests/e2e/persistence-recovery.spec.ts"
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/tests/e2e/day1-template.spec.ts"
     },
     "errors": {
       "phase": "do",
@@ -317,7 +317,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-27T15:38:08.728Z",
-        "lastUpdated": "2026-07-28T01:04:27.081Z"
+        "lastUpdated": "2026-07-30T07:11:18.842Z"
       },
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/ports/index.ts"
     },
@@ -356,7 +356,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-28T00:43:04.060Z",
-        "lastUpdated": "2026-07-28T06:11:15.105Z"
+        "lastUpdated": "2026-07-28T08:30:08.312Z"
       },
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/test/fixtures/project.ts"
     },
@@ -452,22 +452,27 @@
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/output/browserOutputWriter.ts"
     },
     "day1-template": {
-      "phase": "do",
+      "phase": "check",
       "startedAt": "2026-07-28T05:21:54.642264Z",
-      "matchRate": null,
+      "matchRate": 98,
       "iterationCount": 0,
       "documents": {
-        "plan": "docs/01-plan/features/day1-template.plan.md",
         "design": "docs/02-design/features/day1-template.design.md",
-        "renderSpike": "docs/03-analysis/day1-template.render-spike.md",
         "module1Evidence": "docs/03-analysis/day1-template.module-1-schema.md",
-        "module2Evidence": "docs/03-analysis/day1-template.module-2-domain.md"
+        "module2Evidence": "docs/03-analysis/day1-template.module-2-domain.md",
+        "module3Evidence": "docs/03-analysis/day1-template.module-3-composition.md",
+        "module4Evidence": "docs/03-analysis/day1-template.module-4-endcard.md",
+        "plan": "docs/01-plan/features/day1-template.plan.md",
+        "renderSpike": "docs/03-analysis/day1-template.render-spike.md",
+        "module5Evidence": "docs/03-analysis/day1-template.module-5-ui.md",
+        "module6Evidence": "docs/03-analysis/day1-template.module-6-render.md",
+        "analysis": "docs/03-analysis/day1-template.analysis.md"
       },
       "timestamps": {
         "created": "2026-07-28T05:22:06.983980Z",
-        "updated": "2026-07-28T06:34:31.167717Z"
+        "updated": "2026-07-30T08:13:27.813041Z"
       },
-      "phaseNumber": 3
+      "phaseNumber": 4
     },
     "day1": {
       "phase": "do",
@@ -478,7 +483,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-07-28T06:30:15.777Z",
-        "lastUpdated": "2026-07-28T06:31:47.649Z"
+        "lastUpdated": "2026-07-28T07:25:17.968Z"
       },
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/domain/day1/endCard.test.ts"
     }
@@ -554,7 +559,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-07-28T06:32:21.843Z"
+    "lastActivity": "2026-07-30T08:04:10.260Z"
   },
   "history": [
     {
@@ -2480,6 +2485,786 @@
     },
     {
       "timestamp": "2026-07-28T06:32:21.843Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:05.972Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:17.059Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:23.883Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:27.786Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:38.289Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:43.728Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:08:51.151Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:04.415Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:09.134Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:16.607Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:24.820Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:35.707Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:09:55.855Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:10:21.727Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:10:27.692Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:10:35.060Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:11:02.598Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:11:10.168Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:12:40.001Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:15:28.191Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:15:32.519Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:16:16.340Z",
+      "feature": "mkt_videodesigner",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:23:22.946Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:23:34.082Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:23:45.487Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:23:53.174Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:04.029Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:15.311Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:38.782Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:43.354Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:47.478Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:24:51.455Z",
+      "feature": "compositions",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:25:06.039Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:25:17.969Z",
+      "feature": "day1",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:25:33.150Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:25:39.580Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T07:25:53.347Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:28:27.863Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:28:33.709Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:29:10.252Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:29:20.540Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:29:33.878Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:29:37.873Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:29:41.577Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:30:01.150Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:30:08.313Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:30:56.549Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:31:23.957Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:31:27.828Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:31:33.119Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:31:52.878Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:32:01.561Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:32:11.830Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:32:54.159Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:32:59.993Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:33:05.085Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:33:20.539Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:33:42.232Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:33:55.749Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:34:13.850Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:35:07.574Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:35:19.924Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:35:24.360Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:35:58.432Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:37:25.384Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:37:48.498Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:38:03.736Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:38:11.347Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:38:34.043Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:38:40.024Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:38:52.390Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:01.500Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:10.018Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:16.988Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:26.355Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:33.336Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:44.065Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:51.619Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:39:56.004Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:01.642Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:08.999Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:30.294Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:40.166Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:44.641Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:50.992Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:40:58.585Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-28T08:41:03.486Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:10:43.843Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:10:54.461Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:07.626Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:14.256Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:18.842Z",
+      "feature": "ports",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:35.654Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:43.906Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:11:48.701Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:12:05.386Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:12:11.495Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:12:22.922Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:12:45.766Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:12:52.166Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:01.880Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:07.759Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:15.116Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:21.668Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:27.077Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:47.736Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:13:53.634Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:14:13.352Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:14:42.196Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:14:58.804Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:15:07.553Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:15:48.690Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:21:43.200Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:22:34.429Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:22:47.993Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:23:24.141Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:23:35.671Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:45:40.044Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:45:43.781Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:46:17.285Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:48:53.813Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:49:24.955Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:53:36.972Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:53:44.165Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:54:57.622Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:55:04.479Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:55:10.601Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:57:05.048Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T07:57:49.774Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T08:04:10.260Z",
       "feature": "editor",
       "phase": "do",
       "action": "updated"
