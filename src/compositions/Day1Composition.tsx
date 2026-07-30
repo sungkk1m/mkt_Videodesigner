@@ -53,12 +53,13 @@ export const Day1Composition = ({
           {section.activePanel ? (
             <SplitFrame
               active={section.activePanel}
+              audio={audio}
               labelStyle={labelStyle}
               layout={layout}
               lineColor={lineColor}
-              originalVolume={audio.originalVolume}
               panelA={panelA}
               panelB={panelB}
+              sectionFromFrame={section.fromFrame}
             />
           ) : (
             <EndCardScene

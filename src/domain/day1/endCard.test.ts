@@ -1,4 +1,6 @@
-// Day1 Design Ref: §8.1 — the icon constants, the 16:9 gap, and iconAdjust.
+// Day1 Design Ref: §8.1 — the icon constants and iconAdjust. The 16:9 row was
+// added once bannerdesigner v1.18 shipped an app-badge 1920x1080 layout, which
+// retired the manual-placement degradation of Design D12.
 //
 // SC5 (icon overlays the baked-in banner icon within 2px) rests on these
 // numbers, so the first test checks them against the raw bannerdesigner CSS
@@ -6,18 +8,14 @@
 import {describe, expect, it} from 'vitest';
 
 import {RATIO_DIMENSIONS} from '../editor/types';
-import {
-  APP_ICON_RECT,
-  DEFAULT_ICON_ADJUST,
-  appIconRect,
-  placedIconRect,
-} from './endCard';
+import {APP_ICON_RECT, DEFAULT_ICON_ADJUST, appIconRect} from './endCard';
 
 describe('APP_ICON_RECT', () => {
   // Source: today-banner-designer.html `.tmpl-app-badge.size-* .ab-icon`.
   it.each([
     ['1:1' as const, {left: 282, top: 375, size: 515, radius: 96}],
     ['9:16' as const, {left: 200, top: 820, size: 680, radius: 120}],
+    ['16:9' as const, {left: 1096, top: 238, size: 640, radius: 125}],
   ])('places the %s icon back on its CSS pixels', (ratio, css) => {
     const {width, height} = RATIO_DIMENSIONS[ratio];
     const rect = APP_ICON_RECT[ratio];
@@ -34,12 +32,14 @@ describe('APP_ICON_RECT', () => {
     expect(rect.radius * width).toBeCloseTo(css.radius, 6);
   });
 
-  it('has no 16:9 entry — bannerdesigner ships no such layout', () => {
-    expect(APP_ICON_RECT['16:9']).toBeUndefined();
+  it('covers every output ratio, so nothing falls back to manual placement', () => {
+    for (const ratio of ['1:1', '9:16', '16:9'] as const) {
+      expect(APP_ICON_RECT[ratio]).toBeDefined();
+    }
   });
 
   it('keeps the icon inside the frame', () => {
-    for (const ratio of ['1:1', '9:16'] as const) {
+    for (const ratio of ['1:1', '9:16', '16:9'] as const) {
       const rect = APP_ICON_RECT[ratio];
 
       if (!rect) {
@@ -63,8 +63,10 @@ describe('appIconRect', () => {
     expect(appIconRect('9:16')).toEqual(APP_ICON_RECT['9:16']);
   });
 
-  it('returns null for 16:9 so the inspector can ask for manual placement', () => {
-    expect(appIconRect('16:9', DEFAULT_ICON_ADJUST)).toBeNull();
+  it('has a constant for 16:9 too, so no ratio needs manual placement', () => {
+    expect(appIconRect('16:9', DEFAULT_ICON_ADJUST)).toEqual(
+      APP_ICON_RECT['16:9'],
+    );
   });
 
   it('translates by dx and dy', () => {
@@ -133,45 +135,22 @@ describe('appIconRect', () => {
   });
 });
 
-describe('placedIconRect', () => {
-  it.each(['1:1', '9:16'] as const)(
-    'defers to the bannerdesigner constant for %s',
-    (ratio) => {
-      expect(placedIconRect(ratio, {dx: 0.05, dy: 0, scale: 1.1})).toEqual(
-        appIconRect(ratio, {dx: 0.05, dy: 0, scale: 1.1}),
-      );
-    },
-  );
-
-  it('centres a square fallback for 16:9, which has no layout to copy', () => {
+describe('16:9, once bannerdesigner v1.18 gave it a layout', () => {
+  it('is square in pixels like the other two ratios', () => {
     const {width, height} = RATIO_DIMENSIONS['16:9'];
-    const rect = placedIconRect('16:9', DEFAULT_ICON_ADJUST);
+    const rect = appIconRect('16:9', DEFAULT_ICON_ADJUST);
 
-    // Square in pixels even though the frame is not.
     expect(rect.w * width).toBeCloseTo(rect.h * height, 6);
-    // 40% of the shorter edge.
-    expect(rect.h * height).toBeCloseTo(height * 0.4, 6);
-    expect(rect.x + rect.w / 2).toBeCloseTo(0.5, 10);
-    expect(rect.y + rect.h / 2).toBeCloseTo(0.5, 10);
   });
 
-  it('honours dx, dy and scale on the fallback too', () => {
-    const base = placedIconRect('16:9', DEFAULT_ICON_ADJUST);
-    const moved = placedIconRect('16:9', {dx: 0.1, dy: -0.2, scale: 1.5});
+  it('adjusts the same way as the ratios that always had constants', () => {
+    const base = appIconRect('16:9', DEFAULT_ICON_ADJUST);
+    const moved = appIconRect('16:9', {dx: 0.1, dy: -0.2, scale: 1.5});
 
     expect(moved.w).toBeCloseTo(base.w * 1.5, 10);
     expect(moved.h).toBeCloseTo(base.h * 1.5, 10);
-    // Still centred, then nudged.
-    expect(moved.x + moved.w / 2).toBeCloseTo(0.5 + 0.1, 10);
-    expect(moved.y + moved.h / 2).toBeCloseTo(0.5 - 0.2, 10);
-  });
-
-  it('keeps the fallback inside the frame at rest', () => {
-    const rect = placedIconRect('16:9');
-
-    expect(rect.x).toBeGreaterThanOrEqual(0);
-    expect(rect.y).toBeGreaterThanOrEqual(0);
-    expect(rect.x + rect.w).toBeLessThanOrEqual(1);
-    expect(rect.y + rect.h).toBeLessThanOrEqual(1);
+    // Scale about the centre, then the nudge.
+    expect(moved.x + moved.w / 2).toBeCloseTo(base.x + base.w / 2 + 0.1, 10);
+    expect(moved.y + moved.h / 2).toBeCloseTo(base.y + base.h / 2 - 0.2, 10);
   });
 });

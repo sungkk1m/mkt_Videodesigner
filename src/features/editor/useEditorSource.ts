@@ -37,7 +37,8 @@ export interface EditorSourceApi {
   setCtaAsset: (slot: CtaAssetSlot, file: File | null) => Promise<void>;
 }
 
-const VIDEO_PICKER_OPTIONS = {
+/** Shared with `useDay1Assets` so both templates open the same picker. */
+export const VIDEO_PICKER_OPTIONS = {
   types: [
     {
       description: '영상 파일',

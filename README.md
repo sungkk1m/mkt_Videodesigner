@@ -81,8 +81,9 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 
 ## Status
 
-browser-video-mvp Do 모듈 1~7, day1-template Do 모듈 1~6 구현 및 검증 완료
-(유닛 274, E2E 24).
+browser-video-mvp Do 모듈 1~7, day1-template Do 모듈 1~6 구현 및 Check 완료
+(유닛 272, E2E 27 + 옵트인 60초 렌더 하네스 1). Day1 엔드카드는 9:16 · 1:1 · 16:9
+세 규격 모두 bannerdesigner 좌표에 자동 배치됩니다.
 
 **GitHub Pages 배포 완료 (2026-07-28).** 라이브 사이트에서 업로드 → Hook 분석 →
 실제 MP4 렌더 → 자동 저장·복구까지 확인했습니다 (`npm run verify:deployment`).

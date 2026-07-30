@@ -470,52 +470,130 @@ test.describe('module-6 Day1 render integration', () => {
   });
 
   // Plan SC5 — the overlay's bounding box against the bannerdesigner constants.
-  test('places the end card icon within 2px of the banner coordinates', async ({
+  // Both automatic ratios are measured: the placement is one pure function, but
+  // its two constant rows come from two different app-badge layouts.
+  const END_CARD_PLACEMENTS = [
+    {
+      // Day1 Design Ref: §4.3 APP_ICON_RECT['9:16'].
+      ratio: '9:16' as const,
+      file: 'day1-endcard-9x16.mp4',
+      frame: {width: 1080, height: 1920},
+      rect: {x: 0.18519, y: 0.42708, w: 0.62963, h: 0.35417},
+    },
+    {
+      // Day1 Design Ref: §4.3 APP_ICON_RECT['1:1'].
+      ratio: '1:1' as const,
+      file: 'day1-endcard-1x1.mp4',
+      frame: {width: 1080, height: 1080},
+      rect: {x: 0.26111, y: 0.34722, w: 0.47685, h: 0.47685},
+    },
+    {
+      // Day1 Design Ref: §4.3 APP_ICON_RECT['16:9'] — added once bannerdesigner
+      // v1.18 shipped the app-badge 1920×1080 layout (1096, 238, 640×640).
+      ratio: '16:9' as const,
+      file: 'day1-endcard-16x9.mp4',
+      frame: {width: 1920, height: 1080},
+      rect: {x: 0.57083, y: 0.22037, w: 0.33333, h: 0.59259},
+    },
+  ];
+
+  for (const placement of END_CARD_PLACEMENTS) {
+    test(`places the ${placement.ratio} end card icon within 2px of the banner coordinates`, async ({
+      page,
+    }) => {
+      await page.goto('/');
+      await selectDay1(page);
+      await uploadPanels(page);
+      await uploadEndCard(page);
+
+      // `glow` is the only preset with no transform at all (Design §5.3), so the
+      // measured box is the placement and nothing else. `none` would hide it.
+      await page.getByTestId('day1-icon-animation-glow').click();
+      await page.getByTestId('day1-card-motion-none').click();
+
+      await page.getByTestId(`ratio-${placement.ratio}`).click();
+
+      const {outputPath} = await renderAndSave(page, placement.file);
+
+      const {frame} = placement;
+      const expectedRect = {
+        x: placement.rect.x * frame.width,
+        y: placement.rect.y * frame.height,
+        w: placement.rect.w * frame.width,
+        h: placement.rect.h * frame.height,
+      };
+
+      const box = await colorBoundingBox(
+        outputPath,
+        END_CARD_SAMPLE_SECONDS,
+        hexToRgb('#ff00ff'),
+        frame,
+      );
+
+      expect(box.matched).toBeGreaterThan(1000);
+      expect(box.minX).toBeGreaterThanOrEqual(Math.round(expectedRect.x) - 2);
+      expect(box.minX).toBeLessThanOrEqual(Math.round(expectedRect.x) + 2);
+      expect(box.minY).toBeGreaterThanOrEqual(Math.round(expectedRect.y) - 2);
+      expect(box.minY).toBeLessThanOrEqual(Math.round(expectedRect.y) + 2);
+      expect(box.maxX).toBeCloseTo(
+        Math.round(expectedRect.x + expectedRect.w) - 1,
+        -0.5,
+      );
+      expect(box.maxY).toBeCloseTo(
+        Math.round(expectedRect.y + expectedRect.h) - 1,
+        -0.5,
+      );
+    });
+  }
+
+  // Panel restore parity with the three-scene path: a dropzone upload leaves no
+  // handle, so a reload has to land on the relink prompt and the relink has to
+  // keep the panel's trim. The stored-handle path itself needs the OS file
+  // picker, which Playwright cannot drive — the same gap the three-scene source
+  // has in `persistence-recovery.spec.ts`.
+  test('restores Day1 panels after a reload through the relink prompt', async ({
     page,
   }) => {
     await page.goto('/');
+    await page.getByLabel('프로젝트 이름').fill('day1-restore');
     await selectDay1(page);
     await uploadPanels(page);
-    await uploadEndCard(page);
 
-    // `glow` is the only preset with no transform at all (Design §5.3), so the
-    // measured box is the placement and nothing else. `none` would hide it.
-    await page.getByTestId('day1-icon-animation-glow').click();
-    await page.getByTestId('day1-card-motion-none').click();
+    await page.getByTestId('day1-a-trim-in').fill('2');
+    await page.getByTestId('day1-a-trim-in').blur();
+    await expect(page.getByTestId('day1-a-trim-range')).toContainText('2.00s');
 
-    await page.getByTestId('ratio-9:16').click();
+    await expect(page.getByTestId('editor-save-state')).toHaveText('저장됨', {
+      timeout: 10_000,
+    });
 
-    const {outputPath} = await renderAndSave(page, 'day1-endcard-9x16.mp4');
+    await page.reload();
 
-    // Day1 Design Ref: §4.3 APP_ICON_RECT['9:16'].
-    const frame = {width: 1080, height: 1920};
-    const expectedRect = {
-      x: 0.18519 * frame.width,
-      y: 0.42708 * frame.height,
-      w: 0.62963 * frame.width,
-      h: 0.35417 * frame.height,
-    };
+    await expect(page.getByLabel('프로젝트 이름')).toHaveValue('day1-restore');
+    await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 
-    const box = await colorBoundingBox(
-      outputPath,
-      END_CARD_SAMPLE_SECONDS,
-      hexToRgb('#ff00ff'),
-      frame,
+    // Both panels come back as metadata only, so each gets its own prompt and the
+    // render stays blocked until they are reconnected.
+    await expect(page.getByTestId('day1-panel-a-repair')).toBeVisible();
+    await expect(page.getByTestId('day1-panel-b-repair')).toBeVisible();
+    await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeDisabled();
+
+    await page
+      .getByTestId('day1-panel-a-relink')
+      .setInputFiles(PANEL_A_SOURCE);
+    await page
+      .getByTestId('day1-panel-b-relink')
+      .setInputFiles(PANEL_B_SOURCE);
+
+    await expect(page.getByTestId('day1-panel-a-repair')).toBeHidden();
+    await expect(page.getByTestId('day1-panel-b-repair')).toBeHidden();
+    await expect(page.getByTestId('day1-panel-a-metadata')).toContainText(
+      '디코딩 확인됨',
     );
+    await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeEnabled();
 
-    expect(box.matched).toBeGreaterThan(1000);
-    expect(box.minX).toBeGreaterThanOrEqual(Math.round(expectedRect.x) - 2);
-    expect(box.minX).toBeLessThanOrEqual(Math.round(expectedRect.x) + 2);
-    expect(box.minY).toBeGreaterThanOrEqual(Math.round(expectedRect.y) - 2);
-    expect(box.minY).toBeLessThanOrEqual(Math.round(expectedRect.y) + 2);
-    expect(box.maxX).toBeCloseTo(
-      Math.round(expectedRect.x + expectedRect.w) - 1,
-      -0.5,
-    );
-    expect(box.maxY).toBeCloseTo(
-      Math.round(expectedRect.y + expectedRect.h) - 1,
-      -0.5,
-    );
+    // Relink keeps the media id, so the trim edit survives (module-5 §3.5).
+    await expect(page.getByTestId('day1-a-trim-range')).toContainText('2.00s');
   });
 
   // FR-D03 / Design §7 — the gate that module 5 could only show in the preview.

@@ -47,7 +47,7 @@ Plan §1.3의 D1~D8에 더해 Design 단계에서 확정한 것:
 | D9 | **Option C** — `sections`(길이·순서) 공통 + `templateSettings` 판별 유니온 | 타임라인·Batch·파일명이 무수정 재사용되고 죽은 필드가 없다 |
 | D10 | `sections`는 당분간 **3튜플 고정** | 두 템플릿 모두 3구간이다. N구간 일반화는 실제로 필요한 템플릿이 생길 때 (YAGNI) |
 | D11 | 비활성 패널은 **자기 trim-in 프레임**에 정지 | Plan D1의 "첫 프레임" 문언 그대로. Do에서 육안 확인 후 이견 있으면 재논의 |
-| D12 | 16:9 엔드카드는 아이콘 **수동 배치**로 축퇴 | bannerdesigner에 16:9 좌표가 없다. 상수가 생기면 자동 배치로 승격 |
+| D12 | ~~16:9 엔드카드는 아이콘 **수동 배치**로 축퇴~~ → **폐기 (2026-07-30)** | bannerdesigner v1.18이 app-badge 1920×1080 레이아웃을 추가해 좌표가 생겼다. 3규격 모두 자동 배치. Plan D15 |
 | D13 | 스파이크 결과에 따라 **정지 프레임 사전 추출 설계는 폐기** | 실측 0.99×. [render-spike](../../03-analysis/day1-template.render-spike.md) |
 
 ---
@@ -271,16 +271,19 @@ bannerdesigner `today-banner-designer.html`의 `.banner.tmpl-app-badge.size-* .a
 ```ts
 /** 출처: mkt_bannerdesigner today-banner-designer.html §.ab-icon (2026-07-28 기준).
  *  bannerdesigner의 app-badge 레이아웃이 바뀌면 여기도 갱신해야 한다. */
-export const APP_ICON_RECT: Partial<Record<AspectRatio, NormalizedRect>> = {
+export const APP_ICON_RECT: Record<AspectRatio, NormalizedRect> = {
   '1:1':  {x: 0.26111, y: 0.34722, w: 0.47685, h: 0.47685, radius: 0.08889},
   '9:16': {x: 0.18519, y: 0.42708, w: 0.62963, h: 0.35417, radius: 0.11111},
-  // '16:9' 없음 — bannerdesigner app-badge에 1920×1080 레이아웃이 없다 (별도 사이클).
-  //         D12에 따라 수동 배치로 축퇴한다.
+  '16:9': {x: 0.57083, y: 0.22037, w: 0.33333, h: 0.59259, radius: 0.06510},
 };
-export const appIconRect = (ratio, adjust): NormalizedRect | null
+export const appIconRect = (ratio, adjust): NormalizedRect
 ```
 
-`16:9`는 `null`을 반환한다. 인스펙터가 "16:9는 자동 배치 좌표가 없습니다. 수동으로 맞추세요."를 띄우고 화면 중앙을 기본값으로 준다.
+**갱신 (2026-07-30)**: 최초 설계는 16:9에 좌표가 없어 `null` + 수동 배치(D12)였다. Check 단계에서
+bannerdesigner에 app-badge 16:9를 추가해(v1.18) 세 규격이 모두 상수를 갖게 됐다. 그래서 반환형이
+non-nullable이 되고 중앙 정사각형 폴백(`placedIconRect`)은 제거했다. 타입이
+`Record<AspectRatio, …>`이므로 규격이 늘면 좌표 없이는 **컴파일이 실패한다** — 조용한 중앙 배치보다
+낫다.
 
 ---
 
@@ -301,7 +304,9 @@ export const appIconRect = (ratio, adjust): NormalizedRect | null
 
 패널 하나당:
 
-- **활성**: `<Video>` 재생. `volume`은 기존 `duckedVolumeAt`으로 계산 (Plan D7).
+- **활성**: `<Video>` 재생. `volume`은 기존 `duckedVolumeAt`으로 계산 (Plan D7). Day1은 나레이션이
+  범위 밖이라 더킹 창이 빈 배열이므로 곡선은 평평하다. 그래도 같은 함수를 타는 이유는 나레이션이
+  들어올 때 두 템플릿의 오디오 경로가 갈라지지 않게 하려는 것이다.
 - **비활성**: `<Freeze frame={0}>` + `<Video muted style={{filter:'grayscale(1)'}} trimBefore={trimInFrames}/>`
   CTA 배경이 이미 쓰는 패턴이며([CtaScene.tsx:41](../../../src/compositions/scenes/CtaScene.tsx:41)) 스파이크로 성능까지 확인했다.
 - 분할선은 두 패널 사이의 `div`, 색은 `split.lineColor`.
@@ -336,6 +341,15 @@ export const appIconRect = (ratio, adjust): NormalizedRect | null
 ### 6.2 Day1 좌측 패널 (`tab-assets`)
 
 패널 A / 패널 B 각각 Dropzone(기존 컴포넌트 재사용) + 메타데이터. 둘 다 채워지지 않으면 렌더 버튼이 막히고 사유를 표시한다.
+
+**복원 정책 (2026-07-30 보강)**: 3장면 소스와 동일하게 패널마다 "파일 선택" 버튼을 두고, 그 경로로
+올린 영상은 File System Access 핸들을 저장해 새로고침 후 자동 복원한다. 권한이 필요하면
+`permission-required`로 두고 사용자 동작 후에만 요청한다. Dropzone으로 끌어다 놓은 영상은 핸들이
+없으므로 `missing` → relink 프롬프트다 (relink는 미디어 id를 유지하므로 Trim·프레이밍이 살아남는다).
+Day1 전용이던 "항상 relink" 비대칭을 없앤 것이다.
+
+또한 Day1의 좌측 레일은 **소재 · 오디오 2탭**이다. Hook 탭은 사용자 결정으로, 카피 탭은 Plan D14로
+숨긴다.
 
 ### 6.3 Day1 인스펙터
 
@@ -412,7 +426,7 @@ if ('EyeDropper' in window) {
 
 | 항목 | 사유 |
 |------|------|
-| bannerdesigner app-badge 16:9 레이아웃 | 다른 저장소. 사용자 결정으로 분리. 상수가 생기면 `APP_ICON_RECT`에 한 줄 추가하면 붙는다 |
+| ~~bannerdesigner app-badge 16:9 레이아웃~~ | **완료 (2026-07-30)**. Check 단계 결정으로 bannerdesigner v1.18에 추가하고 `APP_ICON_RECT['16:9']`를 붙였다 |
 | MPEG-4 / HEVC 업로드 호환 확대 | 모든 템플릿 공통 영향. 사용자 결정으로 분리. §11.3 참고 |
 | 영상 3개 이상, 가변 분할, 클립 드래그 | Plan §2.2 |
 
@@ -495,3 +509,4 @@ tests/fixtures/gameplay-sample-b.mp4 두 번째 소스 (서로 다른 영상)
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
 | 0.1.0 | 2026-07-28 | 최초 Design. Option C 채택. 렌더 스파이크 0.99× 반영해 정지 프레임 사전 추출 폐기. 16:9 엔드카드·MPEG-4 호환은 별도 사이클로 분리. | 김성권 / Claude |
+| 0.1.1 | 2026-07-30 | Check Gap 수정 반영: D12 폐기(16:9 자동 배치), §4.3 상수 3규격 완비 + 폴백 제거, §5.2 더킹 경로 명시, §6.2 패널 핸들 복원·2탭 근거, §10에서 bannerdesigner 항목 완료 처리. | 김성권 / Claude |

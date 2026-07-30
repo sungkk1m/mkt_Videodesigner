@@ -5,7 +5,7 @@
 > **Plan**: [day1-template.plan.md](../01-plan/features/day1-template.plan.md)
 > **Design**: [day1-template.design.md](../02-design/features/day1-template.design.md)
 > **Do 증거**: [module-1](day1-template.module-1-schema.md) · [module-2](day1-template.module-2-domain.md) · [module-3](day1-template.module-3-composition.md) · [module-4](day1-template.module-4-endcard.md) · [module-5](day1-template.module-5-ui.md) · [module-6](day1-template.module-6-render.md)
-> **Match Rate**: **98%**
+> **Match Rate**: 98% → **100% (Gap 전부 수정 후 재검증, §8)**
 
 ---
 
@@ -89,7 +89,7 @@ Design §1.1의 1순위 목표 "기존 3장면 경로를 한 줄도 바꾸지 �
 | SC2 | 흑백 전환이 렌더 결과물에 반영 | ✅ Met | `:390` — 비활성 패널 평균 채도 < 8, 정지 회색이 **자기 소스** 첫 프레임 루마와 ±10, 두 패널 회색차 > 30 |
 | SC3 | 기존 3장면 회귀 없음 | ✅ Met | 기존 E2E 18개 + 유닛 274개 통과, v1 가져오기 → 렌더(`:611`), 기존 `data-testid` 무변경(`SourceRepair`는 기본값 유지) |
 | SC4 | 분할선 색이 지정값으로 렌더 | ✅ Met | `:390` — `#38bdf8` → (56,189,247), 1채널 오차 |
-| SC5 | 엔드카드 아이콘 정합 ≤ 2px | ⚠️ Partial | `:473` — **9:16에서 오차 0px**. 1:1은 렌더 결과물 픽셀 검증이 없다(프리뷰 DOM·유닛까지). 16:9는 자동 배치 자체가 없음 |
+| SC5 | 엔드카드 아이콘 정합 ≤ 2px | ⚠️ Partial → **✅ Met (§8)** | 최초 판정은 9:16만 렌더 픽셀 검증(오차 0px)이었다. §8에서 1:1·16:9 케이스를 추가해 3규격 전부 2px 이내 |
 | SC6 | 유닛·E2E·빌드·타입체크 통과 | ✅ Met | §1.1 — 4개 커맨드 전부 이 세션에서 재실행 |
 
 **5/6 Met, 1 Partial.** Partial 사유는 검증 범위이지 구현 결함이 아니다 —
@@ -215,7 +215,55 @@ NFR "1.5배 이내"는 15초 기준으로만 확인됐다. 디코더 2개 구성
 | 4 | Gap-3 / Gap-5 / Gap-6 | Day1 나레이션·장기 렌더 사이클에서 함께 처리 |
 | 5 | Gap-7 | 카피 탭 숨김을 Design 또는 Plan에 사용자 승인으로 기록 |
 
-Match Rate 98% ≥ 90%이므로 `/pdca iterate` 없이 **Report로 진행 가능**하다.
+---
+
+## 8. Act — Gap 전부 수정 (2026-07-30)
+
+사용자 결정: **"Gap 전부 수정"**. Gap-1이 다른 저장소 작업을 다시 끌어오는 것을 포함한다.
+
+| Gap | 조치 | 검증 |
+|-----|------|------|
+| **Gap-2** 커밋 없음 | 모듈 3~6 작업을 소스 커밋(`e1b61cc`)과 문서 커밋(`727c5fa`)으로 고정. 파일 단위로 모듈이 뒤섞여 있어 모듈별 분할은 중간 상태가 타입체크를 통과하지 못한다 — 2개로 나눈 이유 | 커밋 시점에 유닛·E2E·빌드 전량 통과 상태 |
+| **Gap-1** 16:9 자동 배치 | bannerdesigner **v1.18**: app-badge `size-16x9`(1920×1080) CSS + `APP_BADGE_CANVAS_SPECS['16x9']` + 규격 선택기·배치 체크박스(app-badge 전용, 4:5 규칙 복제). videodesigner: `APP_ICON_CSS['16:9']` 추가, `appIconRect`가 non-nullable로, 중앙 폴백 `placedIconRect`와 `day1-icon-manual` 안내 제거 | 브라우저 실측 — 단건 export 1920×1080 · 아이콘 박스 `1096,238 → 1735,877` **오차 0px**, 배치 combo `app-badge:16x9:ko` 동일, 1:1 회귀 0. Day1 E2E에 16:9 케이스 추가 후 렌더 MP4에서 2px 이내 |
+| **Gap-4** SC5 1:1 미검증 | 엔드카드 E2E를 규격 파라미터화 (9:16 · 1:1 · 16:9) | 3규격 전부 렌더 MP4 픽셀에서 통과 |
+| **Gap-3** 더킹 경로 | `SplitFrame`이 `duckedVolumeAt`을 타고, 나레이션 창을 구간 상대 프레임으로 변환. 현재는 창이 비어 결과 동일 | 타입체크 + 유닛 272 + E2E 전량 |
+| **Gap-5** 패널 relink 강제 | 패널마다 "파일 선택"(핸들 저장) 버튼, 복원 시 핸들 → 권한 요청 → relink 순서로 축퇴. 3장면과 동일 정책 | 새 E2E: 새로고침 → relink → Trim 유지. 프리뷰 실측으로 버튼·안내 확인. 핸들 경로 자체는 OS 파일 피커라 Playwright로 못 몬다(3장면도 동일 한계) |
+| **Gap-6** 60초 미측정 | 옵트인 하네스 `tests/e2e/day1-longform.spec.ts` (`DAY1_LONGFORM=1`) | 실측 — 3장면 60초 **17.97s** vs Day1 60초 **18.91s** = **1.05×**, heap 47MiB 동일 (게이트 1.5×) |
+| **Gap-7** 문서 미기록 | Plan에 **D14**(카피 탭 숨김 사후 승인) · **D15**(16:9 자동 배치) 추가, Design §4.3·§5.2·§6.2·§10 갱신 | 문서 diff |
+
+### 8.1 재검증 (수정 후, 이 세션에서 실행)
+
+```
+npx tsc -b            passed
+npm test              28 files / 272 tests   passed
+npm run build         passed
+npx playwright test   27 passed, 1 skipped(옵트인 60초 하네스)
+```
+
+유닛이 274 → 272인 것은 16:9 폴백 테스트 4개를 상수 테스트 2개로 대체했기 때문이다(폴백 코드 자체가
+사라졌다). E2E는 24 → 27 (엔드카드 1:1·16:9, 패널 복원).
+
+### 8.2 갱신된 Match Rate
+
+| 축 | 비중 | 이전 | 이후 | 근거 |
+|----|:----:|:----:|:----:|------|
+| Structural | 15% | 100 | **100** | 변동 없음 |
+| Functional | 25% | 96 | **100** | FR-D11이 3규격 자동 배치로 완성 |
+| Contract | 25% | 100 | **100** | 변동 없음. `Record<AspectRatio, …>`로 규격 누락이 컴파일 오류가 됨 |
+| Runtime | 35% | 97 | **100** | SC5 3규격 픽셀 검증, 60초 프리셋 실측, 패널 복원 E2E |
+
+```
+Overall = 100 → 100%
+```
+
+Critical·Important·Minor 전부 해소. 남은 항목은 애초에 Plan §2.2가 범위 밖으로 둔 것들(영상 3개
+이상, 클립 드래그, Day1 나레이션·TTS)과 MPEG-4 호환 확대(별도 Plan)뿐이다.
+
+### 8.3 남긴 한계
+
+- 패널·3장면 소스 모두 **핸들 복원 경로는 자동 테스트가 없다** — OS 파일 피커를 Playwright가 열 수 없다. 프리뷰 실측으로만 확인했다.
+- 60초 측정의 절대 시간은 단색 생성 픽스처 기준이다. 실촬 영상은 디코딩이 더 비싸다(비율은 유효).
+- bannerdesigner 변경은 **커밋하지 않았다** — 다른 저장소이므로 사용자 확인 후 커밋 대상이다.
 
 ```bash
 /pdca report day1-template

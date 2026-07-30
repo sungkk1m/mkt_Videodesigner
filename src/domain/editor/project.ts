@@ -1,6 +1,6 @@
 // Design Ref: §10.2 — project state changes only through pure command functions.
 import {DEFAULT_AUDIO_MIX} from '../audio/mix';
-import {placedIconRect} from '../day1/endCard';
+import {appIconRect} from '../day1/endCard';
 import {splitLayout} from '../day1/layout';
 import {activePanelForSection, day1SectionDurations} from '../day1/playback';
 import {DEFAULT_PROFILE, fpsForProfile, type FrameRate, type RenderProfile} from '../render/profile';
@@ -1304,7 +1304,7 @@ export const buildDay1Props = (
       bannerUrl: resolveUrl(endCard.banner),
       iconUrl: resolveUrl(endCard.appIcon),
       iconRect: Object.freeze(
-        placedIconRect(project.selectedRatio, endCard.iconAdjust),
+        appIconRect(project.selectedRatio, endCard.iconAdjust),
       ),
       iconAnimation: endCard.iconAnimation,
       cardMotion: endCard.cardMotion,

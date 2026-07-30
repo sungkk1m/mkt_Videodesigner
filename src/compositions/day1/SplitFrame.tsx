@@ -6,8 +6,10 @@
 import {Video} from '@remotion/media';
 import {AbsoluteFill, Freeze} from 'remotion';
 
+import {duckedVolumeAt, type NarrationWindow} from '../../domain/audio/ducking';
 import type {
   ActivePanel,
+  AudioRenderProps,
   Day1LabelStyle,
   Day1PanelRenderProps,
   PanelRect,
@@ -62,13 +64,13 @@ const PanelLabel = ({
 const Panel = ({
   labelStyle,
   live,
-  originalVolume,
+  liveVolume,
   panel,
   rect,
 }: {
   labelStyle: Day1LabelStyle;
   live: boolean;
-  originalVolume: number;
+  liveVolume: (panelFrame: number) => number;
   panel: Day1PanelRenderProps;
   rect: PanelRect;
 }) => {
@@ -97,9 +99,9 @@ const Panel = ({
           style={framing}
           trimAfter={panel.trimAfterFrames}
           trimBefore={panel.trimBeforeFrames}
-          // Plan D7: the live panel carries the original sound. Day1 has no
-          // narration (Plan §2.2), so there is nothing to duck against.
-          volume={originalVolume}
+          // Plan D7 / Design §5.2: the live panel carries the original sound
+          // through the same ducking curve the three-scene path uses.
+          volume={liveVolume}
         />
       ) : (
         // Freeze pins its children to frame 0, so `trimBefore` alone chooses
@@ -123,51 +125,67 @@ const Panel = ({
 
 export interface SplitFrameProps {
   active: ActivePanel;
+  audio: AudioRenderProps;
   labelStyle: Day1LabelStyle;
   layout: SplitLayout;
   lineColor: string;
-  originalVolume: number;
   panelA: Day1PanelRenderProps;
   panelB: Day1PanelRenderProps;
+  /** Absolute frame the section starts at, used to place the ducking windows. */
+  sectionFromFrame: number;
 }
 
 export const SplitFrame = ({
   active,
+  audio,
   labelStyle,
   layout,
   lineColor,
-  originalVolume,
   panelA,
   panelB,
-}: SplitFrameProps) => (
-  <AbsoluteFill style={{backgroundColor: CANVAS_COLOR}}>
-    <Panel
-      labelStyle={labelStyle}
-      live={active === 'a'}
-      originalVolume={originalVolume}
-      panel={panelA}
-      rect={layout.a}
-    />
-    <Panel
-      labelStyle={labelStyle}
-      live={active === 'b'}
-      originalVolume={originalVolume}
-      panel={panelB}
-      rect={layout.b}
-    />
+  sectionFromFrame,
+}: SplitFrameProps) => {
+  // Narration frames are absolute while the panel's volume callback counts from
+  // the section start. Day1 ships without narration (Plan §2.2) so the list is
+  // empty and the curve is flat today; going through `duckedVolumeAt` anyway is
+  // what stops the two templates from drifting once narration arrives.
+  const duckWindows: NarrationWindow[] = audio.narration.map((track) => ({
+    fromFrame: track.fromFrame - sectionFromFrame,
+    durationInFrames: track.durationInFrames,
+  }));
+  const liveVolume = (panelFrame: number) =>
+    duckedVolumeAt(panelFrame, audio.originalVolume, duckWindows, audio.ducking);
 
-    {/* Plan SC4: the divider is a solid fill so its rendered pixels equal the
-        configured hex exactly, with no blending to measure against. */}
-    <div
-      data-testid="day1-split-line"
-      style={{
-        backgroundColor: lineColor,
-        height: layout.line.height,
-        left: layout.line.x,
-        position: 'absolute',
-        top: layout.line.y,
-        width: layout.line.width,
-      }}
-    />
-  </AbsoluteFill>
-);
+  return (
+    <AbsoluteFill style={{backgroundColor: CANVAS_COLOR}}>
+      <Panel
+        labelStyle={labelStyle}
+        live={active === 'a'}
+        liveVolume={liveVolume}
+        panel={panelA}
+        rect={layout.a}
+      />
+      <Panel
+        labelStyle={labelStyle}
+        live={active === 'b'}
+        liveVolume={liveVolume}
+        panel={panelB}
+        rect={layout.b}
+      />
+
+      {/* Plan SC4: the divider is a solid fill so its rendered pixels equal the
+          configured hex exactly, with no blending to measure against. */}
+      <div
+        data-testid="day1-split-line"
+        style={{
+          backgroundColor: lineColor,
+          height: layout.line.height,
+          left: layout.line.x,
+          position: 'absolute',
+          top: layout.line.y,
+          width: layout.line.width,
+        }}
+      />
+    </AbsoluteFill>
+  );
+};

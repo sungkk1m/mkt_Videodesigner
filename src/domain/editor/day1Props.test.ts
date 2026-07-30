@@ -1,7 +1,7 @@
 // Day1 Design Ref: §2.2 — the render snapshot the Player and the render job share.
 import {describe, expect, it} from 'vitest';
 
-import {APP_ICON_RECT, placedIconRect} from '../day1/endCard';
+import {APP_ICON_RECT, appIconRect} from '../day1/endCard';
 import {splitLayout} from '../day1/layout';
 import {
   DEFAULT_DAY1_SETTINGS,
@@ -227,16 +227,13 @@ describe('buildDay1Props end card', () => {
     }
   });
 
-  it('falls back to the centred rectangle on 16:9, which has no layout', () => {
+  it('uses the bannerdesigner 16:9 coordinates on a landscape render', () => {
     const props = buildDay1Props(
       {...withEndCard(), selectedRatio: '16:9'},
       testUrlResolver(),
     );
 
-    const rect = placedIconRect('16:9');
-
-    expect(props?.endCard.iconRect).toEqual(rect);
-    expect(rect.x + rect.w / 2).toBeCloseTo(0.5, 10);
+    expect(props?.endCard.iconRect).toEqual(APP_ICON_RECT['16:9']);
   });
 
   it('folds iconAdjust into the rectangle so the composition needs no maths', () => {
@@ -245,7 +242,7 @@ describe('buildDay1Props end card', () => {
     const props = buildDay1Props(project, testUrlResolver());
 
     expect(props?.endCard.iconRect).toEqual(
-      placedIconRect(project.selectedRatio, adjust),
+      appIconRect(project.selectedRatio, adjust),
     );
   });
 });

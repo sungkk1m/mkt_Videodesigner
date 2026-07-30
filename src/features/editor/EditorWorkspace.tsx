@@ -229,6 +229,7 @@ export const EditorWorkspace = ({
 
   const day1Assets = useDay1Assets({
     resolver: mediaResolver,
+    handleStore: mediaHandleStore,
     session,
     project,
     commands: day1Commands,
@@ -668,13 +669,19 @@ export const EditorWorkspace = ({
                 : null
             }
             busy={day1Assets.busy}
+            canGrantPermission={day1Assets.canGrantPermission}
             disabled={isRendering}
             missingPanels={missingPanels}
+            onGrantPermission={(panel) =>
+              void day1Assets.grantPanelPermission(panel)
+            }
+            onPickFile={(panel) => void day1Assets.pickAndUploadPanel(panel)}
             onRelink={(panel, file) => void day1Assets.relinkPanel(panel, file)}
             onUpload={(panel, file) => void day1Assets.uploadPanel(panel, file)}
             panelUrl={day1Assets.panelUrl}
             relinkVerdict={day1Assets.relinkVerdict}
             settings={day1}
+            supportsFilePicker={day1Assets.supportsFilePicker}
             uploadError={day1Assets.uploadError}
           />
         ) : activeTab === 'hook' ? (

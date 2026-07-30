@@ -2,7 +2,6 @@
 // eyedropper, the four-locale panel labels with their styling, and the end card.
 // Reuses the three-scene accordion and field primitives so both inspectors feel
 // identical to operate.
-import {appIconRect} from '../../domain/day1/endCard';
 import type {Day1PanelKey} from '../../domain/editor/project';
 import {
   DAY1_CARD_MOTIONS,
@@ -253,9 +252,6 @@ export const Day1Inspector = ({
   resolveEndCardUrl,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
-  // Day1 Design Ref: §4.3 / D12 — 16:9 has no bannerdesigner layout to copy, so the
-  // icon starts centred and the user places it by hand.
-  const autoPlaced = appIconRect(ratio) !== null;
   const endCardAssetCount = (['banner', 'appIcon'] as Day1EndCardSlot[]).filter(
     (slot) => endCard[slot] !== null,
   ).length;
@@ -464,17 +460,12 @@ export const Day1Inspector = ({
             ))}
           </div>
 
-          {autoPlaced ? (
-            <p className="panel__hint">
-              아이콘은 {ratio} 배너의 아이콘 좌표에 자동 배치됩니다. 어긋나면 아래에서
-              미세조정하세요.
-            </p>
-          ) : (
-            <p className="notice notice--warning" data-testid="day1-icon-manual">
-              {ratio}는 자동 배치 좌표가 없습니다. 화면 중앙에서 시작하니 수동으로
-              맞추세요.
-            </p>
-          )}
+          {/* Every ratio has bannerdesigner coordinates since its v1.18 added the
+              app-badge 16:9 layout, so there is no manual-placement case left. */}
+          <p className="panel__hint">
+            아이콘은 {ratio} 배너의 아이콘 좌표에 자동 배치됩니다. 어긋나면 아래에서
+            미세조정하세요.
+          </p>
 
           <PlainField
             disabled={disabled}

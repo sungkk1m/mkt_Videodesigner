@@ -1,8 +1,9 @@
 // Day1 Design Ref: §6.2 left panel, §6.3 end card section. Owns every path that
 // turns a Day1 file into playable media, mirroring `useEditorSource` for the
-// three-scene template. Kept separate rather than widening that hook: the panels
-// have no File System Access handles, so their restore story is a relink prompt
-// and nothing else.
+// three-scene template. Kept separate rather than widening that hook because the
+// two templates hold their media in different places, but the restore policy is
+// deliberately the same: a stored File System Access handle first, then the
+// permission prompt, and only then a relink.
 import {useCallback, useEffect, useRef, useState} from 'react';
 
 import {day1Of, type Day1PanelKey} from '../../domain/editor/project';
@@ -13,9 +14,10 @@ import type {
   MediaStatus,
 } from '../../domain/editor/types';
 import {compareForRelink, type RelinkVerdict} from '../../domain/media/relink';
-import type {MediaResolver} from '../../domain/ports';
+import type {MediaHandleStore, MediaResolver} from '../../domain/ports';
 import type {AppError} from '../../shared/errors/appError';
 import type {MediaSession} from './useMediaSession';
+import {VIDEO_PICKER_OPTIONS} from './useEditorSource';
 
 export type Day1EndCardSlot = 'banner' | 'appIcon';
 
@@ -36,18 +38,29 @@ export interface Day1AssetsApi {
   uploadError: AppError | null;
   /** Populated after a relink so the panel can report a mismatch. */
   relinkVerdict: RelinkVerdict | null;
-  uploadPanel: (panel: Day1PanelKey, file: File) => Promise<void>;
+  supportsFilePicker: boolean;
+  /** Panels whose stored handle only needs a permission grant to come back. */
+  canGrantPermission: (panel: Day1PanelKey) => boolean;
+  uploadPanel: (
+    panel: Day1PanelKey,
+    file: File,
+    handle?: FileSystemFileHandle,
+  ) => Promise<void>;
+  pickAndUploadPanel: (panel: Day1PanelKey) => Promise<void>;
   relinkPanel: (panel: Day1PanelKey, file: File) => Promise<void>;
+  grantPanelPermission: (panel: Day1PanelKey) => Promise<void>;
   setEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => Promise<void>;
 }
 
 export const useDay1Assets = ({
   resolver,
+  handleStore,
   session,
   project,
   commands,
 }: {
   resolver: MediaResolver;
+  handleStore: MediaHandleStore | null;
   session: MediaSession;
   project: EditorProject;
   commands: Day1AssetCommands;
@@ -71,9 +84,69 @@ export const useDay1Assets = ({
     [project, session],
   );
 
-  // A restored project carries panel references with no session URL. There are no
-  // stored handles for panels, so the only honest state is "missing" — which turns
-  // the panel dropzone into a relink prompt.
+  const supportsFilePicker =
+    typeof window !== 'undefined' && 'showOpenFilePicker' in window;
+
+  const canGrantPermission = useCallback(
+    (panel: Day1PanelKey) =>
+      handleStore !== null &&
+      day1Of(project)?.[panel].source?.status === 'permission-required',
+    [handleStore, project],
+  );
+
+  /**
+   * Brings a panel back from its stored handle. Mirrors `useEditorSource`:
+   * permission is only requested when the user asks, so the silent first attempt
+   * degrades to `permission-required` instead of a prompt on load.
+   */
+  const resolveStoredHandle = useCallback(
+    async (
+      panel: Day1PanelKey,
+      reference: MediaReference,
+      requestPermission: boolean,
+    ) => {
+      if (!handleStore) {
+        commandsRef.current.setPanelStatus(panel, 'missing');
+        return;
+      }
+
+      const resolved = await handleStore.resolve(reference.id, {
+        requestPermission,
+      });
+
+      if (!resolved.ok) {
+        commandsRef.current.setPanelStatus(
+          panel,
+          resolved.error.code === 'MEDIA_PERMISSION_REQUIRED'
+            ? 'permission-required'
+            : 'missing',
+        );
+        return;
+      }
+
+      const probed = await resolver.probe(resolved.value);
+
+      if (!probed.ok) {
+        commandsRef.current.setPanelStatus(panel, 'unsupported');
+        return;
+      }
+
+      // Keeping the project's media id is what lets trim and framing survive.
+      const restored: MediaReference = {
+        ...probed.value.reference,
+        id: reference.id,
+        status: 'available',
+      };
+
+      session.adopt({reference: restored, url: probed.value.url});
+      commandsRef.current.relinkPanel(panel, restored);
+    },
+    [handleStore, resolver, session],
+  );
+
+  // A restored project carries panel references with no session URL. Try the
+  // stored handle silently; a panel uploaded through the dropzone has none, so it
+  // lands on `missing` and the dropzone becomes a relink prompt.
   useEffect(() => {
     if (!settings) {
       return;
@@ -84,7 +157,7 @@ export const useDay1Assets = ({
 
       if (
         !source ||
-        source.status !== 'available' ||
+        source.status === 'unsupported' ||
         session.urlFor(source.id) ||
         restoreAttempts.current.has(source.id)
       ) {
@@ -92,12 +165,12 @@ export const useDay1Assets = ({
       }
 
       restoreAttempts.current.add(source.id);
-      commandsRef.current.setPanelStatus(panel, 'missing');
+      void resolveStoredHandle(panel, source, false);
     }
-  }, [session, settings]);
+  }, [resolveStoredHandle, session, settings]);
 
   const uploadPanel = useCallback(
-    async (panel: Day1PanelKey, file: File) => {
+    async (panel: Day1PanelKey, file: File, handle?: FileSystemFileHandle) => {
       setBusy(true);
       setUploadError(null);
 
@@ -113,8 +186,36 @@ export const useDay1Assets = ({
       session.adopt(result.value);
       commandsRef.current.setPanelSource(panel, result.value.reference);
       setRelinkVerdict(null);
+
+      if (handle && handleStore) {
+        await handleStore.put(result.value.reference.id, handle);
+      }
     },
-    [resolver, session],
+    [handleStore, resolver, session],
+  );
+
+  const pickAndUploadPanel = useCallback(
+    async (panel: Day1PanelKey) => {
+      if (!supportsFilePicker) {
+        return;
+      }
+
+      let handle: FileSystemFileHandle | undefined;
+
+      try {
+        [handle] = await window.showOpenFilePicker(VIDEO_PICKER_OPTIONS);
+      } catch {
+        // AbortError: the user closed the picker. Nothing to report.
+        return;
+      }
+
+      if (!handle) {
+        return;
+      }
+
+      await uploadPanel(panel, await handle.getFile(), handle);
+    },
+    [supportsFilePicker, uploadPanel],
   );
 
   const relinkPanel = useCallback(
@@ -159,6 +260,21 @@ export const useDay1Assets = ({
     [resolver, session, settings],
   );
 
+  const grantPanelPermission = useCallback(
+    async (panel: Day1PanelKey) => {
+      const source = day1Of(project)?.[panel].source;
+
+      if (!source) {
+        return;
+      }
+
+      setBusy(true);
+      await resolveStoredHandle(panel, source, true);
+      setBusy(false);
+    },
+    [project, resolveStoredHandle],
+  );
+
   const setEndCardAsset = useCallback(
     async (slot: Day1EndCardSlot, file: File | null) => {
       if (!file) {
@@ -189,8 +305,12 @@ export const useDay1Assets = ({
     busy,
     uploadError,
     relinkVerdict,
+    supportsFilePicker,
+    canGrantPermission,
     uploadPanel,
+    pickAndUploadPanel,
     relinkPanel,
+    grantPanelPermission,
     setEndCardAsset,
   };
 };
