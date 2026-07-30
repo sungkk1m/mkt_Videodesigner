@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-07-30T08:53:01.000000Z",
+  "lastUpdated": "2026-07-30T09:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "editor",
@@ -452,7 +452,7 @@
       "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/output/browserOutputWriter.ts"
     },
     "day1-template": {
-      "phase": "check",
+      "phase": "completed",
       "startedAt": "2026-07-28T05:21:54.642264Z",
       "matchRate": 100,
       "iterationCount": 1,
@@ -466,13 +466,15 @@
         "renderSpike": "docs/03-analysis/day1-template.render-spike.md",
         "module5Evidence": "docs/03-analysis/day1-template.module-5-ui.md",
         "module6Evidence": "docs/03-analysis/day1-template.module-6-render.md",
-        "analysis": "docs/03-analysis/day1-template.analysis.md"
+        "analysis": "docs/03-analysis/day1-template.analysis.md",
+        "report": "docs/04-report/day1-template.report.md"
       },
       "timestamps": {
         "created": "2026-07-28T05:22:06.983980Z",
-        "updated": "2026-07-30T08:53:01.000000Z"
+        "updated": "2026-07-30T09:30:00.000Z",
+        "completedAt": "2026-07-30T09:30:00.000Z"
       },
-      "phaseNumber": 4
+      "phaseNumber": 6
     },
     "day1": {
       "phase": "do",
@@ -559,7 +561,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-07-30T08:44:35.673Z"
+    "lastActivity": "2026-07-30T09:30:00.000Z"
   },
   "history": [
     {
@@ -3549,6 +3551,12 @@
       "timestamp": "2026-07-30T08:44:35.673Z",
       "feature": "e2e",
       "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-07-30T09:30:00.000Z",
+      "feature": "day1-template",
+      "phase": "completed",
       "action": "updated"
     }
   ],
