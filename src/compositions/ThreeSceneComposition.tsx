@@ -1,6 +1,5 @@
 // Design Ref: §1.1 goal 2 — the Player preview and the browser render consume the
 // exact same composition and props.
-import {Audio} from '@remotion/media';
 import {AbsoluteFill, Sequence, useCurrentFrame} from 'remotion';
 
 import {duckedVolumeAt} from '../domain/audio/ducking';
@@ -12,51 +11,9 @@ import type {
 import {transitionStyleAt} from '../domain/render/transition';
 import {HookScene} from './scenes/HookScene';
 import {CtaScene} from './scenes/CtaScene';
+import {AudioLayer} from './shared/AudioLayer';
 import {CANVAS_COLOR, SceneVideo} from './shared/SceneVideo';
 import {SubtitleOverlay} from './shared/SubtitleOverlay';
-
-/**
- * Design Ref: §3.3 — BGM plus per-scene narration, with original audio and BGM
- * ducked while narration plays. Narration is never stretched or truncated.
- */
-const AudioLayer = ({audio}: {audio: AudioRenderProps}) => {
-  const bgm = audio.bgm;
-
-  return (
-    <>
-      {bgm ? (
-        <Sequence from={bgm.startInFrames} name="bgm">
-          <Audio
-            loop={bgm.loop}
-            src={bgm.url}
-            volume={(frame) =>
-              duckedVolumeAt(
-                frame,
-                bgm.volume,
-                audio.narration.map((track) => ({
-                  fromFrame: track.fromFrame - bgm.startInFrames,
-                  durationInFrames: track.durationInFrames,
-                })),
-                audio.ducking,
-              )
-            }
-          />
-        </Sequence>
-      ) : null}
-
-      {audio.narration.map((track) => (
-        <Sequence
-          durationInFrames={track.durationInFrames}
-          from={track.fromFrame}
-          key={track.kind}
-          name={`narration-${track.kind}`}
-        >
-          <Audio src={track.url} volume={track.volume} />
-        </Sequence>
-      ))}
-    </>
-  );
-};
 
 const SceneLayer = ({
   audio,

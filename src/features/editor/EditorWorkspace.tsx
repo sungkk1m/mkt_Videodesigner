@@ -9,15 +9,21 @@ import {
   useState,
 } from 'react';
 
+import {Day1Composition} from '../../compositions/Day1Composition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   activeTransform,
   buildCompositionProps,
+  buildEditorSnapshot,
+  buildDay1Props,
   createProject,
+  day1MissingPanels,
+  day1Of,
   hasRatioOverride,
   outputDimensions,
   projectTotalFrames,
   threeSceneOf,
+  type Day1PanelKey,
 } from '../../domain/editor/project';
 import {
   ASPECT_RATIOS,
@@ -51,13 +57,17 @@ import {AudioPanel} from './AudioPanel';
 import {BatchDialog} from './BatchDialog';
 import './editor.css';
 import {CopyPanel} from './CopyPanel';
+import {Day1AssetPanel} from './Day1AssetPanel';
+import {Day1Inspector} from './Day1Inspector';
 import {Dropzone} from './Dropzone';
 import {HookCandidateDrawer} from './HookCandidateDrawer';
 import {ProjectMenu} from './ProjectMenu';
 import {useProjectStore} from './projectStore';
 import {SceneInspector} from './SceneInspector';
 import {SourceRepair} from './SourceRepair';
+import {TemplateSelector} from './TemplateSelector';
 import {Timeline} from './Timeline';
+import {useDay1Assets, type Day1AssetCommands} from './useDay1Assets';
 import {
   useEditorAudio,
   type EditorAudioCommands,
@@ -87,6 +97,14 @@ const LEFT_TABS: {kind: LeftTab; icon: string; label: string}[] = [
   {kind: 'audio', icon: '🔊', label: '오디오'},
   {kind: 'hook', icon: '✨', label: 'Hook'},
 ];
+
+/**
+ * Day1 Plan §2.2 puts Hook analysis and narration out of scope, and every field in
+ * the copy panel (headline, CTA text, per-scene subtitles) is a three-scene
+ * concept — Day1 wording is the two panel labels, which live in the inspector.
+ * So Day1 keeps only the tabs that do something.
+ */
+const DAY1_LEFT_TABS: LeftTab[] = ['assets', 'audio'];
 
 const LEFT_TAB_TITLES: Record<LeftTab, string> = {
   assets: '소재',
@@ -134,6 +152,9 @@ export const EditorWorkspace = ({
 }: EditorWorkspaceProps) => {
   const project = useProjectStore((state) => state.project);
   const [selectedKind, setSelectedKind] = useState<SceneKind>('hook');
+  // Day1 shows both panels in one inspector, so the selection only drives the
+  // timeline highlight. Day1 Design Ref: §6.3.
+  const [selectedDay1Section, setSelectedDay1Section] = useState('panel-a');
   const [leftTab, setLeftTab] = useState<LeftTab>('assets');
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -173,6 +194,18 @@ export const EditorWorkspace = ({
     [store],
   );
 
+  const day1Commands = useMemo<Day1AssetCommands>(
+    () => ({
+      setPanelSource: (panel, reference) =>
+        store().setDay1PanelSource(panel, reference),
+      relinkPanel: (panel, reference) => store().relinkDay1Panel(panel, reference),
+      setPanelStatus: (panel, status) => store().setDay1PanelStatus(panel, status),
+      setEndCardAsset: (slot, reference) =>
+        store().setDay1EndCard({[slot]: reference}),
+    }),
+    [store],
+  );
+
   const source = useEditorSource({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
@@ -184,16 +217,22 @@ export const EditorWorkspace = ({
   const totalFrames = projectTotalFrames(project);
   const totalMs = project.durationPreset * 1000;
   const currentMs = (currentFrame / project.fps) * 1000;
-  // Day1 Design Ref: §3.2 — this editor only renders the three-scene template.
-  // The Day1 inspector and its own narrowing arrive with module 5; until then a
-  // Day1 document can only reach here through a hand-made JSON import, which the
-  // notice at the top of the render tree catches.
+  // Day1 Design Ref: §3.2 — the one place the template discriminant is read in the
+  // editor. Everything below narrows through `threeScene` or `day1`.
   const threeScene = threeSceneOf(project);
+  const day1 = day1Of(project);
   const selectedIndex = sceneIndexOf(selectedKind);
   const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
   const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
   const projectSource = threeScene?.source ?? null;
   const isRendering = renderState.status === 'rendering';
+
+  const day1Assets = useDay1Assets({
+    resolver: mediaResolver,
+    session,
+    project,
+    commands: day1Commands,
+  });
 
   const audio = useEditorAudio({
     resolver: mediaResolver,
@@ -226,6 +265,11 @@ export const EditorWorkspace = ({
     ctaAssets?.appIcon?.id,
     ctaAssets?.logo?.id,
     ctaAssets?.storeBadge?.id,
+    // Day1 Design Ref: §6.2 — panel and end card media are retained the same way.
+    day1?.panelA.source?.id,
+    day1?.panelB.source?.id,
+    day1?.endCard.banner?.id,
+    day1?.endCard.appIcon?.id,
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -251,10 +295,27 @@ export const EditorWorkspace = ({
     [project, resolveUrl],
   );
 
+  // Day1 Design Ref: §2.2 — the Player and the render job consume one snapshot.
+  const day1Props = useMemo(
+    () => buildDay1Props(project, resolveUrl),
+    [project, resolveUrl],
+  );
+
   const output = outputDimensions(project.selectedRatio);
   const selectedTransform = selectedScene
     ? activeTransform(selectedScene, project.selectedRatio)
     : DEFAULT_TRANSFORM;
+
+  // FR-D03 — a Day1 render needs both panels present *and* decodable.
+  const missingPanels = day1MissingPanels(project);
+  const unresolvedPanels = day1
+    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter(
+        (panel) => day1Assets.panelUrl(panel) === null,
+      )
+    : [];
+  const renderableSource = day1
+    ? unresolvedPanels.length === 0
+    : source.sourceUrl !== null;
 
   useEffect(() => {
     void videoRenderer.probe().then(setCapabilities);
@@ -339,14 +400,16 @@ export const EditorWorkspace = ({
 
   const startRender = async () => {
     // Design Ref: §6.2 RENDER_PREFLIGHT_FAILED — narration longer than its scene
-    // blocks the render rather than being truncated.
-    if (!capabilities?.ready || !source.sourceUrl || narrationTooLong.length > 0) {
+    // blocks the render rather than being truncated. Day1 Design Ref: §7 — a Day1
+    // project with an unresolved panel is blocked the same way.
+    if (!capabilities?.ready || !renderableSource || narrationTooLong.length > 0) {
       return;
     }
 
     // Design Ref: §4.3 — freeze the edit state so later UI changes cannot mutate
-    // the active job.
-    const snapshot = buildCompositionProps(project, resolveUrl);
+    // the active job. Day1 Design Ref: §2.1 — the snapshot carries its template,
+    // so the adapter renders the matching composition.
+    const snapshot = buildEditorSnapshot(project, resolveUrl);
     const config: EditorRenderConfig = {
       durationPreset: project.durationPreset,
       fps: project.fps,
@@ -428,7 +491,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene || !selectedScene) {
+  if (!threeScene && !day1) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -438,6 +501,11 @@ export const EditorWorkspace = ({
       </div>
     );
   }
+
+  const visibleTabs = day1
+    ? LEFT_TABS.filter((tab) => DAY1_LEFT_TABS.includes(tab.kind))
+    : LEFT_TABS;
+  const activeTab = day1 && !DAY1_LEFT_TABS.includes(leftTab) ? 'assets' : leftTab;
 
   return (
     <div
@@ -468,12 +536,30 @@ export const EditorWorkspace = ({
             project={project}
             repository={projectRepository}
           />
+          {/* Day1 Design Ref: §6.1 — template choice sits next to the identity. */}
+          <TemplateSelector
+            current={project.templateSettings.template}
+            disabled={isRendering}
+            onSwitch={(template) => {
+              store().switchTemplate(template);
+              setSelectedKind('hook');
+              setSelectedDay1Section('panel-a');
+              setLeftTab('assets');
+              setRenderState({status: 'idle'});
+              seekToMs(0);
+            }}
+          />
         </div>
 
         <div className="editor__actions">
           {narrationTooLong.length > 0 ? (
             <span className="editor__blocker" data-testid="render-blocker">
               나레이션 {narrationTooLong.length}개가 장면보다 깁니다
+            </span>
+          ) : null}
+          {day1 && missingPanels.length > 0 ? (
+            <span className="editor__blocker" data-testid="day1-render-blocker">
+              영상 {missingPanels.length}개가 더 필요합니다
             </span>
           ) : null}
           <span className="editor__status" data-testid="editor-render-status">
@@ -513,7 +599,7 @@ export const EditorWorkspace = ({
             disabled={
               isRendering ||
               !capabilities?.ready ||
-              !source.sourceUrl ||
+              !renderableSource ||
               narrationTooLong.length > 0
             }
             onClick={() => void startRender()}
@@ -535,11 +621,11 @@ export const EditorWorkspace = ({
       </header>
 
       <nav aria-label="입력 탭" className="rail">
-        {LEFT_TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
-            aria-pressed={leftTab === tab.kind && !panelCollapsed}
+            aria-pressed={activeTab === tab.kind && !panelCollapsed}
             className={`rail__tab${
-              leftTab === tab.kind && !panelCollapsed ? ' rail__tab--on' : ''
+              activeTab === tab.kind && !panelCollapsed ? ' rail__tab--on' : ''
             }`}
             data-testid={`tab-${tab.kind}`}
             key={tab.kind}
@@ -568,13 +654,30 @@ export const EditorWorkspace = ({
         </button>
       </nav>
 
-      <aside aria-label={LEFT_TAB_TITLES[leftTab]} className="panel" hidden={panelCollapsed}>
+      <aside aria-label={LEFT_TAB_TITLES[activeTab]} className="panel" hidden={panelCollapsed}>
         <div className="panel__head">
-          <h2>{LEFT_TAB_TITLES[leftTab]}</h2>
+          <h2>{LEFT_TAB_TITLES[activeTab]}</h2>
         </div>
 
         <div className="panel__body">
-        {leftTab === 'hook' ? (
+        {day1 && activeTab === 'assets' ? (
+          <Day1AssetPanel
+            autosaveError={
+              persistence.saveState.status === 'failed'
+                ? persistence.saveState.error
+                : null
+            }
+            busy={day1Assets.busy}
+            disabled={isRendering}
+            missingPanels={missingPanels}
+            onRelink={(panel, file) => void day1Assets.relinkPanel(panel, file)}
+            onUpload={(panel, file) => void day1Assets.uploadPanel(panel, file)}
+            panelUrl={day1Assets.panelUrl}
+            relinkVerdict={day1Assets.relinkVerdict}
+            settings={day1}
+            uploadError={day1Assets.uploadError}
+          />
+        ) : activeTab === 'hook' ? (
           <HookCandidateDrawer
             analyzer={hookAnalyzer}
             candidateDurationMs={hookCandidateDurationMs(project.durationPreset)}
@@ -587,7 +690,7 @@ export const EditorWorkspace = ({
             sourceDurationMs={projectSource?.durationMs ?? null}
             sourceUrl={source.sourceUrl}
           />
-        ) : leftTab === 'audio' ? (
+        ) : activeTab === 'audio' ? (
           <AudioPanel
             capabilities={audio.capabilities}
             disabled={isRendering}
@@ -615,7 +718,7 @@ export const EditorWorkspace = ({
             onOriginalVolume={(volume) => store().setOriginalVolume(volume)}
             project={project}
           />
-        ) : leftTab === 'copy' ? (
+        ) : activeTab === 'copy' ? (
           <CopyPanel
             copy={project.copy[project.selectedLocale] as LocalizedCopy}
             disabled={isRendering}
@@ -788,21 +891,72 @@ export const EditorWorkspace = ({
           className="stage__frame"
           style={{aspectRatio: `${output.width} / ${output.height}`}}
         >
-          <Player
-            acknowledgeRemotionLicense
-            component={ThreeSceneComposition}
-            compositionHeight={output.height}
-            compositionWidth={output.width}
-            durationInFrames={totalFrames}
-            fps={project.fps}
-            inputProps={compositionProps}
-            ref={playerRef}
-            style={{height: '100%', width: '100%'}}
-          />
+          {/* Day1 Design Ref: §2.1 — the template picks the composition, and each
+              one gets the snapshot its own prop builder produced. */}
+          {day1 && day1Props ? (
+            <Player
+              acknowledgeRemotionLicense
+              component={Day1Composition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={day1Props}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          ) : (
+            <Player
+              acknowledgeRemotionLicense
+              component={ThreeSceneComposition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={compositionProps}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          )}
         </div>
 
       </main>
 
+      {day1 ? (
+        <Day1Inspector
+          activeTransformOf={(panel) =>
+            activeTransform(day1[panel], project.selectedRatio)
+          }
+          copy={project.copy}
+          disabled={isRendering}
+          hasRatioOverride={(panel) =>
+            hasRatioOverride(day1[panel], project.selectedRatio)
+          }
+          onEndCard={(patch) => store().setDay1EndCard(patch)}
+          onEndCardAsset={(slot, file) =>
+            void day1Assets.setEndCardAsset(slot, file)
+          }
+          onLabelStyle={(patch) => store().setDay1LabelStyle(patch)}
+          onLabelText={(locale, panel, value) =>
+            store().setDay1LabelAt(locale, panel, value)
+          }
+          onResetTransform={(panel) => store().resetDay1Transform(panel)}
+          onSplit={(patch) => store().setDay1Split(patch)}
+          onToggleRatioOverride={(panel, enabled) =>
+            store().toggleDay1RatioOverride(panel, enabled)
+          }
+          onTransform={(panel, patch) => store().setDay1Transform(panel, patch)}
+          onTrimIn={(panel, ms) => store().setDay1TrimIn(panel, ms)}
+          onTrimOut={(panel, ms) => store().setDay1TrimOut(panel, ms)}
+          panelDurationsMs={{
+            panelA: project.sections[0].durationMs,
+            panelB: project.sections[1].durationMs,
+          }}
+          ratio={project.selectedRatio}
+          resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}
+          settings={day1}
+        />
+      ) : selectedScene ? (
       <SceneInspector
         disabled={isRendering}
         hasRatioOverride={
@@ -829,6 +983,7 @@ export const EditorWorkspace = ({
         sourceDurationMs={projectSource?.durationMs ?? null}
         transform={selectedTransform}
       />
+      ) : null}
 
       {batchOpen ? (
         <BatchDialog
@@ -850,7 +1005,9 @@ export const EditorWorkspace = ({
           onRetryFailed={() => void queue.retryFailed(project)}
           onStart={() =>
             void queue.start(project, {
-              sourceResolved: source.sourceUrl !== null,
+              // Day1 Design Ref: §7 — for Day1 this means both panels decoded,
+              // which `renderableSource` already resolves per template.
+              sourceResolved: renderableSource,
               rendererReady: capabilities?.ready === true,
             })
           }
@@ -877,10 +1034,14 @@ export const EditorWorkspace = ({
         }
         onSeek={seekToMs}
         onSeekFrame={(frame) => seekToMs((frame / project.fps) * 1000)}
-        onSelect={(sectionId) => setSelectedKind(sectionId as SceneKind)}
+        onSelect={(sectionId) =>
+          day1
+            ? setSelectedDay1Section(sectionId)
+            : setSelectedKind(sectionId as SceneKind)
+        }
         onTogglePlay={() => playerRef.current?.toggle()}
         sections={project.sections}
-        selectedId={selectedKind}
+        selectedId={day1 ? selectedDay1Section : selectedKind}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

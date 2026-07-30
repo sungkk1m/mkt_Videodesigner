@@ -3,7 +3,12 @@
 // starts, and a failure never stops the queue.
 import {useCallback, useRef, useState} from 'react';
 
-import {buildCompositionProps, threeSceneOf} from '../../domain/editor/project';
+import {
+  buildEditorSnapshot,
+  day1MissingPanels,
+  threeSceneOf,
+  type Day1PanelKey,
+} from '../../domain/editor/project';
 import {narrationBlockers} from '../../domain/audio/mix';
 import type {
   EditorProject,
@@ -56,9 +61,19 @@ const toAppError = (error: unknown): AppError =>
         {action: {label: '실패 항목 재시도', target: 'retry'}, retryable: true},
       );
 
+const DAY1_PANEL_LABEL: Record<Day1PanelKey, string> = {
+  panelA: 'A',
+  panelB: 'B',
+};
+
 /**
  * Design Ref: §5.5 Preflight list — every blocking condition is reported before a
  * single frame is rendered.
+ *
+ * Day1 Design Ref: §7 RENDER_PREFLIGHT_FAILED — Day1 needs two videos rather than
+ * one, so the source check branches on the template. Narration is out of Day1's
+ * scope (Plan §2.2) and `narrationBlockers` already returns nothing for it, so the
+ * loop below stays template-agnostic.
  */
 export const preflightIssues = (
   project: EditorProject,
@@ -67,9 +82,20 @@ export const preflightIssues = (
 ): string[] => {
   const issues: string[] = [];
 
-  const source = threeSceneOf(project)?.source ?? null;
+  if (project.templateSettings.template === 'day1') {
+    // FR-D03 — both panels are required, and each must also be decodable.
+    const missingPanels = day1MissingPanels(project);
 
-  if (!source) {
+    if (missingPanels.length > 0) {
+      issues.push(
+        `영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: ${missingPanels
+          .map((panel) => DAY1_PANEL_LABEL[panel])
+          .join(' · ')}`,
+      );
+    } else if (!sourceResolved) {
+      issues.push('패널 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
+    }
+  } else if (!threeSceneOf(project)?.source) {
     issues.push('영상 소재가 없습니다.');
   } else if (!sourceResolved) {
     issues.push('원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
@@ -135,8 +161,10 @@ export const useRenderQueue = ({
         });
         setJobs(current);
 
-        // Design Ref: §4.3 — one frozen snapshot per job.
-        const snapshot = buildCompositionProps(
+        // Design Ref: §4.3 — one frozen snapshot per job. Day1 Design Ref: §2.1 —
+        // the ratio is part of the snapshot, so a Day1 job carries the split
+        // geometry for its own output size.
+        const snapshot = buildEditorSnapshot(
           {
             ...project,
             selectedLocale: job.locale,

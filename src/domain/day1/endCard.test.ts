@@ -6,7 +6,12 @@
 import {describe, expect, it} from 'vitest';
 
 import {RATIO_DIMENSIONS} from '../editor/types';
-import {APP_ICON_RECT, DEFAULT_ICON_ADJUST, appIconRect} from './endCard';
+import {
+  APP_ICON_RECT,
+  DEFAULT_ICON_ADJUST,
+  appIconRect,
+  placedIconRect,
+} from './endCard';
 
 describe('APP_ICON_RECT', () => {
   // Source: today-banner-designer.html `.tmpl-app-badge.size-* .ab-icon`.
@@ -125,5 +130,48 @@ describe('appIconRect', () => {
     appIconRect('1:1', {dx: 0.2, dy: 0.2, scale: 2});
 
     expect(APP_ICON_RECT['1:1']).toEqual(before);
+  });
+});
+
+describe('placedIconRect', () => {
+  it.each(['1:1', '9:16'] as const)(
+    'defers to the bannerdesigner constant for %s',
+    (ratio) => {
+      expect(placedIconRect(ratio, {dx: 0.05, dy: 0, scale: 1.1})).toEqual(
+        appIconRect(ratio, {dx: 0.05, dy: 0, scale: 1.1}),
+      );
+    },
+  );
+
+  it('centres a square fallback for 16:9, which has no layout to copy', () => {
+    const {width, height} = RATIO_DIMENSIONS['16:9'];
+    const rect = placedIconRect('16:9', DEFAULT_ICON_ADJUST);
+
+    // Square in pixels even though the frame is not.
+    expect(rect.w * width).toBeCloseTo(rect.h * height, 6);
+    // 40% of the shorter edge.
+    expect(rect.h * height).toBeCloseTo(height * 0.4, 6);
+    expect(rect.x + rect.w / 2).toBeCloseTo(0.5, 10);
+    expect(rect.y + rect.h / 2).toBeCloseTo(0.5, 10);
+  });
+
+  it('honours dx, dy and scale on the fallback too', () => {
+    const base = placedIconRect('16:9', DEFAULT_ICON_ADJUST);
+    const moved = placedIconRect('16:9', {dx: 0.1, dy: -0.2, scale: 1.5});
+
+    expect(moved.w).toBeCloseTo(base.w * 1.5, 10);
+    expect(moved.h).toBeCloseTo(base.h * 1.5, 10);
+    // Still centred, then nudged.
+    expect(moved.x + moved.w / 2).toBeCloseTo(0.5 + 0.1, 10);
+    expect(moved.y + moved.h / 2).toBeCloseTo(0.5 - 0.2, 10);
+  });
+
+  it('keeps the fallback inside the frame at rest', () => {
+    const rect = placedIconRect('16:9');
+
+    expect(rect.x).toBeGreaterThanOrEqual(0);
+    expect(rect.y).toBeGreaterThanOrEqual(0);
+    expect(rect.x + rect.w).toBeLessThanOrEqual(1);
+    expect(rect.y + rect.h).toBeLessThanOrEqual(1);
   });
 });

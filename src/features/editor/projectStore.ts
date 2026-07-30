@@ -16,10 +16,18 @@ import {
   applySourceToAllScenes,
   createProject,
   moveTimelineBoundary,
+  relinkDay1PanelSource,
   relinkSource,
   renameProject,
+  resetDay1Transform,
   resetSceneTransform,
   setCopyField,
+  setDay1LabelText,
+  setDay1PanelSource,
+  setDay1PanelSourceStatus,
+  setDay1RatioOverride,
+  setDay1TrimInMs,
+  setDay1TrimOutMs,
   setRatioOverride,
   setSceneSubtitleText,
   setSceneTransition,
@@ -30,20 +38,29 @@ import {
   setRenderProfile,
   setSelectedLocale,
   setSelectedRatio,
+  switchTemplate,
   toggleRenderLocale,
   toggleRenderRatio,
   setSourceStatus,
   threeSceneOf,
   updateCtaSettings,
+  updateDay1EndCard,
+  updateDay1LabelStyle,
+  updateDay1Split,
+  updateDay1Transform,
   updateHookSettings,
   updateSceneTransform,
   updateSubtitleStyle,
+  type Day1EndCardPatch,
+  type Day1PanelKey,
 } from '../../domain/editor/project';
 import type {
+  ActivePanel,
   AspectRatio,
   AudioMix,
   AudioTrack,
   CtaSceneSettings,
+  Day1Settings,
   DurationPreset,
   EditorProject,
   HookSceneSettings,
@@ -55,6 +72,7 @@ import type {
   SceneKind,
   SceneTransition,
   SubtitleStyle,
+  TemplateKind,
 } from '../../domain/editor/types';
 import type {FrameRate, RenderProfile} from '../../domain/render/profile';
 import type {BoundaryIndex} from '../../domain/timeline/timeline';
@@ -107,6 +125,30 @@ export interface ProjectStore {
   setRenderFilePrefix: (prefix: string) => void;
   toggleRenderLocale: (locale: Locale) => void;
   toggleRenderRatio: (ratio: AspectRatio) => void;
+  /** Day1 commands. Day1 Design Ref: §6.1, §6.3. */
+  switchTemplate: (template: TemplateKind) => void;
+  setDay1PanelSource: (
+    panel: Day1PanelKey,
+    source: MediaReference | null,
+  ) => void;
+  relinkDay1Panel: (panel: Day1PanelKey, source: MediaReference) => void;
+  setDay1PanelStatus: (panel: Day1PanelKey, status: MediaStatus) => void;
+  setDay1TrimIn: (panel: Day1PanelKey, ms: number) => void;
+  setDay1TrimOut: (panel: Day1PanelKey, ms: number) => void;
+  setDay1Transform: (
+    panel: Day1PanelKey,
+    patch: Partial<Omit<MediaTransform, 'fit'>>,
+  ) => void;
+  resetDay1Transform: (panel: Day1PanelKey) => void;
+  toggleDay1RatioOverride: (panel: Day1PanelKey, enabled: boolean) => void;
+  setDay1Split: (patch: Partial<Day1Settings['split']>) => void;
+  setDay1LabelStyle: (patch: Partial<Day1Settings['labelStyle']>) => void;
+  setDay1EndCard: (patch: Day1EndCardPatch) => void;
+  /**
+   * Label wording takes an explicit locale: the Day1 inspector edits all four at
+   * once rather than following the header. Day1 Design Ref: §6.3.
+   */
+  setDay1LabelAt: (locale: Locale, panel: ActivePanel, value: string) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set) => ({
@@ -237,4 +279,58 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: toggleRenderLocale(state.project, locale)})),
   toggleRenderRatio: (ratio) =>
     set((state) => ({project: toggleRenderRatio(state.project, ratio)})),
+  switchTemplate: (template) =>
+    set((state) => ({project: switchTemplate(state.project, template)})),
+  setDay1PanelSource: (panel, source) =>
+    set((state) => ({
+      project: setDay1PanelSource(state.project, panel, source),
+    })),
+  relinkDay1Panel: (panel, source) =>
+    set((state) => ({
+      project: relinkDay1PanelSource(state.project, panel, source),
+    })),
+  setDay1PanelStatus: (panel, status) =>
+    set((state) => ({
+      project: setDay1PanelSourceStatus(state.project, panel, status),
+    })),
+  setDay1TrimIn: (panel, ms) =>
+    set((state) => ({project: setDay1TrimInMs(state.project, panel, ms)})),
+  setDay1TrimOut: (panel, ms) =>
+    set((state) => ({project: setDay1TrimOutMs(state.project, panel, ms)})),
+  setDay1Transform: (panel, patch) =>
+    set((state) => ({
+      project: updateDay1Transform(
+        state.project,
+        panel,
+        state.project.selectedRatio,
+        patch,
+      ),
+    })),
+  resetDay1Transform: (panel) =>
+    set((state) => ({
+      project: resetDay1Transform(
+        state.project,
+        panel,
+        state.project.selectedRatio,
+      ),
+    })),
+  toggleDay1RatioOverride: (panel, enabled) =>
+    set((state) => ({
+      project: setDay1RatioOverride(
+        state.project,
+        panel,
+        state.project.selectedRatio,
+        enabled,
+      ),
+    })),
+  setDay1Split: (patch) =>
+    set((state) => ({project: updateDay1Split(state.project, patch)})),
+  setDay1LabelStyle: (patch) =>
+    set((state) => ({project: updateDay1LabelStyle(state.project, patch)})),
+  setDay1EndCard: (patch) =>
+    set((state) => ({project: updateDay1EndCard(state.project, patch)})),
+  setDay1LabelAt: (locale, panel, value) =>
+    set((state) => ({
+      project: setDay1LabelText(state.project, locale, panel, value),
+    })),
 }));

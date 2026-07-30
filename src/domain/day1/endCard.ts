@@ -1,6 +1,6 @@
 // Day1 Design Ref: §4.3 End Card Geometry — where the app-icon overlay must sit
 // so it lands exactly on the icon already baked into the bannerdesigner export.
-import type {AspectRatio} from '../editor/types';
+import {RATIO_DIMENSIONS, type AspectRatio} from '../editor/types';
 
 /**
  * A rectangle as a fraction of the output frame. `w` is a fraction of the frame
@@ -100,5 +100,47 @@ export const appIconRect = (
     w,
     h,
     radius: base.radius * adjust.scale,
+  };
+};
+
+/**
+ * A centred square, used where no bannerdesigner layout exists. The side is a
+ * fraction of the frame's *shorter* edge, which is how both real layouts read
+ * (515/1080 and 680/1080), and the radius is the ~18% of the icon side they
+ * share.
+ */
+const FALLBACK_ICON_SIDE_FRACTION = 0.4;
+const FALLBACK_ICON_RADIUS_FRACTION = 0.18;
+
+/**
+ * The rectangle the end card actually draws the icon in.
+ *
+ * Day1 Design Ref: §1.3 D12 / §4.3 — 16:9 has no app-badge layout to copy, so
+ * it degrades to manual placement. The composition still has to put the icon
+ * somewhere, so it starts centred and the inspector nudges from there with the
+ * same `iconAdjust` the automatic ratios use.
+ */
+export const placedIconRect = (
+  ratio: AspectRatio,
+  adjust: IconAdjust = DEFAULT_ICON_ADJUST,
+): NormalizedRect => {
+  const automatic = appIconRect(ratio, adjust);
+
+  if (automatic) {
+    return automatic;
+  }
+
+  const {width, height} = RATIO_DIMENSIONS[ratio];
+  const side =
+    Math.min(width, height) * FALLBACK_ICON_SIDE_FRACTION * adjust.scale;
+  const w = side / width;
+  const h = side / height;
+
+  return {
+    x: (1 - w) / 2 + adjust.dx,
+    y: (1 - h) / 2 + adjust.dy,
+    w,
+    h,
+    radius: (side * FALLBACK_ICON_RADIUS_FRACTION) / width,
   };
 };

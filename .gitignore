@@ -8,8 +8,10 @@ artifacts/render-poc/*.json
 .DS_Store
 artifacts/module-3a/
 tests/fixtures/*.mp4
+tests/fixtures/*.png
 artifacts/module-4/
 artifacts/module-5/
+artifacts/module-6/
 tests/fixtures/*.wav
 *.tsbuildinfo
 

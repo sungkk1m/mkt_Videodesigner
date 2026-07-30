@@ -7,9 +7,9 @@
 // that implement them.
 import type {
   EditorProject,
+  EditorSnapshot,
   MediaReference,
   ResolvedMedia,
-  ThreeSceneProps,
 } from '../editor/types';
 import type {HookCandidate} from '../hook/scoring';
 import type {
@@ -110,7 +110,11 @@ export interface RenderCapabilities {
 }
 
 export interface RenderRequest {
-  snapshot: ThreeSceneProps;
+  /**
+   * Day1 Design Ref: §2.1 — tagged with its template so the adapter picks the
+   * composition instead of guessing from the prop shape.
+   */
+  snapshot: EditorSnapshot;
   config: EditorRenderConfig;
   signal: AbortSignal;
   onProgress: (event: RenderProgressEvent) => void;
