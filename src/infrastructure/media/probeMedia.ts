@@ -8,6 +8,7 @@ import {
   type Result,
 } from '../../shared/errors/appError';
 import {fingerprintBlob} from './fingerprint';
+import {describeVideoCodecTag, readVideoCodecTag} from './videoCodecTag';
 
 export type MediaProbeResult = Result<ResolvedMedia>;
 
@@ -24,6 +25,8 @@ export interface ProbeMediaDependencies {
   loadImageSize: (url: string) => Promise<{width: number; height: number}>;
   createId: () => string;
   fingerprint: (file: Blob) => Promise<string>;
+  /** Plan FR-M03: only called when a video upload fails, to name the codec. */
+  readCodecTag: (file: Blob) => Promise<string | null>;
 }
 
 const METADATA_TIMEOUT_MS = 15_000;
@@ -69,6 +72,7 @@ const createBrowserDependencies = (): ProbeMediaDependencies => ({
   loadImageSize,
   createId: () => `media_${crypto.randomUUID()}`,
   fingerprint: (file) => fingerprintBlob(file),
+  readCodecTag: (file) => readVideoCodecTag(file),
 });
 
 const loadImageSize = (url: string): Promise<{width: number; height: number}> =>
@@ -245,15 +249,21 @@ export const probeVideoFile = async (
       );
     }
 
+    // Plan FR-M03: Chrome reports 0x0 rather than an error when it parses the
+    // container but cannot decode the video track — mp4v lands here. The file
+    // does have a video track, so naming the codec is the only honest answer.
     if (metadata.width <= 0 || metadata.height <= 0) {
       dependencies.revokeObjectUrl(url);
+
+      const codecTag = await dependencies.readCodecTag(file);
+
       return fail(
         createAppError(
-          'MEDIA_PROBE_FAILED',
-          '영상 해상도를 확인할 수 없습니다. 영상 트랙이 있는 파일을 선택하세요.',
+          'CODEC_UNSUPPORTED',
+          `Chrome이 이 영상의 ${describeVideoCodecTag(codecTag)}를 디코딩하지 못합니다. H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
           {
+            details: {codecTag, mimeType: file.type},
             action: {label: '다른 파일 선택', target: 'source'},
-            retryable: true,
           },
         ),
       );
@@ -277,11 +287,15 @@ export const probeVideoFile = async (
     });
   } catch (cause) {
     dependencies.revokeObjectUrl(url);
+
+    const codecTag = await dependencies.readCodecTag(file);
+
     return fail(
       createAppError(
         'CODEC_UNSUPPORTED',
-        'Chrome이 이 영상을 디코딩하지 못했습니다. H.264 MP4로 변환한 뒤 다시 업로드하세요.',
+        `Chrome이 이 영상을 열지 못했습니다 (${describeVideoCodecTag(codecTag)}). H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
         {
+          details: {codecTag, mimeType: file.type},
           action: {label: '다른 파일 선택', target: 'source'},
           cause,
         },

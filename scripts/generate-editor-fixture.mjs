@@ -142,3 +142,42 @@ for (const {name, color, size} of STILLS) {
 
   process.stdout.write(`${stillPath}\n`);
 }
+
+/**
+ * Codec-compatibility fixtures (Plan FR-M01 / FR-M03).
+ *
+ * Chrome 148 decodes HEVC in both `<video>` and WebCodecs, so `codec-hevc.mp4`
+ * locks in that an iPhone-shaped source uploads *and* renders. `codec-mp4v.mp4`
+ * is the one format with no decode path at all — Chrome parses the container and
+ * reports 0x0 instead of erroring — so it locks in that the rejection names the
+ * codec instead of claiming the file has no video track.
+ */
+const CODEC_FIXTURES = [
+  {name: 'codec-hevc', args: ['-c:v', 'libx265', '-tag:v', 'hvc1']},
+  {name: 'codec-mp4v', args: ['-c:v', 'mpeg4']},
+];
+
+for (const {name, args} of CODEC_FIXTURES) {
+  const outputPath = resolve(fixtureDirectory, `${name}.mp4`);
+
+  await execFileAsync('ffmpeg', [
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'testsrc2=size=640x360:rate=30:duration=3',
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=440:duration=3',
+    ...args,
+    '-pix_fmt',
+    'yuv420p',
+    '-c:a',
+    'aac',
+    '-shortest',
+    outputPath,
+  ]);
+
+  process.stdout.write(`${outputPath}\n`);
+}
