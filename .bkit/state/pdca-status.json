@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-15T06:00:38.538Z",
+  "lastUpdated": "2026-08-15T06:08:16.149Z",
   "activeFeatures": [
     "browser-video-mvp",
     "media-codec-compat"
@@ -202,16 +202,17 @@
         "FR-M02",
         "FR-M03",
         "FR-M04",
-        "FR-M05"
+        "FR-M05",
+        "FR-M06"
       ],
       "documents": {
         "plan": "docs/01-plan/features/media-codec-compat.plan.md"
       },
       "timestamps": {
         "started": "2026-07-28T00:00:00.000Z",
-        "lastUpdated": "2026-08-01T06:11:38.000Z"
+        "lastUpdated": "2026-08-15T06:08:16.149Z"
       },
-      "notes": "Design phase skipped; FR-M01/M03/M04 landed directly in commit a2c1ff7. Plan premise contradicted by Chrome 148 measurements — Plan needs a revision before Check."
+      "notes": "Plan revised to v0.2.0 on Chrome 148 measurements. Design skipped by decision. Video path shipped in a2c1ff7; remaining R1-R3 (AV1/VP8 fixtures, audio codec naming) before Check."
     }
   },
   "pipeline": {
@@ -285,7 +286,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-15T06:00:38.538Z"
+    "lastActivity": "2026-08-15T06:08:16.149Z"
   },
   "history": [
     {
@@ -384,6 +385,12 @@
       "feature": "media-codec-compat",
       "phase": "do",
       "action": "registered"
+    },
+    {
+      "timestamp": "2026-08-15T06:08:16.149Z",
+      "feature": "media-codec-compat",
+      "phase": "plan",
+      "action": "revised"
     }
   ],
   "stateMachine": {
