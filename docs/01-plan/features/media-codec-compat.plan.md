@@ -65,7 +65,7 @@ mp4v 파일에서 Chrome은 **에러를 내지 않는다.** 컨테이너를 파�
 
 v0.1.0 §5는 "Mediabunny 파서로 메타데이터 추출을 대체하는 것이 이 작업의 실제 핵심"이라고 봤다. **불가능하다.** mediabunny는 자기가 지원하는 코덱만 모델링해서, mp4v를 파싱하려 하면 throw한다 — 정확히 우리가 이름을 알아내야 하는 그 파일에서 실패한다. WebCodecs `isConfigSupported()`도 답이 아니다. 그건 코덱 문자열을 **인자로 받는** API인데, 우리에게 없는 게 바로 그 문자열이다.
 
-그래서 ISO-BMFF 박스 체인(`moov→trak→mdia→minf→stbl→stsd`)을 직접 내려가 sample entry의 fourcc를 읽는다. [videoCodecTag.ts](../../../src/infrastructure/media/videoCodecTag.ts) — 박스 헤더와 `moov`만 읽으므로 파일 전체를 훑지 않고, **실패 경로에서만 호출**되므로 성공한 업로드는 비용이 0이다.
+그래서 ISO-BMFF 박스 체인(`moov→trak→mdia→minf→stbl→stsd`)을 직접 내려가 sample entry의 fourcc를 읽는다. [codecTag.ts](../../../src/infrastructure/media/codecTag.ts) — 박스 헤더와 `moov`만 읽으므로 파일 전체를 훑지 않고, **실패 경로에서만 호출**되므로 성공한 업로드는 비용이 0이다.
 
 ---
 
@@ -111,7 +111,7 @@ v0.1.0 §5는 "Mediabunny 파서로 메타데이터 추출을 대체하는 것�
 | SC1 | HEVC mp4 픽스처로 업로드 → 렌더 → `ffprobe` 확인이 통과한다 | E2E | ✅ [media-codec-compat.spec.ts:27](../../../tests/e2e/media-codec-compat.spec.ts) |
 | SC2 | mp4v 픽스처가 코덱명(`MPEG-4 Part 2` + `mp4v`)이 포함된 에러로 거부되고, "영상 트랙이 있는 파일" 문구가 나오지 않는다 | E2E | ✅ 동 spec `:69` |
 | SC3 | 기존 유닛 **287**개 · E2E **30**개 통과 | 회귀 | ✅ 2026-08-15 재실행 |
-| **SC4** | AV1 mp4와 VP8 WebM이 업로드를 통과한다 | E2E | ⏳ |
+| **SC4** | AV1 mp4와 VP8 WebM이 업로드를 통과하고 **MP4까지 렌더된다** | E2E | ⏳ |
 | **SC5** | Chrome이 디코딩 못 하는 오디오가 코덱명이 포함된 에러로 거부된다 | E2E | ⏳ |
 
 > SC3의 기준선은 v0.1.0의 "164·17"에서 갱신했다. Day1 사이클(272·27)과 `a2c1ff7`을 거치며 늘어난 값이다.
@@ -145,10 +145,20 @@ v0.1.0 §5는 "Mediabunny 파서로 메타데이터 추출을 대체하는 것�
 | # | 작업 | 대응 | 산출 |
 |---|------|------|------|
 | R1 | AV1 mp4 · VP8 WebM 픽스처 생성 + 업로드 E2E | FR-M02 / SC4 | `tests/fixtures/codec-av1.mp4` · `codec-vp8.webm`, E2E 2케이스 |
-| R2 | fourcc 리더를 오디오까지 일반화 + 오디오 코덱 라벨 | FR-M06 | `videoCodecTag.ts` 확장 (명칭 포함 재검토), 유닛 테스트 |
+| R2 | fourcc 리더를 오디오까지 일반화 + 오디오 코덱 라벨 | FR-M06 | `codecTag.ts` (구 `videoCodecTag.ts`), 유닛 테스트 |
 | R3 | 오디오 실패 경로에 코덱명 연결 + 거부 픽스처 E2E | FR-M06 / SC5 | `probeMedia.ts` `probeAudioFile` catch, E2E 1케이스 |
 
 **의도적으로 하지 않는 것**: 영상 경로 리팩터. `a2c1ff7`이 검증을 통과했고 이 사이클의 목표를 충족한다. 오디오를 붙이면서 영상 코드를 "정리"하지 않는다.
+
+### 6.1 Do 단계에서 추가된 결정
+
+> Day1 회고 §6.3의 Try("Do 중 미기재 결정이 생기면 그 자리에서 문서에 한 줄 추가")를 적용한 항목이다. 이번에도 Check(Gap-3)에서 잡혔으므로 사후 승인으로 기록한다.
+
+| ID | 결정 | 근거 |
+|----|------|------|
+| **D1** | `readCodecTag`는 `hdlr` 핸들러 타입(`vide`/`soun`)으로 트랙을 고른다 | R2를 하려면 트랙 선택이 필요한데, 기존 코드는 첫 `trak`을 무조건 집고 있었다. 오디오가 앞에 오는 mp4에서 **영상 거부를 오디오 코덱 이름으로 설명하는** 잠재 버그다. 오디오 지원의 직접적 전제라 함께 고쳤다 |
+| **D2** | `videoCodecTag.ts` → `codecTag.ts` 개명 | 오디오도 읽으므로 기존 이름이 거짓이 된다. §6 "영상 경로 리팩터 안 함"의 예외 — 동작 변경이 아니라 명칭 정정이고, mp4v E2E로 무회귀 확인 |
+| **D3** | 코덱 라벨은 게이트가 아니다 | `CODEC_LABELS` 미등록 태그는 `코덱 'xxxx'`로 축퇴할 뿐 거부 여부를 바꾸지 않는다. §2.1 "화이트리스트를 들지 않는다"를 코드 수준에서 지키기 위한 것 |
 
 ---
 
@@ -168,3 +178,4 @@ v0.1.0 §5는 "Mediabunny 파서로 메타데이터 추출을 대체하는 것�
 |---------|------|---------|--------|
 | 0.1.0 | 2026-07-28 | 최초 Plan. Chrome 코덱 지원 실측 결과 기반. Day1 사이클에서 분리. | 김성권 / Claude |
 | 0.2.0 | 2026-08-15 | Chrome 148 재측정으로 전제 개정. HEVC 오거부·WebCodecs 이관·Mediabunny 대체를 폐기 사유와 함께 제거하고, 실제 결함(거짓 에러 메시지)으로 문제를 다시 정의. FR-M06(오디오) 승격, SC3 기준선 갱신(287·30), SC4·SC5 추가, §6 잔여 작업 신설. | 김성권 / Claude |
+| 0.2.1 | 2026-08-15 | Check Gap 3건 반영. 개명된 `codecTag.ts`로 링크 교정(Gap-1), SC4를 렌더까지 요구하도록 강화(Gap-2), Do 단계 결정 D1~D3을 §6.1에 사후 승인 기록(Gap-3). | 김성권 / Claude |

@@ -29,62 +29,59 @@ const outputDirectory = resolve(projectRoot, 'artifacts/media-codec-compat');
 test.describe('media codec compatibility', () => {
   test.setTimeout(8 * 60 * 1000);
 
-  test('accepts and renders an HEVC source end to end', async ({page}) => {
-    await page.goto('/');
-    await page
-      .getByTestId('source-input')
-      .setInputFiles(fixture('codec-hevc.mp4'));
-
-    await expect(page.getByTestId('source-metadata')).toContainText(
-      'codec-hevc.mp4',
-      {timeout: 30_000},
-    );
-
-    // FR-M04: passing upload has to mean passing render, not just passing probe.
-    await page.getByTestId('ratio-1:1').click();
-
-    const downloadPromise = page.waitForEvent('download', {
-      timeout: 8 * 60 * 1000,
-    });
-    await page.getByRole('button', {name: 'MP4 렌더'}).click();
-    await expect(page.getByTestId('editor-render-status')).toContainText('완료', {
-      timeout: 8 * 60 * 1000,
-    });
-    await page.getByRole('button', {name: '다운로드'}).click();
-
-    await mkdir(outputDirectory, {recursive: true});
-    const outputPath = resolve(outputDirectory, 'hevc-source-1x1.mp4');
-    await (await downloadPromise).saveAs(outputPath);
-
-    const {stdout} = await execFileAsync('ffprobe', [
-      '-v',
-      'error',
-      '-print_format',
-      'json',
-      '-show_streams',
-      outputPath,
-    ]);
-    const streams = JSON.parse(stdout).streams as Array<Record<string, unknown>>;
-
-    expect(streams.find((stream) => stream.codec_type === 'video')).toMatchObject(
-      {codec_name: 'h264', width: 1080, height: 1080},
-    );
-  });
-
-  // FR-M02. VP8 ships as WebM because ffmpeg will not mux it into mp4, which
-  // also exercises a container the fourcc reader deliberately cannot parse —
-  // it never runs here, because the upload succeeds.
-  for (const {label, file} of [
-    {label: 'AV1 mp4', file: 'codec-av1.mp4'},
-    {label: 'VP8 WebM', file: 'codec-vp8.webm'},
+  // FR-M02 / FR-M04. Every accepted codec goes all the way to an MP4, because
+  // "upload succeeded" is not the promise — "you will get a file out" is. Only
+  // HEVC used to be covered end to end, which left AV1 and VP8 true but
+  // unguarded (Check Gap-2).
+  //
+  // VP8 ships as WebM because ffmpeg will not mux it into mp4. That also puts a
+  // container the fourcc reader deliberately cannot parse through the happy
+  // path — the reader never runs there, because the upload succeeds.
+  for (const {label, file, output} of [
+    {label: 'HEVC', file: 'codec-hevc.mp4', output: 'hevc-source-1x1.mp4'},
+    {label: 'AV1', file: 'codec-av1.mp4', output: 'av1-source-1x1.mp4'},
+    {label: 'VP8 WebM', file: 'codec-vp8.webm', output: 'vp8-source-1x1.mp4'},
   ]) {
-    test(`accepts a ${label} source`, async ({page}) => {
+    test(`accepts and renders a ${label} source end to end`, async ({page}) => {
       await page.goto('/');
       await page.getByTestId('source-input').setInputFiles(fixture(file));
 
       await expect(page.getByTestId('source-metadata')).toContainText(file, {
         timeout: 30_000,
       });
+
+      await page.getByTestId('ratio-1:1').click();
+
+      const downloadPromise = page.waitForEvent('download', {
+        timeout: 8 * 60 * 1000,
+      });
+      await page.getByRole('button', {name: 'MP4 렌더'}).click();
+      await expect(page.getByTestId('editor-render-status')).toContainText(
+        '완료',
+        {timeout: 8 * 60 * 1000},
+      );
+      await page.getByRole('button', {name: '다운로드'}).click();
+
+      await mkdir(outputDirectory, {recursive: true});
+      const outputPath = resolve(outputDirectory, output);
+      await (await downloadPromise).saveAs(outputPath);
+
+      const {stdout} = await execFileAsync('ffprobe', [
+        '-v',
+        'error',
+        '-print_format',
+        'json',
+        '-show_streams',
+        outputPath,
+      ]);
+      const streams = JSON.parse(stdout).streams as Array<
+        Record<string, unknown>
+      >;
+
+      // Whatever went in, an H.264 MP4 comes out.
+      expect(
+        streams.find((stream) => stream.codec_type === 'video'),
+      ).toMatchObject({codec_name: 'h264', width: 1080, height: 1080});
     });
   }
 
