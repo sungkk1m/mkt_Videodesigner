@@ -1,0 +1,149 @@
+{
+  "version": "2.0.6",
+  "pdca": {
+    "docPaths": {
+      "plan": [
+        "docs/01-plan/features/{feature}.plan.md",
+        "docs/01-plan/{feature}.plan.md",
+        "docs/plan/{feature}.md"
+      ],
+      "design": [
+        "docs/02-design/features/{feature}.design.md",
+        "docs/02-design/{feature}.design.md",
+        "docs/design/{feature}.md"
+      ],
+      "analysis": [
+        "docs/03-analysis/{feature}.analysis.md",
+        "docs/03-analysis/features/{feature}.analysis.md",
+        "docs/03-analysis/{feature}.gap-analysis.md"
+      ],
+      "report": [
+        "docs/04-report/features/{feature}.report.md",
+        "docs/04-report/{feature}.report.md",
+        "docs/04-report/{feature}.completion-report.md"
+      ],
+      "archive": "docs/archive/{date}/{feature}"
+    },
+    "matchRateThreshold": 90,
+    "autoIterate": true,
+    "maxIterations": 5,
+    "requireDesignDoc": true,
+    "automationLevel": "semi-auto",
+    "autoStartThreshold": 100,
+    "fullAuto": {
+      "reviewCheckpoints": ["design"]
+    }
+  },
+  "triggers": {
+    "implicitEnabled": true,
+    "confidenceThreshold": 0.7,
+    "clarifyAmbiguity": true
+  },
+  "pipeline": {
+    "autoTransition": false,
+    "skipConfirmation": false
+  },
+  "multiFeature": {
+    "maxActiveFeatures": 5,
+    "autoSwitch": true
+  },
+  "featurePatterns": [
+    "features",
+    "modules",
+    "packages",
+    "apps",
+    "services",
+    "domains"
+  ],
+  "fileDetection": {
+    "sourceExtensions": [],
+    "excludePatterns": [
+      "node_modules",
+      ".git",
+      "dist",
+      "build",
+      ".next",
+      "__pycache__",
+      "vendor",
+      "target",
+      ".cache",
+      ".turbo",
+      "coverage",
+      "mkt_videodesigner/"
+    ]
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 5000
+  },
+  "permissions": {
+    "Write": "allow",
+    "Edit": "allow",
+    "Read": "allow",
+    "Bash": "allow",
+    "Bash(rm -rf*)": "deny",
+    "Bash(rm -r*)": "ask",
+    "Bash(git push --force*)": "deny",
+    "Bash(git reset --hard*)": "ask"
+  },
+  "automation": {
+    "defaultLevel": 2,
+    "trustScoreEnabled": true,
+    "autoEscalation": false,
+    "autoDowngrade": true,
+    "maxConcurrentFeatures": 3,
+    "gateTimeoutMs": 300000,
+    "emergencyStopEnabled": true
+  },
+  "guardrails": {
+    "destructiveDetection": true,
+    "loopBreaker": {
+      "maxPdcaIterations": 5,
+      "maxSameFileEdits": 10,
+      "maxAgentRecursion": 3,
+      "cooldownMs": 60000
+    },
+    "blastRadiusLimit": "high",
+    "checkpointOnPhaseTransition": true,
+    "checkpointOnDestructive": true
+  },
+  "quality": {
+    "gateEnabled": true,
+    "metricsCollection": true,
+    "regressionGuard": true,
+    "thresholds": {
+      "matchRate": 90,
+      "codeQualityScore": 70,
+      "criticalIssueCount": 0,
+      "conventionCompliance": 90
+    },
+    "historyMaxDataPoints": 100
+  },
+  "team": {
+    "enabled": true,
+    "displayMode": "in-process",
+    "maxTeammates": 5,
+    "delegateMode": false,
+    "ctoAgent": "cto-lead",
+    "levelOverrides": {
+      "Dynamic": { "maxTeammates": 3 },
+      "Enterprise": { "maxTeammates": 5 }
+    },
+    "orchestrationPatterns": {
+      "Dynamic": {
+        "plan": "leader",
+        "design": "leader",
+        "do": "swarm",
+        "check": "council",
+        "act": "leader"
+      },
+      "Enterprise": {
+        "plan": "leader",
+        "design": "council",
+        "do": "swarm",
+        "check": "council",
+        "act": "watchdog"
+      }
+    }
+  }
+}
