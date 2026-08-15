@@ -1,13 +1,18 @@
-// Plan FR-M01 / FR-M03 / FR-M04 — media-codec-compat.
+// Plan FR-M01 / FR-M02 / FR-M03 / FR-M04 / FR-M06 — media-codec-compat.
 //
-// Two claims worth locking down, both measured on Chrome 148 rather than assumed:
+// Claims worth locking down, all measured on Chrome 148 rather than assumed:
 //   1. HEVC (the iPhone / screen-recording codec) uploads AND renders. The Plan
 //      was written when Chrome's `<video>` still refused HEVC; it no longer does,
 //      so this test is what tells us if that ever regresses.
-//   2. MPEG-4 Part 2 (mp4v) has no decode path in Chrome at all, so the only
+//   2. AV1 and VP8 upload too. Nothing in the probe path branches on codec, so
+//      these guard the claim that the accepted set really is "whatever Chrome
+//      decodes" rather than a list we maintain.
+//   3. MPEG-4 Part 2 (mp4v) has no decode path in Chrome at all, so the only
 //      thing we control is whether the rejection is honest. It must name the
 //      codec — the old copy told the user to pick "a file with a video track"
 //      for a file that has one.
+//   4. The same honesty applies to audio: ALAC comes out of Apple tools and
+//      Chrome cannot decode it.
 import {execFile} from 'node:child_process';
 import {mkdir} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
@@ -66,6 +71,23 @@ test.describe('media codec compatibility', () => {
     );
   });
 
+  // FR-M02. VP8 ships as WebM because ffmpeg will not mux it into mp4, which
+  // also exercises a container the fourcc reader deliberately cannot parse —
+  // it never runs here, because the upload succeeds.
+  for (const {label, file} of [
+    {label: 'AV1 mp4', file: 'codec-av1.mp4'},
+    {label: 'VP8 WebM', file: 'codec-vp8.webm'},
+  ]) {
+    test(`accepts a ${label} source`, async ({page}) => {
+      await page.goto('/');
+      await page.getByTestId('source-input').setInputFiles(fixture(file));
+
+      await expect(page.getByTestId('source-metadata')).toContainText(file, {
+        timeout: 30_000,
+      });
+    });
+  }
+
   test('names the codec when rejecting an undecodable source', async ({page}) => {
     await page.goto('/');
     await page
@@ -80,5 +102,30 @@ test.describe('media codec compatibility', () => {
     // The file does have a video track. Saying otherwise sent users hunting for
     // a problem that was not there.
     await expect(error).not.toContainText('영상 트랙이 있는 파일');
+  });
+
+  // FR-M06. The audio panel needs a source loaded before it opens.
+  test('names the codec when rejecting an undecodable audio file', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page
+      .getByTestId('source-input')
+      .setInputFiles(fixture('gameplay-sample.mp4'));
+    await expect(page.getByTestId('source-metadata')).toContainText(
+      'gameplay-sample.mp4',
+      {timeout: 30_000},
+    );
+
+    await page.getByTestId('tab-audio').click();
+    await page
+      .getByTestId('audio-bgm-input')
+      .setInputFiles(fixture('codec-alac.m4a'));
+
+    const error = page.getByText(/디코딩하지 못합니다/);
+
+    await expect(error).toBeVisible({timeout: 30_000});
+    await expect(error).toContainText('ALAC (Apple Lossless)');
+    await expect(error).toContainText('alac');
   });
 });

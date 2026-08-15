@@ -1,9 +1,11 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-15T06:08:16.149Z",
+  "lastUpdated": "2026-08-15T06:17:42.446Z",
   "activeFeatures": [
     "browser-video-mvp",
-    "media-codec-compat"
+    "media-codec-compat",
+    "media",
+    "e2e"
   ],
   "primaryFeature": "media-codec-compat",
   "features": {
@@ -210,9 +212,35 @@
       },
       "timestamps": {
         "started": "2026-07-28T00:00:00.000Z",
-        "lastUpdated": "2026-08-15T06:08:16.149Z"
+        "lastUpdated": "2026-08-15T06:17:42.446Z"
       },
-      "notes": "Plan revised to v0.2.0 on Chrome 148 measurements. Design skipped by decision. Video path shipped in a2c1ff7; remaining R1-R3 (AV1/VP8 fixtures, audio codec naming) before Check."
+      "notes": "Plan v0.2.0. Design skipped by decision. R1-R3 complete: AV1/VP8/ALAC fixtures, codecTag generalized to audio with hdlr-based track selection, audio failure path names the codec. 296 unit / 33 e2e green. Ready for Check."
+    },
+    "media": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-15T06:11:11.750Z",
+        "lastUpdated": "2026-08-15T06:13:31.105Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/src/infrastructure/media/probeMedia.test.ts"
+    },
+    "e2e": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-15T06:13:59.212Z",
+        "lastUpdated": "2026-08-15T06:14:13.194Z"
+      },
+      "lastFile": "/Users/sungkkim/Desktop/mkt_videodesigner/tests/e2e/media-codec-compat.spec.ts"
     }
   },
   "pipeline": {
@@ -286,7 +314,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-15T06:08:16.149Z"
+    "lastActivity": "2026-08-15T06:17:42.446Z"
   },
   "history": [
     {
@@ -391,6 +419,108 @@
       "feature": "media-codec-compat",
       "phase": "plan",
       "action": "revised"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:11.750Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:29.467Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:42.773Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:47.471Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:51.506Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:11:55.030Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:12:00.696Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:12:05.873Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:12:14.461Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:12:26.909Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:12:55.276Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:13:27.529Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:13:31.105Z",
+      "feature": "media",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:13:59.212Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:14:06.079Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:14:13.195Z",
+      "feature": "e2e",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-15T06:17:42.446Z",
+      "feature": "media-codec-compat",
+      "phase": "do",
+      "action": "updated"
     }
   ],
   "stateMachine": {

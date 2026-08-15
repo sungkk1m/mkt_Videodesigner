@@ -7,8 +7,8 @@ import {
   ok,
   type Result,
 } from '../../shared/errors/appError';
+import {describeCodecTag, readCodecTag, type TrackKind} from './codecTag';
 import {fingerprintBlob} from './fingerprint';
-import {describeVideoCodecTag, readVideoCodecTag} from './videoCodecTag';
 
 export type MediaProbeResult = Result<ResolvedMedia>;
 
@@ -25,8 +25,8 @@ export interface ProbeMediaDependencies {
   loadImageSize: (url: string) => Promise<{width: number; height: number}>;
   createId: () => string;
   fingerprint: (file: Blob) => Promise<string>;
-  /** Plan FR-M03: only called when a video upload fails, to name the codec. */
-  readCodecTag: (file: Blob) => Promise<string | null>;
+  /** Plan FR-M03 / FR-M06: only called when an upload fails, to name the codec. */
+  readCodecTag: (file: Blob, kind: TrackKind) => Promise<string | null>;
 }
 
 const METADATA_TIMEOUT_MS = 15_000;
@@ -72,7 +72,7 @@ const createBrowserDependencies = (): ProbeMediaDependencies => ({
   loadImageSize,
   createId: () => `media_${crypto.randomUUID()}`,
   fingerprint: (file) => fingerprintBlob(file),
-  readCodecTag: (file) => readVideoCodecTag(file),
+  readCodecTag: (file, kind) => readCodecTag(file, kind),
 });
 
 const loadImageSize = (url: string): Promise<{width: number; height: number}> =>
@@ -203,11 +203,20 @@ export const probeAudioFile = async (
   } catch (cause) {
     dependencies.revokeObjectUrl(url);
 
+    // Plan FR-M06: same policy as the video path — name what the file actually
+    // holds. "WAV 또는 MP3로 변환하세요" alone leaves the user guessing which of
+    // their files is the problem, and ALAC comes out of Apple tools routinely.
+    const codecTag = await dependencies.readCodecTag(file, 'audio');
+
     return fail(
       createAppError(
         'CODEC_UNSUPPORTED',
-        'Chrome이 이 음성을 디코딩하지 못했습니다. WAV 또는 MP3로 변환한 뒤 다시 업로드하세요.',
-        {action: {label: '다른 파일 선택', target: 'audio'}, cause},
+        `Chrome이 이 음성의 ${describeCodecTag(codecTag)}를 디코딩하지 못합니다. WAV 또는 MP3로 변환한 뒤 다시 업로드하세요.`,
+        {
+          details: {codecTag, mimeType: file.type},
+          action: {label: '다른 파일 선택', target: 'audio'},
+          cause,
+        },
       ),
     );
   }
@@ -255,12 +264,12 @@ export const probeVideoFile = async (
     if (metadata.width <= 0 || metadata.height <= 0) {
       dependencies.revokeObjectUrl(url);
 
-      const codecTag = await dependencies.readCodecTag(file);
+      const codecTag = await dependencies.readCodecTag(file, 'video');
 
       return fail(
         createAppError(
           'CODEC_UNSUPPORTED',
-          `Chrome이 이 영상의 ${describeVideoCodecTag(codecTag)}를 디코딩하지 못합니다. H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
+          `Chrome이 이 영상의 ${describeCodecTag(codecTag)}를 디코딩하지 못합니다. H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
           {
             details: {codecTag, mimeType: file.type},
             action: {label: '다른 파일 선택', target: 'source'},
@@ -288,12 +297,12 @@ export const probeVideoFile = async (
   } catch (cause) {
     dependencies.revokeObjectUrl(url);
 
-    const codecTag = await dependencies.readCodecTag(file);
+    const codecTag = await dependencies.readCodecTag(file, 'video');
 
     return fail(
       createAppError(
         'CODEC_UNSUPPORTED',
-        `Chrome이 이 영상을 열지 못했습니다 (${describeVideoCodecTag(codecTag)}). H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
+        `Chrome이 이 영상을 열지 못했습니다 (${describeCodecTag(codecTag)}). H.264 또는 HEVC MP4로 변환한 뒤 다시 업로드하세요.`,
         {
           details: {codecTag, mimeType: file.type},
           action: {label: '다른 파일 선택', target: 'source'},

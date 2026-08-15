@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {describeVideoCodecTag, readVideoCodecTag} from './videoCodecTag';
+import {describeCodecTag, readCodecTag} from './codecTag';
 
 /** Blob only accepts views backed by a plain ArrayBuffer. */
 type Bytes = Uint8Array<ArrayBuffer>;
@@ -61,9 +61,27 @@ const stsd = (codecTag: string, entryPayloadBytes = 70) =>
     box(codecTag, new Uint8Array(entryPayloadBytes)),
   );
 
+/** hdlr content: version+flags, pre_defined, handler_type, reserved, name. */
+const hdlr = (handlerType: string) =>
+  box('hdlr', new Uint8Array(8), ascii(handlerType), new Uint8Array(12));
+
+const trak = (handlerType: string, codecTag: string, make = box) =>
+  make(
+    'trak',
+    make(
+      'mdia',
+      hdlr(handlerType),
+      make('minf', make('stbl', stsd(codecTag))),
+    ),
+  );
+
 const isobmff = (
   codecTag: string,
-  options: {boxFactory?: typeof box; leadingBoxes?: Bytes[]} = {},
+  options: {
+    boxFactory?: typeof box;
+    leadingBoxes?: Bytes[];
+    handlerType?: string;
+  } = {},
 ) => {
   const make = options.boxFactory ?? box;
 
@@ -72,19 +90,52 @@ const isobmff = (
     make(
       'moov',
       box('mvhd', new Uint8Array(100)),
-      make('trak', make('mdia', make('minf', make('stbl', stsd(codecTag))))),
+      trak(options.handlerType ?? 'vide', codecTag, make),
     ),
   ]);
 };
 
-describe('readVideoCodecTag', () => {
+describe('readCodecTag', () => {
   it.each([
-    ['avc1', 'H.264'],
-    ['hvc1', 'HEVC'],
-    ['mp4v', 'MPEG-4 Part 2'],
-    ['av01', 'AV1'],
-  ])('reads the %s sample entry', async (tag) => {
-    await expect(readVideoCodecTag(isobmff(tag))).resolves.toBe(tag);
+    ['avc1'],
+    ['hvc1'],
+    ['mp4v'],
+    ['av01'],
+  ])('reads the %s video sample entry', async (tag) => {
+    await expect(readCodecTag(isobmff(tag), 'video')).resolves.toBe(tag);
+  });
+
+  it.each([['mp4a'], ['alac'], ['ac-3']])(
+    'reads the %s audio sample entry',
+    async (tag) => {
+      const file = isobmff(tag, {handlerType: 'soun'});
+
+      await expect(readCodecTag(file, 'audio')).resolves.toBe(tag);
+    },
+  );
+
+  it('picks the track matching the requested kind, not the first one', async () => {
+    // Audio-first mp4. Taking whichever trak comes first would blame the video
+    // rejection on the audio codec.
+    const file = new Blob([
+      box('ftyp', ascii('isom')),
+      box(
+        'moov',
+        box('mvhd', new Uint8Array(100)),
+        trak('soun', 'mp4a'),
+        trak('vide', 'mp4v'),
+      ),
+    ]);
+
+    await expect(readCodecTag(file, 'video')).resolves.toBe('mp4v');
+    await expect(readCodecTag(file, 'audio')).resolves.toBe('mp4a');
+  });
+
+  it('returns null when the requested kind is absent', async () => {
+    // An audio-only m4a has no video track. "알 수 없음" is the honest answer.
+    await expect(
+      readCodecTag(isobmff('alac', {handlerType: 'soun'}), 'video'),
+    ).resolves.toBeNull();
   });
 
   it('skips sibling boxes on the way to moov', async () => {
@@ -92,19 +143,15 @@ describe('readVideoCodecTag', () => {
       box('ftyp', ascii('isom')),
       box('free', new Uint8Array(512)),
       box('mdat', new Uint8Array(4096)),
-      box(
-        'moov',
-        box('mvhd', new Uint8Array(100)),
-        box('trak', box('mdia', box('minf', box('stbl', stsd('hvc1'))))),
-      ),
+      box('moov', box('mvhd', new Uint8Array(100)), trak('vide', 'hvc1')),
     ]);
 
-    await expect(readVideoCodecTag(file)).resolves.toBe('hvc1');
+    await expect(readCodecTag(file, 'video')).resolves.toBe('hvc1');
   });
 
   it('handles 64-bit largesize headers', async () => {
     await expect(
-      readVideoCodecTag(isobmff('avc1', {boxFactory: largeBox})),
+      readCodecTag(isobmff('avc1', {boxFactory: largeBox}), 'video'),
     ).resolves.toBe('avc1');
   });
 
@@ -115,7 +162,7 @@ describe('readVideoCodecTag', () => {
       new Uint8Array(256),
     ]);
 
-    await expect(readVideoCodecTag(webm)).resolves.toBeNull();
+    await expect(readCodecTag(webm, 'video')).resolves.toBeNull();
   });
 
   it.each([
@@ -124,23 +171,22 @@ describe('readVideoCodecTag', () => {
     ['a box whose size overruns the file', new Blob([ascii('\x00\x00\xff\xffmoov')])],
     ['a file with no stsd', new Blob([box('ftyp', ascii('isom')), box('moov', box('mvhd'))])],
   ])('returns null for %s rather than throwing', async (_label, file) => {
-    await expect(readVideoCodecTag(file)).resolves.toBeNull();
+    await expect(readCodecTag(file, 'video')).resolves.toBeNull();
   });
 });
 
-describe('describeVideoCodecTag', () => {
+describe('describeCodecTag', () => {
   it('names codecs a marketer actually runs into', () => {
-    expect(describeVideoCodecTag('mp4v')).toBe(
-      'MPEG-4 Part 2 (DivX·Xvid) (mp4v)',
-    );
-    expect(describeVideoCodecTag('hvc1')).toBe('HEVC (H.265) (hvc1)');
+    expect(describeCodecTag('mp4v')).toBe('MPEG-4 Part 2 (DivX·Xvid) (mp4v)');
+    expect(describeCodecTag('hvc1')).toBe('HEVC (H.265) (hvc1)');
+    expect(describeCodecTag('alac')).toBe('ALAC (Apple Lossless) (alac)');
   });
 
   it('quotes an unknown tag instead of guessing', () => {
-    expect(describeVideoCodecTag('zzzz')).toBe("코덱 'zzzz'");
+    expect(describeCodecTag('zzzz')).toBe("코덱 'zzzz'");
   });
 
   it('admits when there is no tag at all', () => {
-    expect(describeVideoCodecTag(null)).toBe('알 수 없는 코덱');
+    expect(describeCodecTag(null)).toBe('알 수 없는 코덱');
   });
 });

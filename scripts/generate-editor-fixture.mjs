@@ -144,21 +144,31 @@ for (const {name, color, size} of STILLS) {
 }
 
 /**
- * Codec-compatibility fixtures (Plan FR-M01 / FR-M03).
+ * Codec-compatibility fixtures (Plan FR-M01 / FR-M02 / FR-M03).
  *
  * Chrome 148 decodes HEVC in both `<video>` and WebCodecs, so `codec-hevc.mp4`
  * locks in that an iPhone-shaped source uploads *and* renders. `codec-mp4v.mp4`
  * is the one format with no decode path at all — Chrome parses the container and
  * reports 0x0 instead of erroring — so it locks in that the rejection names the
  * codec instead of claiming the file has no video track.
+ *
+ * AV1 and VP8 cover FR-M02. VP8 ships as WebM because ffmpeg refuses to mux it
+ * into mp4 ("Could not find tag for codec vp8"), which also means WebM has to
+ * carry Opus rather than AAC.
  */
 const CODEC_FIXTURES = [
-  {name: 'codec-hevc', args: ['-c:v', 'libx265', '-tag:v', 'hvc1']},
-  {name: 'codec-mp4v', args: ['-c:v', 'mpeg4']},
+  {name: 'codec-hevc.mp4', video: ['-c:v', 'libx265', '-tag:v', 'hvc1']},
+  {name: 'codec-mp4v.mp4', video: ['-c:v', 'mpeg4']},
+  {name: 'codec-av1.mp4', video: ['-c:v', 'libsvtav1']},
+  {
+    name: 'codec-vp8.webm',
+    video: ['-c:v', 'libvpx', '-b:v', '1M'],
+    audio: ['-c:a', 'libopus'],
+  },
 ];
 
-for (const {name, args} of CODEC_FIXTURES) {
-  const outputPath = resolve(fixtureDirectory, `${name}.mp4`);
+for (const {name, video, audio = ['-c:a', 'aac']} of CODEC_FIXTURES) {
+  const outputPath = resolve(fixtureDirectory, name);
 
   await execFileAsync('ffmpeg', [
     '-y',
@@ -170,12 +180,36 @@ for (const {name, args} of CODEC_FIXTURES) {
     'lavfi',
     '-i',
     'sine=frequency=440:duration=3',
-    ...args,
+    ...video,
     '-pix_fmt',
     'yuv420p',
-    '-c:a',
-    'aac',
+    ...audio,
     '-shortest',
+    outputPath,
+  ]);
+
+  process.stdout.write(`${outputPath}\n`);
+}
+
+/**
+ * Audio codec fixture (Plan FR-M06).
+ *
+ * ALAC is the audio counterpart to mp4v: it sits in an ordinary `.m4a` that
+ * Chrome cannot decode, and it turns up for real because Apple tools emit it.
+ * The rejection has to name it rather than blaming the file's existence.
+ */
+const AUDIO_CODEC_FIXTURES = [{name: 'codec-alac.m4a', args: ['-c:a', 'alac']}];
+
+for (const {name, args} of AUDIO_CODEC_FIXTURES) {
+  const outputPath = resolve(fixtureDirectory, name);
+
+  await execFileAsync('ffmpeg', [
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=440:duration=3',
+    ...args,
     outputPath,
   ]);
 
