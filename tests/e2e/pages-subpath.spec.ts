@@ -108,7 +108,7 @@ test.describe('GitHub Pages subpath layout', () => {
     await page.getByRole('button', {name: '다운로드'}).click();
 
     expect((await downloadPromise).suggestedFilename()).toBe(
-      'ua-video_ko_9x16_15s_60fps.mp4',
+      'ua-video_ko_9x16_15s_30fps.mp4',
     );
     expect(failedRequests).toEqual([]);
   });

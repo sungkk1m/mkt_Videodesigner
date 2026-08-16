@@ -65,14 +65,14 @@ describe('buildDay1Props', () => {
       'panel-b',
       'endcard',
     ]);
-    expect(sections.map((section) => section.fromFrame)).toEqual([0, 360, 720]);
-    // 15s preset at 60fps: 6000/6000/3000ms.
+    expect(sections.map((section) => section.fromFrame)).toEqual([0, 180, 360]);
+    // 15s preset at 30fps: 6000/6000/3000ms.
     expect(sections.map((section) => section.durationInFrames)).toEqual([
-      360, 360, 180,
+      180, 180, 90,
     ]);
     expect(
       sections.reduce((sum, section) => sum + section.durationInFrames, 0),
-    ).toBe(15 * 60);
+    ).toBe(15 * 30);
   });
 
   it('maps the active panel onto the section axis, with none on the end card', () => {
@@ -91,10 +91,10 @@ describe('buildDay1Props', () => {
     expect(props?.panelA.url).toBe(TEST_SOURCE_URL);
     expect(props?.panelB.url).toBe(TEST_SOURCE_URL);
     expect(props?.panelA.trimBeforeFrames).toBe(0);
-    expect(props?.panelA.trimAfterFrames).toBe(360);
+    expect(props?.panelA.trimAfterFrames).toBe(180);
     // Panel B starts one second into its own source.
-    expect(props?.panelB.trimBeforeFrames).toBe(60);
-    expect(props?.panelB.trimAfterFrames).toBe(420);
+    expect(props?.panelB.trimBeforeFrames).toBe(30);
+    expect(props?.panelB.trimAfterFrames).toBe(210);
   });
 
   it('keeps a missing panel source as a null URL so the preview can prompt', () => {

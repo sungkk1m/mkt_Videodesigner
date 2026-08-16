@@ -257,7 +257,7 @@ test.describe('module-6 Day1 render integration', () => {
       );
 
       expect(suggestedFilename).toBe(
-        `ua-video_ko_${spec.file}_15s_60fps.mp4`,
+        `ua-video_ko_${spec.file}_15s_30fps.mp4`,
       );
 
       const probe = await probeVideo(outputPath);
@@ -607,6 +607,8 @@ test.describe('module-6 Day1 render integration', () => {
       'v1-migrated-9x16.mp4',
     );
 
+    // The v1 fixture stores fps 60, and a stored document keeps its own fps
+    // (day1-render-fps D-07) — so this stays 60fps while new projects are 30.
     expect(suggestedFilename).toBe('v1-regression_ko_9x16_15s_60fps.mp4');
 
     // The three-scene baseline through the same harness and output settings, so

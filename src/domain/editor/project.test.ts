@@ -7,8 +7,11 @@ import {
   buildCompositionProps,
   createProject,
   moveTimelineBoundary,
+  parseProject,
   resetSceneTransform,
   scenesShorterThanSource,
+  setRenderFps,
+  setRenderProfile,
   setSceneTrimInMs,
   setSceneTrimOutMs,
   updateSceneTransform,
@@ -31,10 +34,13 @@ const withSource = (durationMs = source.durationMs) =>
   applySourceToAllScenes(createProject(15), {...source, durationMs});
 
 describe('createProject', () => {
-  it('starts as a 15-second 60fps project with the approved scene defaults', () => {
+  it('starts as a 15-second 30fps project with the approved scene defaults', () => {
     const project = createProject();
 
+    // day1-render-fps U-01 — both fps fields start at the 30fps default.
+    expect(project.fps).toBe(30);
     expect(project.fps).toBe(EDITOR_FPS);
+    expect(project.render.fps).toBe(EDITOR_FPS);
     expect(scenesOf(project).map((scene) => scene.kind)).toEqual([
       'hook',
       'gameplay',
@@ -172,13 +178,13 @@ describe('buildCompositionProps', () => {
     const props = buildCompositionProps(withSource(), testUrlResolver());
 
     expect(props.src).toBe('blob:mock-url');
-    expect(props.scenes.map((scene) => scene.fromFrame)).toEqual([0, 120, 720]);
+    expect(props.scenes.map((scene) => scene.fromFrame)).toEqual([0, 60, 360]);
     expect(props.scenes.map((scene) => scene.durationInFrames)).toEqual([
-      120, 600, 180,
+      60, 300, 90,
     ]);
     expect(
       props.scenes.reduce((sum, scene) => sum + scene.durationInFrames, 0),
-    ).toBe(900);
+    ).toBe(450);
   });
 
   it('converts the source interval into trim frames', () => {
@@ -188,8 +194,8 @@ describe('buildCompositionProps', () => {
     );
 
     expect(props.scenes[1]).toMatchObject({
-      trimBeforeFrames: 720,
-      trimAfterFrames: 1320,
+      trimBeforeFrames: 360,
+      trimAfterFrames: 660,
     });
   });
 
@@ -203,5 +209,46 @@ describe('buildCompositionProps', () => {
 
   it('renders no scene source before an upload', () => {
     expect(buildCompositionProps(createProject(), testUrlResolver(null)).src).toBeNull();
+  });
+});
+
+// day1-render-fps Design Ref: §3.1 — the header displays project.fps while
+// writes go through setRenderFps, so the two fps fields must never diverge.
+describe('render fps', () => {
+  it('keeps project.fps and render.fps identical through any call order (U-03)', () => {
+    let project = createProject();
+
+    project = setRenderFps(project, 60);
+    expect(project.fps).toBe(60);
+    expect(project.render.fps).toBe(60);
+
+    project = setRenderProfile(project, 'fast');
+    expect(project.fps).toBe(project.render.fps);
+
+    project = setRenderProfile(project, 'high');
+    project = setRenderFps(project, 30);
+    expect(project.fps).toBe(30);
+    expect(project.render.fps).toBe(30);
+  });
+
+  it('clamps a frame rate the profile does not allow (U-04)', () => {
+    const fast = setRenderProfile(createProject(), 'fast');
+
+    // Fast is 30fps only, so a 60fps request must not stick.
+    expect(setRenderFps(fast, 60).render.fps).toBe(30);
+  });
+
+  it('keeps a stored 60fps document at 60fps (U-06)', () => {
+    // A saved project carries its own fps; the 30fps default is for new
+    // projects only and must never rewrite an explicit choice (D-07).
+    const saved = JSON.parse(JSON.stringify(setRenderFps(createProject(), 60)));
+    const result = parseProject(saved);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok) {
+      expect(result.value.fps).toBe(60);
+      expect(result.value.render.fps).toBe(60);
+    }
   });
 });

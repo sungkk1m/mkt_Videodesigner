@@ -66,10 +66,10 @@ describe('moveBoundary', () => {
 describe('allocateSceneFrames', () => {
   it('matches the preset frame total exactly for the defaults', () => {
     expect(allocateSceneFrames([2000, 10000, 3000], 15, EDITOR_FPS)).toEqual([
-      120, 600, 180,
+      60, 300, 90,
     ]);
     expect(allocateSceneFrames([3000, 54000, 3000], 60, EDITOR_FPS)).toEqual([
-      180, 3240, 180,
+      90, 1620, 90,
     ]);
   });
 
