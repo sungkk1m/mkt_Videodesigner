@@ -69,6 +69,59 @@ describe('preflightIssues — Day1 (FR-D03)', () => {
 
   // Day1 never reports a three-scene blocker, and never asks for narration it
   // cannot have (Plan §2.2 keeps narration out of Day1).
+  // Day1 Trim UX FR-S03/S04. The 15s preset gives each panel a 6s section, and
+  // the fixture sources are 30s, so shortening one is what trips the gate.
+  it('blocks a render when a panel source cannot fill its section (FR-S03)', () => {
+    const short = setDay1PanelSource(
+      day1With(['panelA', 'panelB']),
+      'panelA',
+      testMediaReference({id: 'media_short', durationMs: 4000}),
+    );
+
+    expect(preflightIssues(short, true, true)).toEqual([
+      '원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 패널: A',
+    ]);
+  });
+
+  it('names every short panel so the user knows where to look (FR-S04)', () => {
+    const short = setDay1PanelSource(
+      setDay1PanelSource(
+        day1With(['panelA', 'panelB']),
+        'panelA',
+        testMediaReference({id: 'short_a', durationMs: 4000}),
+      ),
+      'panelB',
+      testMediaReference({id: 'short_b', durationMs: 2000}),
+    );
+
+    expect(preflightIssues(short, true, true)).toEqual([
+      '원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 패널: A · B',
+    ]);
+  });
+
+  // A missing panel and a short one are different problems with different fixes,
+  // so both are reported rather than one masking the other.
+  it('reports a missing panel and a short panel together', () => {
+    const issues = preflightIssues(
+      setDay1PanelSource(
+        day1ProjectFixture(),
+        'panelA',
+        testMediaReference({id: 'media_short', durationMs: 4000}),
+      ),
+      true,
+      true,
+    );
+
+    expect(issues).toEqual([
+      '영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: B',
+      '원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 패널: A',
+    ]);
+  });
+
+  it('never reports a short panel for a three-scene project', () => {
+    expect(preflightIssues(threeSceneLoaded(), true, true)).toEqual([]);
+  });
+
   it('does not leak three-scene blockers into a Day1 project', () => {
     const issues = preflightIssues(day1ProjectFixture(), false, false);
 

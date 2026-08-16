@@ -27,7 +27,6 @@ import {
   setDay1PanelSourceStatus,
   setDay1RatioOverride,
   setDay1TrimInMs,
-  setDay1TrimOutMs,
   setRatioOverride,
   setSceneSubtitleText,
   setSceneTransition,
@@ -134,7 +133,6 @@ export interface ProjectStore {
   relinkDay1Panel: (panel: Day1PanelKey, source: MediaReference) => void;
   setDay1PanelStatus: (panel: Day1PanelKey, status: MediaStatus) => void;
   setDay1TrimIn: (panel: Day1PanelKey, ms: number) => void;
-  setDay1TrimOut: (panel: Day1PanelKey, ms: number) => void;
   setDay1Transform: (
     panel: Day1PanelKey,
     patch: Partial<Omit<MediaTransform, 'fit'>>,
@@ -295,8 +293,6 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     })),
   setDay1TrimIn: (panel, ms) =>
     set((state) => ({project: setDay1TrimInMs(state.project, panel, ms)})),
-  setDay1TrimOut: (panel, ms) =>
-    set((state) => ({project: setDay1TrimOutMs(state.project, panel, ms)})),
   setDay1Transform: (panel, patch) =>
     set((state) => ({
       project: updateDay1Transform(

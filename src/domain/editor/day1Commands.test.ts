@@ -7,6 +7,7 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1PanelsShorterThanSection,
   hasRatioOverride,
   moveTimelineBoundary,
   parseProject,
@@ -154,6 +155,75 @@ describe('Day1 panel sources', () => {
     ).toEqual(['panelB']);
     expect(day1MissingPanels(withPanels())).toEqual([]);
     expect(day1MissingPanels(createProject())).toEqual([]);
+  });
+
+  // Day1 Trim UX FR-S01. The 15s preset gives each panel a 6s section, so a 12s
+  // source fills it and a 4s source cannot.
+  it('reports the panels whose source cannot fill their section (FR-S01)', () => {
+    const short = setDay1PanelSource(
+      withPanels(),
+      'panelA',
+      testMediaReference({id: 'media_short', durationMs: 4000}),
+    );
+
+    expect(day1PanelsShorterThanSection(short)).toEqual(['panelA']);
+    expect(day1PanelsShorterThanSection(withPanels())).toEqual([]);
+  });
+
+  it('leaves a panel with no source to day1MissingPanels, not this one', () => {
+    const empty = switchTemplate(createProject(), 'day1');
+
+    expect(day1MissingPanels(empty)).toEqual(['panelA', 'panelB']);
+    expect(day1PanelsShorterThanSection(empty)).toEqual([]);
+  });
+
+  it('does not report a source that exactly fills its section', () => {
+    const exact = setDay1PanelSource(
+      withPanels(),
+      'panelA',
+      testMediaReference({id: 'media_exact', durationMs: 6000}),
+    );
+
+    expect(day1PanelsShorterThanSection(exact)).toEqual([]);
+  });
+
+  it('reports both panels when neither source is long enough', () => {
+    const base = switchTemplate(createProject(), 'day1');
+    const withA = setDay1PanelSource(
+      base,
+      'panelA',
+      testMediaReference({id: 'short_a', durationMs: 2000}),
+    );
+
+    expect(
+      day1PanelsShorterThanSection(
+        setDay1PanelSource(
+          withA,
+          'panelB',
+          testMediaReference({id: 'short_b', durationMs: 3000}),
+        ),
+      ),
+    ).toEqual(['panelA', 'panelB']);
+  });
+
+  it('never reports anything for a three-scene project', () => {
+    expect(day1PanelsShorterThanSection(createProject())).toEqual([]);
+  });
+
+  // Shrinking the section is the escape hatch the warning points at (Plan SC5),
+  // so the detector has to clear once the boundary moves.
+  it('clears once the section shrinks below the source', () => {
+    const short = setDay1PanelSource(
+      withPanels(),
+      'panelA',
+      testMediaReference({id: 'media_short', durationMs: 4000}),
+    );
+
+    expect(day1PanelsShorterThanSection(short)).toEqual(['panelA']);
+
+    const shrunk = moveTimelineBoundary(short, 0, 3500);
+
+    expect(day1PanelsShorterThanSection(shrunk)).toEqual([]);
   });
 });
 

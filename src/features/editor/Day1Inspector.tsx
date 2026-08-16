@@ -31,8 +31,10 @@ import {
 } from '../../domain/editor/types';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
+import {TrimStrip} from './TrimStrip';
 import type {Day1EndCardPatch} from '../../domain/editor/project';
 import type {Day1EndCardSlot} from './useDay1Assets';
+import type {FrameSampler} from '../../domain/ports';
 import {
   AssetField,
   PercentField,
@@ -91,8 +93,12 @@ export interface Day1InspectorProps {
   activeTransformOf: (panel: Day1PanelKey) => MediaTransform;
   hasRatioOverride: (panel: Day1PanelKey) => boolean;
   disabled: boolean;
+  /** Day1 Trim UX Design Ref: §1.2 — injected, because features cannot reach
+      into infrastructure. */
+  frameSampler: FrameSampler;
+  /** Session URL of a panel's video, or null while it is unresolved. */
+  resolvePanelUrl: (panel: Day1PanelKey) => string | null;
   onTrimIn: (panel: Day1PanelKey, ms: number) => void;
-  onTrimOut: (panel: Day1PanelKey, ms: number) => void;
   onTransform: (
     panel: Day1PanelKey,
     patch: Partial<Omit<MediaTransform, 'fit'>>,
@@ -110,34 +116,39 @@ export interface Day1InspectorProps {
 const PanelSection = ({
   disabled,
   durationMs,
+  frameSampler,
   hasOverride,
   panel,
   ratio,
   settings,
   transform,
+  url,
   onResetTransform,
   onToggleRatioOverride,
   onTransform,
   onTrimIn,
-  onTrimOut,
 }: {
   disabled: boolean;
   durationMs: number;
+  frameSampler: FrameSampler;
   hasOverride: boolean;
   panel: Day1PanelKey;
   ratio: AspectRatio;
   settings: Day1Settings;
   transform: MediaTransform;
+  /** Session URL of this panel's video, or null while it is unresolved. */
+  url: string | null;
   onResetTransform: () => void;
   onToggleRatioOverride: (enabled: boolean) => void;
   onTransform: (patch: Partial<Omit<MediaTransform, 'fit'>>) => void;
   onTrimIn: (ms: number) => void;
-  onTrimOut: (ms: number) => void;
 }) => {
   const key = PANEL_TEST_KEY[panel];
   const {source, trim} = settings[panel];
   const sourceMs = source?.durationMs ?? 0;
   const controlsDisabled = disabled || sourceMs <= 0;
+  // FR-S02. Mirrors `day1PanelsShorterThanSection`, which the render gate uses.
+  const isShortSource = sourceMs > 0 && sourceMs < durationMs;
 
   return (
     <InspectorSection
@@ -152,6 +163,22 @@ const PanelSection = ({
         </p>
       )}
 
+      {/* Day1 Trim UX FR-T01, FR-T02 — pick the interval by looking at it. */}
+      <TrimStrip
+        disabled={controlsDisabled}
+        inMs={trim.inMs}
+        onCommit={onTrimIn}
+        sampler={frameSampler}
+        sectionDurationMs={durationMs}
+        sourceDurationMs={sourceMs}
+        sourceId={source?.id ?? null}
+        testIdPrefix={`day1-${key}`}
+        url={url}
+      />
+
+      {/* Day1 Trim UX FR-T06 — kept alongside the strip, sharing `onTrimIn`, so
+          the two stay in sync and 0.1s precision survives the strip's pixel
+          resolution (Plan §5). */}
       <SecondsField
         disabled={controlsDisabled}
         label="Trim In (초)"
@@ -161,20 +188,31 @@ const PanelSection = ({
         testId={`day1-${key}-trim-in`}
         valueMs={trim.inMs}
       />
-      <SecondsField
-        disabled={controlsDisabled}
-        label="Trim Out (초)"
-        max={sourceMs}
-        min={0}
-        onCommit={onTrimOut}
-        testId={`day1-${key}-trim-out`}
-        valueMs={trim.outMs}
-      />
+      {/* Day1 Trim UX FR-T07 — `reconcileTrim` derives the out point from the in
+          point, so showing it as an input invited edits that were discarded. */}
+      <p className="field field--readout">
+        <span>
+          Trim Out (초)
+          <strong data-testid={`day1-${key}-trim-out`}>
+            {formatSeconds(trim.outMs)}
+          </strong>
+        </span>
+      </p>
       <p className="panel__hint" data-testid={`day1-${key}-trim-range`}>
         소스 구간 {formatSeconds(trim.inMs)}s – {formatSeconds(trim.outMs)}s · 구간{' '}
         {formatSeconds(durationMs)}s
         {sourceMs > 0 ? ` · 원본 ${formatSeconds(sourceMs)}s` : ''}
       </p>
+      {/* Day1 Trim UX FR-S02 — the three-scene inspector has said this since the
+          start; Day1 was the one template where it went unsaid. Unlike the
+          three-scene wording this names both ways out, because a Day1 section is
+          resized by dragging the timeline boundary (Plan SC5). */}
+      {isShortSource ? (
+        <p className="notice notice--warning" data-testid={`day1-${key}-trim-short`}>
+          원본이 구간보다 짧아 남은 시간은 검은 화면으로 출력됩니다. 구간 길이를
+          줄이거나 더 긴 영상을 사용하세요.
+        </p>
+      ) : null}
 
       <p className="panel__hint">Fit · Cover 고정</p>
       <label className="field field--toggle">
@@ -237,10 +275,11 @@ export const Day1Inspector = ({
   ratio,
   panelDurationsMs,
   activeTransformOf,
+  frameSampler,
   hasRatioOverride,
   disabled,
+  resolvePanelUrl,
   onTrimIn,
-  onTrimOut,
   onTransform,
   onResetTransform,
   onToggleRatioOverride,
@@ -270,6 +309,7 @@ export const Day1Inspector = ({
           <PanelSection
             disabled={disabled}
             durationMs={panelDurationsMs[panel]}
+            frameSampler={frameSampler}
             hasOverride={hasRatioOverride(panel)}
             key={panel}
             onResetTransform={() => onResetTransform(panel)}
@@ -278,11 +318,11 @@ export const Day1Inspector = ({
             }
             onTransform={(patch) => onTransform(panel, patch)}
             onTrimIn={(ms) => onTrimIn(panel, ms)}
-            onTrimOut={(ms) => onTrimOut(panel, ms)}
             panel={panel}
             ratio={ratio}
             settings={settings}
             transform={activeTransformOf(panel)}
+            url={resolvePanelUrl(panel)}
           />
         ))}
 

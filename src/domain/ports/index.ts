@@ -37,6 +37,49 @@ export interface MediaResolver {
   release(url: string): void;
 }
 
+/**
+ * Day1 Trim UX Design Ref: §3.1 FrameSampler — decodes frames out of a source
+ * video at times the caller picks. Hook analysis wants a 500ms grid with raw
+ * pixels for the scoring worker; the trim strip wants a fixed cell count and
+ * thumbnails only. Leaving the grid to the caller is what keeps one sampler
+ * serving both (§1.5 D-D01).
+ */
+export interface SampledFrame {
+  timeMs: number;
+  width: number;
+  height: number;
+  /** Small JPEG data URL, always produced. */
+  thumbnail: string;
+  /** Raw RGBA pixels, transferable. Null unless the request set `needsPixels`. */
+  pixels: ArrayBuffer | null;
+}
+
+export interface FrameSampleRequest {
+  /** Session object URL of the source video. */
+  url: string;
+  /** Sample times in source time, ascending. */
+  timesMs: readonly number[];
+  /** Longest edge of the decoded frame, in px. */
+  maxEdge: number;
+  /** Set when the caller needs raw pixels as well as the thumbnail. */
+  needsPixels: boolean;
+  signal: AbortSignal;
+  /**
+   * Called once per decoded frame, in `timesMs` order. Frames arrive as they
+   * decode so a caller can paint progressively (Day1 Trim UX FR-T03).
+   */
+  onFrame: (frame: SampledFrame) => void;
+}
+
+export interface FrameSampler {
+  /**
+   * Resolves once every frame has been delivered to `onFrame`. The frames
+   * themselves went out through the callback, so the result only reports
+   * whether the run finished and why it stopped if it did not.
+   */
+  sample(request: FrameSampleRequest): Promise<Result<void>>;
+}
+
 /** Design Ref: §4.4 HookAnalyzer — heuristic candidate intervals. */
 export interface HookCandidateWithThumbnail extends HookCandidate {
   /** Small JPEG data URL for the filmstrip, or null when capture failed. */

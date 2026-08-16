@@ -16,6 +16,7 @@ tests/fixtures/*.wav
 tests/fixtures/*.webm
 tests/fixtures/*.m4a
 artifacts/media-codec-compat/
+artifacts/day1-trim-ux/
 *.tsbuildinfo
 
 # bkit local session state. `pdca-status.json` is kept as project state; audit

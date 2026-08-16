@@ -1,10 +1,10 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-15T07:04:23.912Z",
+  "lastUpdated": "2026-08-16T06:47:46.000Z",
   "activeFeatures": [
     "browser-video-mvp"
   ],
-  "primaryFeature": "browser-video-mvp",
+  "primaryFeature": "day1-trim-ux",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -214,6 +214,14 @@
         "lastUpdated": "2026-08-15T06:36:36.388Z"
       },
       "notes": "Cycle complete. Match Rate 100%, SC 5/5, FR 6/6. Open: VP9 fixture missing."
+    },
+    "day1-trim-ux": {
+      "phase": "archived",
+      "matchRate": 100,
+      "iterationCount": 0,
+      "startedAt": "2026-08-15T07:38:21.000Z",
+      "archivedAt": "2026-08-16T06:47:46.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-trim-ux/"
     }
   },
   "pipeline": {

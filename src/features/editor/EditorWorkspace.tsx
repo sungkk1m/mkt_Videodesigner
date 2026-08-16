@@ -19,6 +19,7 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1PanelsShorterThanSection,
   hasRatioOverride,
   outputDimensions,
   projectTotalFrames,
@@ -39,6 +40,7 @@ import {narrationBlockers} from '../../domain/audio/mix';
 import {hookCandidateDurationMs} from '../../domain/hook/scoring';
 import type {TtsProvider} from '../../domain/tts/types';
 import type {
+  FrameSampler,
   HookAnalyzer,
   MediaHandleStore,
   MediaResolver,
@@ -125,6 +127,8 @@ export interface EditorWorkspaceProps {
   mediaResolver: MediaResolver;
   videoRenderer: VideoRenderer;
   hookAnalyzer: HookAnalyzer;
+  /** Day1 Trim UX Design Ref: §3.1 — feeds the trim strip's thumbnails. */
+  frameSampler: FrameSampler;
   ttsProvider: TtsProvider;
   ttsCache: TtsCacheGateway;
   outputWriter: OutputWriter;
@@ -142,6 +146,7 @@ export const EditorWorkspace = ({
   mediaResolver,
   videoRenderer,
   hookAnalyzer,
+  frameSampler,
   ttsProvider,
   ttsCache,
   outputWriter,
@@ -317,6 +322,10 @@ export const EditorWorkspace = ({
   const renderableSource = day1
     ? unresolvedPanels.length === 0
     : source.sourceUrl !== null;
+  // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
+  // button keeps its own list, so the short-source block has to be stated twice
+  // or it only half-applies.
+  const shortPanels = day1PanelsShorterThanSection(project);
 
   useEffect(() => {
     void videoRenderer.probe().then(setCapabilities);
@@ -403,7 +412,13 @@ export const EditorWorkspace = ({
     // Design Ref: §6.2 RENDER_PREFLIGHT_FAILED — narration longer than its scene
     // blocks the render rather than being truncated. Day1 Design Ref: §7 — a Day1
     // project with an unresolved panel is blocked the same way.
-    if (!capabilities?.ready || !renderableSource || narrationTooLong.length > 0) {
+    if (
+      !capabilities?.ready ||
+      !renderableSource ||
+      narrationTooLong.length > 0 ||
+      // FR-S03 — a short panel renders black, so the job never starts.
+      shortPanels.length > 0
+    ) {
       return;
     }
 
@@ -563,6 +578,11 @@ export const EditorWorkspace = ({
               영상 {missingPanels.length}개가 더 필요합니다
             </span>
           ) : null}
+          {shortPanels.length > 0 ? (
+            <span className="editor__blocker" data-testid="day1-short-blocker">
+              원본이 구간보다 짧은 패널 {shortPanels.length}개
+            </span>
+          ) : null}
           <span className="editor__status" data-testid="editor-render-status">
             {renderStatusText}
           </span>
@@ -601,7 +621,8 @@ export const EditorWorkspace = ({
               isRendering ||
               !capabilities?.ready ||
               !renderableSource ||
-              narrationTooLong.length > 0
+              narrationTooLong.length > 0 ||
+              shortPanels.length > 0
             }
             onClick={() => void startRender()}
             type="button"
@@ -936,6 +957,7 @@ export const EditorWorkspace = ({
           }
           copy={project.copy}
           disabled={isRendering}
+          frameSampler={frameSampler}
           hasRatioOverride={(panel) =>
             hasRatioOverride(day1[panel], project.selectedRatio)
           }
@@ -954,13 +976,13 @@ export const EditorWorkspace = ({
           }
           onTransform={(panel, patch) => store().setDay1Transform(panel, patch)}
           onTrimIn={(panel, ms) => store().setDay1TrimIn(panel, ms)}
-          onTrimOut={(panel, ms) => store().setDay1TrimOut(panel, ms)}
           panelDurationsMs={{
             panelA: project.sections[0].durationMs,
             panelB: project.sections[1].durationMs,
           }}
           ratio={project.selectedRatio}
           resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}
+          resolvePanelUrl={(panel) => day1Assets.panelUrl(panel)}
           settings={day1}
         />
       ) : selectedScene ? (

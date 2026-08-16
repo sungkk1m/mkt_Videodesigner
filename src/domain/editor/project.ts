@@ -1066,6 +1066,30 @@ export const day1MissingPanels = (
 };
 
 /**
+ * Day1 Trim UX FR-S01 — panels whose source cannot fill their section. The
+ * source runs out partway and the panel renders black for the remainder, with
+ * nothing in the UI saying so, which is what this exists to surface.
+ *
+ * A panel with no source at all belongs to `day1MissingPanels`, so the zero
+ * guard keeps the two from reporting the same panel twice.
+ */
+export const day1PanelsShorterThanSection = (
+  project: EditorProject,
+): Day1PanelKey[] => {
+  const settings = day1Of(project);
+
+  return settings
+    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter((key, index) => {
+        const sourceMs = settings[key].source?.durationMs ?? 0;
+
+        return (
+          sourceMs > 0 && sourceMs < (project.sections[index]?.durationMs ?? 0)
+        );
+      })
+    : [];
+};
+
+/**
  * Runtime gate for any project that did not come from these command functions,
  * such as a stored or imported document. Design Ref: §6.2 `PROJECT_INVALID`.
  */

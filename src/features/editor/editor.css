@@ -1284,3 +1284,90 @@
   color: var(--muted);
   font-weight: 600;
 }
+
+/* ===== Trim strip (Day1 Trim UX Design Ref: §5.1) ===== */
+
+/* The source laid out end to end, with the trim window sitting on top of it.
+   `hook__strip` is a vertical card list, so this track is its own layout. */
+.trim {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* The frame at the window's start, big enough to judge framing on (FR-T05). */
+.trim__preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+}
+
+.trim__track {
+  position: relative;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  height: 44px;
+  overflow: hidden;
+  background: var(--input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+}
+
+.trim__cell {
+  overflow: hidden;
+  /* Cells stay in place while they fill in one by one (FR-T03). */
+  background: var(--input-bg);
+}
+
+.trim__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Fixed width, moves only — the shape of `reconcileTrim` (Design §1.3). */
+.trim__window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  padding: 0;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  touch-action: none;
+}
+
+.trim__window:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.trim__window:active {
+  cursor: grabbing;
+}
+
+/* A source too short to fill the section leaves nothing to choose (FR-S05). */
+.trim__window--locked,
+.trim__window:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Label plus its derived value, matching the `field--range` readout. */
+.field--readout > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.field--readout strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}

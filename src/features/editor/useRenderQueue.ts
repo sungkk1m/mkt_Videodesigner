@@ -6,6 +6,7 @@ import {useCallback, useRef, useState} from 'react';
 import {
   buildEditorSnapshot,
   day1MissingPanels,
+  day1PanelsShorterThanSection,
   threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
@@ -94,6 +95,23 @@ export const preflightIssues = (
       );
     } else if (!sourceResolved) {
       issues.push('패널 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
+    }
+
+    // Day1 Trim UX FR-S03, FR-S04 — a source that runs out mid-section renders black
+    // for the remainder, silently. Blocking here is the difference between
+    // noticing now and noticing in the ad account.
+    //
+    // A separate `if`, not another branch: a panel can be missing while the
+    // other one is too short, and both are worth saying. `day1PanelsShorterThanSection`
+    // ignores panels with no source at all, so neither is reported twice.
+    const shortPanels = day1PanelsShorterThanSection(project);
+
+    if (shortPanels.length > 0) {
+      issues.push(
+        `원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 패널: ${shortPanels
+          .map((panel) => DAY1_PANEL_LABEL[panel])
+          .join(' · ')}`,
+      );
     }
   } else if (!threeSceneOf(project)?.source) {
     issues.push('영상 소재가 없습니다.');
