@@ -31,7 +31,6 @@ import {
   setSceneSubtitleText,
   setSceneTransition,
   setSceneTrimInMs,
-  setSceneTrimOutMs,
   setRenderFilePrefix,
   setRenderFps,
   setRenderProfile,
@@ -92,7 +91,6 @@ export interface ProjectStore {
   setSourceStatus: (status: MediaStatus) => void;
   moveBoundary: (boundary: BoundaryIndex, positionMs: number) => void;
   setTrimIn: (kind: SceneKind, ms: number) => void;
-  setTrimOut: (kind: SceneKind, ms: number) => void;
   setLocale: (locale: Locale) => void;
   setRatio: (ratio: AspectRatio) => void;
   /** Framing commands act on the ratio currently selected in the header. */
@@ -178,8 +176,6 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     })),
   setTrimIn: (kind, ms) =>
     set((state) => ({project: setSceneTrimInMs(state.project, kind, ms)})),
-  setTrimOut: (kind, ms) =>
-    set((state) => ({project: setSceneTrimOutMs(state.project, kind, ms)})),
   setLocale: (locale) =>
     set((state) => ({project: setSelectedLocale(state.project, locale)})),
   setRatio: (ratio) =>

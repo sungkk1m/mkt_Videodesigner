@@ -7,10 +7,12 @@ import {
   buildEditorSnapshot,
   day1MissingPanels,
   day1PanelsShorterThanSection,
+  scenesShorterThanSection,
   threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
 import {narrationBlockers} from '../../domain/audio/mix';
+import {SCENE_LABELS} from '../../domain/editor/types';
 import type {
   EditorProject,
   MediaReference,
@@ -113,10 +115,28 @@ export const preflightIssues = (
           .join(' · ')}`,
       );
     }
-  } else if (!threeSceneOf(project)?.source) {
-    issues.push('영상 소재가 없습니다.');
-  } else if (!sourceResolved) {
-    issues.push('원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
+  } else {
+    if (!threeSceneOf(project)?.source) {
+      issues.push('영상 소재가 없습니다.');
+    } else if (!sourceResolved) {
+      issues.push('원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
+    }
+
+    // Three-Scene Trim Parity FR-S04, FR-S05 — the Day1 block above says the
+    // same thing about panels; this closes the asymmetry it left behind.
+    //
+    // A block rather than another `else if` in the chain: the source can be
+    // present *and* resolved and still be too short, which is the whole point.
+    // As an `else if` this would never run on the path that matters.
+    const shortScenes = scenesShorterThanSection(project);
+
+    if (shortScenes.length > 0) {
+      issues.push(
+        `원본이 장면보다 짧아 검은 화면이 출력됩니다. 장면 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 장면: ${shortScenes
+          .map((kind) => SCENE_LABELS[kind])
+          .join(' · ')}`,
+      );
+    }
   }
 
   if (!rendererReady) {

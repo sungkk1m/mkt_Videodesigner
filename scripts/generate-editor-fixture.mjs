@@ -167,6 +167,15 @@ const CODEC_FIXTURES = [
   },
 ];
 
+/**
+ * Three-Scene Trim Parity FR-E01 — long enough to fill the 15s preset's 10s
+ * gameplay section. At 3s these sources rendered seven seconds of black, which
+ * the short-source gate now blocks, so a codec test would never reach its MP4.
+ * The render cost is set by the 15s output, not by the source, so the longer
+ * fixture does not slow the spec down.
+ */
+const CODEC_FIXTURE_SECONDS = 12;
+
 for (const {name, video, audio = ['-c:a', 'aac']} of CODEC_FIXTURES) {
   const outputPath = resolve(fixtureDirectory, name);
 
@@ -175,11 +184,11 @@ for (const {name, video, audio = ['-c:a', 'aac']} of CODEC_FIXTURES) {
     '-f',
     'lavfi',
     '-i',
-    'testsrc2=size=640x360:rate=30:duration=3',
+    `testsrc2=size=640x360:rate=30:duration=${CODEC_FIXTURE_SECONDS}`,
     '-f',
     'lavfi',
     '-i',
-    'sine=frequency=440:duration=3',
+    `sine=frequency=440:duration=${CODEC_FIXTURE_SECONDS}`,
     ...video,
     '-pix_fmt',
     'yuv420p',

@@ -20,6 +20,7 @@ import {
   day1MissingPanels,
   day1Of,
   day1PanelsShorterThanSection,
+  scenesShorterThanSection,
   hasRatioOverride,
   outputDimensions,
   projectTotalFrames,
@@ -325,7 +326,13 @@ export const EditorWorkspace = ({
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
   // or it only half-applies.
-  const shortPanels = day1PanelsShorterThanSection(project);
+  //
+  // Three-Scene Trim Parity Design Ref: §2.0 Option C — one list per template,
+  // resolved once here, so the three single-render sites below cannot drift
+  // apart the way they would if each carried its own template branch.
+  const shortSections = day1
+    ? day1PanelsShorterThanSection(project)
+    : scenesShorterThanSection(project);
 
   useEffect(() => {
     void videoRenderer.probe().then(setCapabilities);
@@ -417,7 +424,7 @@ export const EditorWorkspace = ({
       !renderableSource ||
       narrationTooLong.length > 0 ||
       // FR-S03 — a short panel renders black, so the job never starts.
-      shortPanels.length > 0
+      shortSections.length > 0
     ) {
       return;
     }
@@ -578,9 +585,16 @@ export const EditorWorkspace = ({
               영상 {missingPanels.length}개가 더 필요합니다
             </span>
           ) : null}
-          {shortPanels.length > 0 ? (
-            <span className="editor__blocker" data-testid="day1-short-blocker">
-              원본이 구간보다 짧은 패널 {shortPanels.length}개
+          {/* Three-Scene Trim Parity D-D04 — one badge, named for the template
+              it is describing. Day1 keeps its testId and wording so the specs
+              that pin them stay untouched. */}
+          {shortSections.length > 0 ? (
+            <span
+              className="editor__blocker"
+              data-testid={day1 ? 'day1-short-blocker' : 'scene-short-blocker'}
+            >
+              원본이 구간보다 짧은 {day1 ? '패널' : '장면'}{' '}
+              {shortSections.length}개
             </span>
           ) : null}
           <span className="editor__status" data-testid="editor-render-status">
@@ -622,7 +636,7 @@ export const EditorWorkspace = ({
               !capabilities?.ready ||
               !renderableSource ||
               narrationTooLong.length > 0 ||
-              shortPanels.length > 0
+              shortSections.length > 0
             }
             onClick={() => void startRender()}
             type="button"
@@ -993,6 +1007,7 @@ export const EditorWorkspace = ({
             ? hasRatioOverride(selectedScene, project.selectedRatio)
             : false
         }
+        frameSampler={frameSampler}
         onCta={(patch) => store().setCta(patch)}
         onCtaAsset={(slot, file) => void source.setCtaAsset(slot, file)}
         onHook={(patch) => store().setHook(patch)}
@@ -1004,12 +1019,13 @@ export const EditorWorkspace = ({
         onTransform={(patch) => store().setTransform(selectedKind, patch)}
         onTransition={(patch) => store().setTransition(selectedKind, patch)}
         onTrimInMs={(ms) => store().setTrimIn(selectedKind, ms)}
-        onTrimOutMs={(ms) => store().setTrimOut(selectedKind, ms)}
         ratio={project.selectedRatio}
         resolveCtaAssetUrl={(slot) => resolveUrl(selectedScene?.cta?.[slot])}
         scene={selectedScene}
         sceneDurationMs={selectedSectionMs}
         sourceDurationMs={projectSource?.durationMs ?? null}
+        sourceId={projectSource?.id ?? null}
+        sourceUrl={source.sourceUrl}
         transform={selectedTransform}
       />
       ) : null}

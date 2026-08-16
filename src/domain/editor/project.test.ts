@@ -6,11 +6,12 @@ import {
   applySourceToAllScenes,
   buildCompositionProps,
   createProject,
+  isSceneShorterThanSection,
   moveTimelineBoundary,
   resetSceneTransform,
-  scenesShorterThanSource,
+  scenesShorterThanSection,
   setSceneTrimInMs,
-  setSceneTrimOutMs,
+  updateCtaSettings,
   updateSceneTransform,
 } from './project';
 import {EDITOR_FPS} from './types';
@@ -115,19 +116,85 @@ describe('scene trim commands', () => {
     expect(scenesOf(project)[0].trim).toEqual({inMs: 28_000, outMs: 30_000});
   });
 
-  it('moves the interval when the out point is edited', () => {
-    const project = setSceneTrimOutMs(withSource(), 'gameplay', 25_000);
+  it('derives the out point from the in point and the section length', () => {
+    const project = setSceneTrimInMs(withSource(), 'gameplay', 15_000);
 
     expect(scenesOf(project)[1].trim).toEqual({inMs: 15_000, outMs: 25_000});
   });
+});
 
-  it('flags scenes whose source window is shorter than the scene', () => {
-    const project = withSource(4000);
+// Three-Scene Trim Parity FR-S01, FR-S02.
+describe('scenesShorterThanSection', () => {
+  const gameplayScene = () => scenesOf(withSource())[1];
+  const ctaScene = () => scenesOf(withSource())[2];
 
-    expect(scenesShorterThanSource(project).map((scene) => scene.kind)).toEqual([
+  it('reports nothing while the project has no source at all', () => {
+    // The missing source is the `영상 소재가 없습니다` preflight message's
+    // concern, so this must not report the same problem a second time.
+    expect(scenesShorterThanSection(createProject(15))).toEqual([]);
+  });
+
+  it('reports only the scenes the source cannot fill', () => {
+    // 15s preset is [2s, 10s, 3s], so a 4s source runs out during gameplay only.
+    expect(scenesShorterThanSection(withSource(4000))).toEqual(['gameplay']);
+  });
+
+  it('reports every scene when the source is shorter than all of them', () => {
+    // The CTA is exempt by default (generated background), so it stays out.
+    expect(scenesShorterThanSection(withSource(1000))).toEqual([
+      'hook',
       'gameplay',
     ]);
-    expect(scenesOf(project)[1].trim).toEqual({inMs: 0, outMs: 4000});
+  });
+
+  it('reports nothing when the source fills every section', () => {
+    expect(scenesShorterThanSection(withSource())).toEqual([]);
+  });
+
+  it('treats a section exactly as long as the source as filled', () => {
+    expect(isSceneShorterThanSection(gameplayScene(), 10_000, 10_000)).toBe(
+      false,
+    );
+  });
+
+  it('ignores a scene with no source rather than calling it short', () => {
+    expect(isSceneShorterThanSection(gameplayScene(), 0, 10_000)).toBe(false);
+  });
+
+  it('exempts a CTA that plays its own footage instead of the source', () => {
+    const withCtaMedia = updateCtaSettings(withSource(1000), {
+      media: {...source, id: 'cta-media'},
+      useGeneratedBackground: false,
+    });
+
+    expect(scenesShorterThanSection(withCtaMedia)).toEqual([
+      'hook',
+      'gameplay',
+    ]);
+  });
+
+  it('exempts a CTA whose background is generated from a frozen frame', () => {
+    expect(
+      isSceneShorterThanSection(ctaScene(), 1000, 3000),
+    ).toBe(false);
+  });
+
+  it('flags a CTA that falls back to playing the shared source', () => {
+    const plainCta = updateCtaSettings(withSource(1000), {
+      useGeneratedBackground: false,
+    });
+
+    expect(scenesShorterThanSection(plainCta)).toEqual([
+      'hook',
+      'gameplay',
+      'cta',
+    ]);
+  });
+
+  it('applies the CTA exemption only to the CTA scene', () => {
+    // `hook` and `gameplay` carry no `cta` field, so the exemption cannot reach
+    // them however the CTA is configured.
+    expect(isSceneShorterThanSection(gameplayScene(), 1000, 10_000)).toBe(true);
   });
 });
 

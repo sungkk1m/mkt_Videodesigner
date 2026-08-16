@@ -121,11 +121,6 @@ export const reconcileTrim = (
   return {inMs, outMs: inMs + windowMs};
 };
 
-export const isTrimShorterThanScene = (
-  trim: MediaTrim,
-  sceneDurationMs: number,
-) => trim.outMs - trim.inMs < sceneDurationMs;
-
 export const createSceneDurations = (
   preset: DurationPreset,
 ): SceneDurationsMs => [...SCENE_DURATION_PRESETS_MS[preset]];

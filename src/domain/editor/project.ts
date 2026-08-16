@@ -14,7 +14,6 @@ import {
 import {
   allocateSceneFrames,
   createSceneDurations,
-  isTrimShorterThanScene,
   moveBoundary,
   msToFrames,
   reconcileTrim,
@@ -511,24 +510,6 @@ export const setSceneTrimInMs = (
   }));
 };
 
-/**
- * Trim out is the same interval seen from its end, so setting it moves the in
- * point by the scene length. This keeps the window equal to the scene duration.
- */
-export const setSceneTrimOutMs = (
-  project: EditorProject,
-  kind: SceneKind,
-  outMs: number,
-): EditorProject => {
-  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
-  const windowMs = Math.min(
-    sectionMs,
-    threeSceneOf(project)?.source?.durationMs ?? sectionMs,
-  );
-
-  return setSceneTrimInMs(project, kind, outMs - windowMs);
-};
-
 export const setSelectedLocale = (
   project: EditorProject,
   locale: Locale,
@@ -894,27 +875,6 @@ export const setDay1TrimInMs = (
   }));
 };
 
-/** The same interval seen from its end, mirroring `setSceneTrimOutMs`. */
-export const setDay1TrimOutMs = (
-  project: EditorProject,
-  key: Day1PanelKey,
-  outMs: number,
-): EditorProject => {
-  const settings = day1Of(project);
-
-  if (!settings) {
-    return project;
-  }
-
-  const sectionMs = day1SectionMs(project, key);
-  const windowMs = Math.min(
-    sectionMs,
-    settings[key].source?.durationMs ?? sectionMs,
-  );
-
-  return setDay1TrimInMs(project, key, outMs - windowMs);
-};
-
 /** FR-D07 — per-panel Cover reframing with the same override rules as a scene. */
 export const updateDay1Transform = (
   project: EditorProject,
@@ -1090,6 +1050,61 @@ export const day1PanelsShorterThanSection = (
 };
 
 /**
+ * Three-Scene Trim Parity Design Ref: §1.4 — the CTA scene does not always read
+ * the shared source. With its own `media`, or with a generated background, the
+ * composition never plays the trim window, so nothing goes black there. The
+ * condition mirrors `freezeSourceFrame` in `buildCompositionProps` exactly; if
+ * one moves the other has to move with it.
+ */
+const ctaSkipsSharedSource = (scene: EditorScene) =>
+  scene.kind === 'cta' &&
+  scene.cta !== undefined &&
+  (scene.cta.media !== null || scene.cta.useGeneratedBackground);
+
+/**
+ * Three-Scene Trim Parity FR-S01, FR-S02 — a scene whose section outlasts the
+ * shared source renders black once the source runs out. The inspector warning
+ * and the render gate both go through here so they can never disagree.
+ *
+ * Reads the source rather than the trim: `reconcileTrim` keeps the two in step,
+ * but the source is also right for a document that has not been reconciled yet,
+ * and it matches the shape of `day1PanelsShorterThanSection`.
+ */
+export const isSceneShorterThanSection = (
+  scene: EditorScene,
+  sourceDurationMs: number,
+  sectionDurationMs: number,
+) =>
+  sourceDurationMs > 0 &&
+  sourceDurationMs < sectionDurationMs &&
+  !ctaSkipsSharedSource(scene);
+
+/**
+ * Three-Scene Trim Parity FR-S01 — the scenes the render gate blocks on, the
+ * three-scene counterpart of `day1PanelsShorterThanSection`.
+ *
+ * A project with no source at all is the `영상 소재가 없습니다` preflight
+ * message's concern, so the zero guard inside the predicate keeps the two from
+ * reporting the same problem twice.
+ */
+export const scenesShorterThanSection = (
+  project: EditorProject,
+): SceneKind[] => {
+  const settings = threeSceneOf(project);
+  const sourceMs = settings?.source?.durationMs ?? 0;
+
+  return (settings?.scenes ?? [])
+    .filter((scene, index) =>
+      isSceneShorterThanSection(
+        scene,
+        sourceMs,
+        project.sections[index]?.durationMs ?? 0,
+      ),
+    )
+    .map((scene) => scene.kind);
+};
+
+/**
  * Runtime gate for any project that did not come from these command functions,
  * such as a stored or imported document. Design Ref: §6.2 `PROJECT_INVALID`.
  */
@@ -1115,14 +1130,6 @@ export const parseProject = (input: unknown): Result<EditorProject> => {
 
 export const projectTotalFrames = (project: EditorProject) =>
   project.durationPreset * project.fps;
-
-export const scenesShorterThanSource = (project: EditorProject) =>
-  (threeSceneOf(project)?.scenes ?? []).filter((scene, index) =>
-    isTrimShorterThanScene(
-      scene.trim,
-      project.sections[index]?.durationMs ?? 0,
-    ),
-  );
 
 const NO_TRANSITION: TransitionRenderProps = {kind: 'cut', durationInFrames: 0};
 

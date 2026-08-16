@@ -40,6 +40,50 @@ describe('preflightIssues — three-scene', () => {
       '원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.',
     ]);
   });
+
+  // Three-Scene Trim Parity FR-S04, FR-S05. The 15s preset is [2s, 10s, 3s], so
+  // a 4s source runs out during gameplay. This is the block Day1 has had since
+  // the previous cycle and the three-scene path did not.
+  it('blocks a render when the source cannot fill a section (FR-S04)', () => {
+    const short = applySourceToAllScenes(
+      createProject(15),
+      testMediaReference({durationMs: 4000}),
+    );
+
+    expect(preflightIssues(short, true, true)).toEqual([
+      '원본이 장면보다 짧아 검은 화면이 출력됩니다. 장면 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 장면: Gameplay',
+    ]);
+  });
+
+  it('names every short scene so the user knows where to look (FR-S05)', () => {
+    const short = applySourceToAllScenes(
+      createProject(15),
+      testMediaReference({durationMs: 1000}),
+    );
+
+    // The CTA is exempt — its generated background never plays the source.
+    expect(preflightIssues(short, true, true)).toEqual([
+      '원본이 장면보다 짧아 검은 화면이 출력됩니다. 장면 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 장면: Hook · Gameplay',
+    ]);
+  });
+
+  // The short-source check has to survive the source checks above it rather
+  // than being another `else if` that the resolved path skips (D-D05).
+  it('reports the short source on the ordinary resolved path', () => {
+    const short = applySourceToAllScenes(
+      createProject(15),
+      testMediaReference({durationMs: 4000}),
+    );
+
+    expect(preflightIssues(short, true, true)).toHaveLength(1);
+  });
+
+  it('says nothing about a short source when there is no source at all', () => {
+    // Otherwise an empty project reports the same problem twice.
+    expect(preflightIssues(createProject(15), false, true)).toEqual([
+      '영상 소재가 없습니다.',
+    ]);
+  });
 });
 
 describe('preflightIssues — Day1 (FR-D03)', () => {

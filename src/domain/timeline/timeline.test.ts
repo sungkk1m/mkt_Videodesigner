@@ -5,7 +5,6 @@ import {
   allocateSceneFrames,
   boundaryPositionsMs,
   createSceneDurations,
-  isTrimShorterThanScene,
   moveBoundary,
   reconcileTrim,
   sceneStartsMs,
@@ -112,8 +111,10 @@ describe('reconcileTrim', () => {
   it('shortens the window when the source is shorter than the scene', () => {
     const trim = reconcileTrim({inMs: 2000, outMs: 12000}, 6000, 10000);
 
+    // The window can no longer be the scene length, which is what
+    // `scenesShorterThanSection` surfaces to the user.
     expect(trim).toEqual({inMs: 0, outMs: 6000});
-    expect(isTrimShorterThanScene(trim, 10000)).toBe(true);
+    expect(trim.outMs - trim.inMs).toBeLessThan(10000);
   });
 
   it('returns an empty interval when no source is loaded', () => {

@@ -23,7 +23,8 @@ import {
   type SceneTransition,
   type SubtitleStyle,
 } from '../../domain/editor/types';
-import {isTrimShorterThanScene} from '../../domain/timeline/timeline';
+import {isSceneShorterThanSection} from '../../domain/editor/project';
+import type {FrameSampler} from '../../domain/ports';
 import {InspectorSection} from './InspectorSection';
 import {
   AssetField,
@@ -32,6 +33,7 @@ import {
   SecondsField,
   formatSeconds,
 } from './inspectorFields';
+import {TrimStrip} from './TrimStrip';
 
 export type CtaAssetSlot = 'media' | 'appIcon' | 'logo' | 'storeBadge';
 
@@ -74,9 +76,13 @@ export interface SceneInspectorProps {
   transform: MediaTransform;
   hasRatioOverride: boolean;
   sourceDurationMs: number | null;
+  /** Three-Scene Trim Parity FR-P01 — the three scenes share one source. */
+  sourceUrl: string | null;
+  /** Thumbnail cache key, so switching scenes does not resample. */
+  sourceId: string | null;
+  frameSampler: FrameSampler;
   disabled: boolean;
   onTrimInMs: (ms: number) => void;
-  onTrimOutMs: (ms: number) => void;
   onTransform: (patch: Partial<Omit<MediaTransform, 'fit'>>) => void;
   onResetTransform: () => void;
   onToggleRatioOverride: (enabled: boolean) => void;
@@ -96,9 +102,11 @@ export const SceneInspector = ({
   transform,
   hasRatioOverride,
   sourceDurationMs,
+  sourceUrl,
+  sourceId,
+  frameSampler,
   disabled,
   onTrimInMs,
-  onTrimOutMs,
   onTransform,
   onResetTransform,
   onToggleRatioOverride,
@@ -111,8 +119,13 @@ export const SceneInspector = ({
 }: SceneInspectorProps) => {
   const hasSource = sourceDurationMs !== null && sourceDurationMs > 0;
   const controlsDisabled = disabled || !hasSource;
-  const shortSource =
-    hasSource && isTrimShorterThanScene(scene.trim, sceneDurationMs);
+  // Three-Scene Trim Parity D-D02 — the same predicate the render gate uses, so
+  // a warning here always means a block there and never the other way round.
+  const shortSource = isSceneShorterThanSection(
+    scene,
+    sourceDurationMs ?? 0,
+    sceneDurationMs,
+  );
   const maxTransitionMs = Math.min(
     MAX_TRANSITION_MS,
     Math.floor(sceneDurationMs / 2),
@@ -140,6 +153,19 @@ export const SceneInspector = ({
           defaultOpen
           title="Trim"
         >
+          {/* Three-Scene Trim Parity FR-P02 — the strip Day1 already uses, wired
+              to the shared source. The window width is this scene's section. */}
+          <TrimStrip
+            disabled={controlsDisabled}
+            inMs={scene.trim.inMs}
+            onCommit={onTrimInMs}
+            sampler={frameSampler}
+            sectionDurationMs={sceneDurationMs}
+            sourceDurationMs={sourceDurationMs ?? 0}
+            sourceId={sourceId}
+            testIdPrefix="scene"
+            url={sourceUrl}
+          />
           <SecondsField
             disabled={controlsDisabled}
             label="Trim In (초)"
@@ -149,25 +175,32 @@ export const SceneInspector = ({
             testId="trim-in"
             valueMs={scene.trim.inMs}
           />
-          <SecondsField
-            disabled={controlsDisabled}
-            label="Trim Out (초)"
-            max={sourceDurationMs ?? 0}
-            min={0}
-            onCommit={onTrimOutMs}
-            testId="trim-out"
-            valueMs={scene.trim.outMs}
-          />
+          {/* Three-Scene Trim Parity FR-P05 — `reconcileTrim` derives the out
+              point from the in point, so showing it as an input invited edits
+              that were silently turned into a window move. */}
+          <p className="field field--readout">
+            <span>
+              Trim Out (초)
+              <strong data-testid="trim-out">
+                {formatSeconds(scene.trim.outMs)}
+              </strong>
+            </span>
+          </p>
           <p className="panel__hint" data-testid="trim-range">
             소스 구간 {formatSeconds(scene.trim.inMs)}s –{' '}
             {formatSeconds(scene.trim.outMs)}s · 장면{' '}
             {formatSeconds(sceneDurationMs)}s
             {hasSource ? ` · 원본 ${formatSeconds(sourceDurationMs)}s` : ''}
           </p>
+          {/* Three-Scene Trim Parity FR-S07 — the render is blocked now, so the
+              warning names both ways out rather than only the shorter scene. */}
           {shortSource ? (
-            <p className="notice notice--warning">
+            <p
+              className="notice notice--warning"
+              data-testid="scene-trim-short"
+            >
               원본이 장면보다 짧아 남은 시간은 검은 화면으로 출력됩니다. 장면
-              길이를 줄이세요.
+              길이를 줄이거나 더 긴 영상을 사용하세요.
             </p>
           ) : null}
         </InspectorSection>

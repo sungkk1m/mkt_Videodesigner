@@ -6,7 +6,7 @@
 > **Version**: 0.1.0
 > **Author**: 김성권 / Claude
 > **Date**: 2026-08-16
-> **Status**: Draft — awaiting Do
+> **Status**: Do 완료 — Check 대기 (E2E는 §7.5 참조)
 > **Plan**: [three-scene-trim-parity.plan.md](../../01-plan/features/three-scene-trim-parity.plan.md)
 > **Architecture**: Option C — 대칭 쌍 + 호출부 정규화
 
@@ -79,6 +79,8 @@ Plan §1.5의 D-P01~D-P06을 승계한다. Design에서 추가로 확정한 항�
 | **D-D06** | **CTA 예외는 `cta.media`의 URL 해소 여부를 보지 않는다** | 도메인 함수는 세션 URL을 모른다. 알게 하려면 `resolveUrl`을 도메인에 주입해야 하고 그 비용이 이득을 넘는다. 남는 빈틈은 §6에 한정 사항으로 명시한다 |
 | **D-D07** | **`scene-` 접두 `testId`를 쓰고 기존 `trim-in`·`trim-range`는 유지한다** | 기존 3장면 단언(`hook-analysis`·`editor-vertical-slice`·`persistence-recovery`)이 접두 없는 이름을 쓴다. 새 요소에만 접두를 붙여 스트립 관련 요소를 묶는다 |
 | **D-D08** | **CTA 장면에도 스트립을 표시한다** | 케이스 3에서는 CTA도 공유 소스의 트림 창을 재생한다. 트림 필드가 이미 세 장면 모두에 있으므로 스트립만 빼면 오히려 일관성이 깨진다 |
+| **D-D09** | **CTA 예외는 예외 상황이 아니라 기본값이다 — 설계를 바꾸지 않고 근거만 강화한다** | **Do 중 발견.** [project.ts:113](../../../src/domain/editor/project.ts:113) `DEFAULT_CTA.useGeneratedBackground`가 `true`다. 즉 모든 신규 프로젝트에서 CTA는 처음부터 면제 대상이며, D-P03이 없었다면 CTA 구간보다 짧은 소스가 **항상** 오차단됐을 것이다. 좁은 엣지 케이스로 보고 생략했다면 기본 경로가 깨졌다 |
+| **D-D10** | **E2E는 이 컨테이너에서 실행할 수 없다. VP8 대체 소스로 렌더 외 전량을 검증하고 그 사실을 그대로 보고한다** | **Do 중 발견.** §7.5 참조. 실행 불가를 "통과"로 보고하지 않는다 |
 
 > **Do 단계 기록 규칙**: Do 중 이 표에 없는 결정을 내리면 그 자리에서 이 표(또는 Plan §1.5)에 행을 추가한다. Check까지 미루지 않는다.
 
@@ -512,6 +514,35 @@ await expect(page.getByTestId('trim-out')).toHaveText('12.00');
 
 모듈 종료마다 `npm test && npm run build`. **module-2 종료 시 `day1-trim-ux.spec.ts`를 반드시 포함한다** — 게이트를 건드리는 유일한 회귀 접점이다(SC9). 전체 종료 시 `npx playwright test` 전량 + 코덱 픽스처 재생성 후 `media-codec-compat` 실측.
 
+### 7.5 실행 환경 한계 — Do 중 확인 (D-D10)
+
+구현 컨테이너에서 E2E 전량을 실행할 수 없다는 사실을 Do 중 확인했다. 원인과 실제로 검증된 범위를 남긴다.
+
+**원인**: `playwright.config.ts`가 `channel: 'chrome'`을 고정하는데 프록시가 Chrome 배포판 다운로드를 막는다(`CONNECT tunnel failed, 403`). 사전 설치된 Chromium으로 대체하면 브라우저는 뜨지만 **H.264 디코드·인코드가 모두 없다** — 앱이 `Chrome이 이 영상을 열지 못했습니다 (H.264 (avc1))` / `Video codec "h264" cannot be encoded by this browser`를 띄운다.
+
+**이것이 이번 변경 때문이 아님을 확인했다**: 변경을 `git stash`한 원본 트리에서 기존 `hook-analysis.spec.ts`를 돌려 **동일하게 실패**하는 것을 확인했다.
+
+**대체 검증**: Chromium이 디코드할 수 있는 `codec-vp8.webm`(FR-E01로 12초가 됨)을 소스로 바꿔 렌더 시나리오를 제외한 T1·T3·T4·T5·T6·T7 **6건 전량 통과**를 확인했다. 여기에는 다음이 포함된다.
+
+- `scene-trim-strip` 16칸 · `scene-trim-window` 드래그·키보드 · `scene-trim-preview`
+- 장면 전환 시 창 폭 변화와 썸네일 캐시 히트(3초 이내 재표시)
+- `scene-trim-short` 경고 · `scene-short-blocker` `1개` 배지
+- **Batch preflight 문구 전문** — `원본이 장면보다 짧아 검은 화면이 출력됩니다. 장면 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 장면: Gameplay`
+- 15초 복귀 시 경고·배지 해소와 창 재활성화
+
+**검증되지 않은 것 (실제 Chrome 필요)**:
+
+| 항목 | 이유 |
+|------|------|
+| T2 렌더 대조 (SC2) | H.264 인코드 불가 |
+| T5의 `MP4 렌더` 활성화 단언 | 위와 같음 — `capabilities.ready`가 항상 거짓이라 버튼이 늘 비활성 |
+| FR-E01·E02·E03이 고친 기존 스펙 3종 | 전부 H.264 픽스처를 쓴다 |
+| Day1 회귀 (SC9) · 그 외 E2E 전량 | 위와 같음 |
+
+T1은 VP8 대체본에서 `2.01`을 반환해 실패했는데, 그 픽스처가 12.008초(VP8 muxing 반올림)라 `12.008 − 10 = 2.008`이 정확한 값이다. 12.000초인 실제 픽스처에서는 `2.00`이 된다 — **드래그와 클램프가 옳게 동작한다는 확인**이지 결함이 아니다.
+
+**따라서 SC9와 SC2, SC10의 E2E 부분은 Check 단계에서 실제 Chrome이 있는 환경에서 확인해야 한다.** 이 문서는 그것을 통과로 기록하지 않는다.
+
 ---
 
 ## 8. Architecture Compliance
@@ -640,4 +671,5 @@ src/
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 0.2.0 | 2026-08-16 | Do 완료. 구현 중 결정 2건 추가 — `DEFAULT_CTA.useGeneratedBackground`가 `true`라 CTA 예외가 엣지 케이스가 아니라 기본 경로임을 확인(D-D09), 컨테이너에 H.264가 없어 E2E 전량 실행이 불가함을 확인하고 VP8 대체 검증 범위를 §7.5에 기록(D-D10). | 김성권 / Claude |
 | 0.1.0 | 2026-08-16 | 최초 Design. Option C(대칭 쌍 + 호출부 정규화) 선택. Plan §7이 넘긴 5개 항목 확정 — 판정 함수 형태(D-D02), 목록 계산 위치(§5.1), `preflightIssues` 블록화(D-D05, `else if`로 붙이면 실행되지 않음을 확인), 스트립 배치·CTA 노출(D-D08), FR-E02 구체 형태(§7.3). Day1 E2E가 문구를 정확 문자열로 고정한다는 제약(§1.2)을 발견해 Option B 기각의 근거로 삼음. `isTrimShorterThanScene`이 이번 변경으로 고아가 됨을 확인(D-D03). | 김성권 / Claude |

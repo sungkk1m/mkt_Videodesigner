@@ -18,7 +18,6 @@ import {
   setDay1PanelSourceStatus,
   setDay1RatioOverride,
   setDay1TrimInMs,
-  setDay1TrimOutMs,
   switchTemplate,
   threeSceneOf,
   updateDay1EndCard,
@@ -234,12 +233,6 @@ describe('Day1 panel trims', () => {
     expect(day1(project).panelA.trim).toEqual({inMs: 6000, outMs: 12_000});
   });
 
-  it('moves the in point by the window when the out point is set', () => {
-    const project = setDay1TrimOutMs(withPanels(), 'panelB', 9000);
-
-    expect(day1(project).panelB.trim).toEqual({inMs: 3000, outMs: 9000});
-  });
-
   it('re-clamps both panels after a boundary drag shortens a section', () => {
     const trimmed = setDay1TrimInMs(withPanels(), 'panelA', 6000);
     const moved = moveTimelineBoundary(trimmed, 0, 10_000);
@@ -398,7 +391,6 @@ describe('template isolation', () => {
       setDay1PanelSource(project, 'panelA', testMediaReference()),
     ).toStrictEqual(project);
     expect(setDay1TrimInMs(project, 'panelA', 1000)).toBe(project);
-    expect(setDay1TrimOutMs(project, 'panelA', 1000)).toBe(project);
     expect(updateDay1Transform(project, 'panelA', '9:16', {scale: 2})).toBe(
       project,
     );

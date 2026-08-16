@@ -181,9 +181,9 @@ test.describe('module-3a editor vertical slice', () => {
     await fillField(page, 'trim-in', '99');
     await expect(page.getByTestId('trim-range')).toContainText('2.00s – 12.00s');
 
-    // Trim out moves the same scene-length window, so it never reverses.
-    await fillField(page, 'trim-out', '9');
-    await expect(page.getByTestId('trim-range')).toContainText('0.00s – 10.00s');
+    // Three-Scene Trim Parity FR-P05 — trim out is `in + window`, so it is a
+    // readout that follows trim in rather than a field of its own.
+    await expect(page.getByTestId('trim-out')).toHaveText('12.00');
 
     // Transform controls.
     await page.getByTestId('transform-scale').fill('1.4');

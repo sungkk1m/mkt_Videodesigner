@@ -59,12 +59,19 @@ test.describe('module-3 persistence and recovery', () => {
     );
     // An exact fingerprint match is accepted without a warning.
     await expect(page.getByTestId('relink-verdict')).toBeHidden();
-    await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeEnabled();
 
     // The relink must not reset the edit that was restored.
     await expect(page.getByTestId('timeline-duration-gameplay')).toHaveText(
       '24.0초',
     );
+
+    // Three-Scene Trim Parity FR-S03 — the relink gate has cleared, and what
+    // holds the button now is a different one: the 12s source cannot fill the
+    // 24s gameplay section the restored project is carrying. Shrinking the
+    // project is what proves the relink did restore renderability.
+    await expect(page.getByTestId('scene-short-blocker')).toBeVisible();
+    await page.getByRole('button', {name: '15초'}).click();
+    await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeEnabled();
   });
 
   test('exports metadata-only JSON and imports it into a new project', async ({
