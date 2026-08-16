@@ -1,8 +1,6 @@
 // Design Ref: §5.5 Left Input Panel (Audio/TTS) — original/BGM/narration volume,
 // auto ducking, per-scene narration upload or Beta generation, and the zh-TW
 // upload-required notice.
-import type {ChangeEvent} from 'react';
-
 import {narrationOf} from '../../domain/audio/mix';
 import {
   SCENE_LABELS,
@@ -13,6 +11,7 @@ import {
 } from '../../domain/editor/types';
 import type {TtsCapabilities} from '../../domain/tts/types';
 import {MODEL_NETWORK_NOTICE} from '../../shared/config/models';
+import {Dropzone} from './Dropzone';
 import type {NarrationJob} from './useEditorAudio';
 
 export interface AudioPanelProps {
@@ -36,18 +35,6 @@ export interface AudioPanelProps {
 }
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
-
-const pickFile = (
-  event: ChangeEvent<HTMLInputElement>,
-  handle: (file: File) => void,
-) => {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-
-  if (file) {
-    handle(file);
-  }
-};
 
 export const AudioPanel = ({
   project,
@@ -92,29 +79,15 @@ export const AudioPanel = ({
 
       <div className="panel__group">
         <h3>BGM</h3>
-        <label className="field">
-          <span>배경음악 파일</span>
-          <input
-            accept="audio/*"
-            data-testid="audio-bgm-input"
-            disabled={disabled}
-            onChange={(event) => pickFile(event, (file) => onBgmFile(file))}
-            type="file"
-          />
-        </label>
-        <p className="panel__readout">
-          {audio.bgm?.source.name ?? '없음'}
-          {audio.bgm ? (
-            <button
-              className="button button--ghost"
-              disabled={disabled}
-              onClick={() => onBgmFile(null)}
-              type="button"
-            >
-              제거
-            </button>
-          ) : null}
-        </p>
+        <Dropzone
+          disabled={disabled}
+          fileName={audio.bgm?.source.name ?? null}
+          inputTestId="audio-bgm-input"
+          kind="audio"
+          onFile={(file) => onBgmFile(file)}
+          onRemove={() => onBgmFile(null)}
+          prompt="배경음악 파일"
+        />
 
         {audio.bgm ? (
           <>
@@ -202,7 +175,7 @@ export const AudioPanel = ({
 
         {SCENE_ORDER.map((kind) => {
           const track = narrationOf(project, selectedLocale, kind);
-          const sceneMs = project.scenes[SCENE_ORDER.indexOf(kind)]?.durationMs ?? 0;
+          const sceneMs = project.sections[SCENE_ORDER.indexOf(kind)]?.durationMs ?? 0;
           const tooLong = track ? track.durationMs > sceneMs : false;
           const working = job.status === 'working' && job.kind === kind;
 
@@ -211,18 +184,14 @@ export const AudioPanel = ({
               <strong>{SCENE_LABELS[kind]}</strong>
 
               <div className="narration__actions">
-                <label className="field">
-                  <span>음성 업로드</span>
-                  <input
-                    accept="audio/*"
-                    data-testid={`narration-upload-${kind}`}
-                    disabled={disabled}
-                    onChange={(event) =>
-                      pickFile(event, (file) => onNarrationFile(kind, file))
-                    }
-                    type="file"
-                  />
-                </label>
+                <Dropzone
+                  disabled={disabled}
+                  fileName={track?.source.name ?? null}
+                  inputTestId={`narration-upload-${kind}`}
+                  kind="audio"
+                  onFile={(file) => onNarrationFile(kind, file)}
+                  prompt="음성 업로드"
+                />
                 <button
                   className="button button--secondary"
                   data-testid={`narration-generate-${kind}`}
@@ -235,7 +204,7 @@ export const AudioPanel = ({
               </div>
 
               {working ? (
-                <p className="panel__readout" data-testid={`narration-progress-${kind}`}>
+                <p className="panel__hint" data-testid={`narration-progress-${kind}`}>
                   생성 중 {Math.round(job.progress * 100)}%
                 </p>
               ) : null}

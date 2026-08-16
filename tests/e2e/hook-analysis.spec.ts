@@ -10,10 +10,16 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
 
 const uploadFixture = async (page: Page) => {
+  await page.getByTestId('tab-assets').click();
   await page.getByTestId('source-input').setInputFiles(fixturePath);
   await expect(page.getByTestId('source-metadata')).toContainText(
     'gameplay-sample.mp4',
   );
+};
+
+/** The Hook drawer lives in the left rail, alongside assets, copy and audio. */
+const openHookTab = async (page: Page) => {
+  await page.getByTestId('tab-hook').click();
 };
 
 test.describe('module-5 hook analysis', () => {
@@ -25,9 +31,11 @@ test.describe('module-5 hook analysis', () => {
     await page.goto('/');
 
     // Analysis is unavailable until there is footage, but the drawer is present.
+    await openHookTab(page);
     await expect(page.getByTestId('hook-analyze')).toBeDisabled();
 
     await uploadFixture(page);
+    await openHookTab(page);
     await expect(page.getByTestId('hook-analyze')).toBeEnabled();
 
     await page.getByTestId('hook-analyze').click();
@@ -62,6 +70,7 @@ test.describe('module-5 hook analysis', () => {
   test('keeps the manual Hook range usable', async ({page}) => {
     await page.goto('/');
     await uploadFixture(page);
+    await openHookTab(page);
 
     await page.getByTestId('hook-manual-range').fill('4500');
     await expect(page.getByTestId('inspector-scene')).toHaveText('Hook');

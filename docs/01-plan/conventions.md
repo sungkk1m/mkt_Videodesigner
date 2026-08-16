@@ -64,6 +64,21 @@ This keeps the Remotion license contingency to a single-file swap.
 - Time is milliseconds or frames, and the unit is in the identifier
   (`durationMs`, `trimBeforeFrames`).
 
+### 3.1 Templates
+
+Day1 Design §3.2 split the project into a template-agnostic part and a payload.
+
+- `sections` (length and order) and `copy`/`audio`/`render` are common to every
+  template. Anything template-specific goes under `templateSettings`, a Zod
+  discriminated union on `template`.
+- Narrow through `threeSceneOf(project)` or `day1Of(project)`. Do not read
+  `templateSettings` fields directly outside those helpers.
+- A template command no-ops on a foreign template rather than throwing.
+- Adding a template means two arms, not a schema change: one in
+  `templateSettings`, and one in `buildEditorSnapshot()` — the single place the
+  render path maps a template to a composition. `EditorSnapshot` carries the
+  template as a tag so the adapter never infers it from the prop shape.
+
 ## 4. State
 
 | Store | Persistent | Content |
@@ -144,6 +159,7 @@ Type-only imports use `import type`.
 ## 11. Verification Commands
 
 ```bash
+npm run generate:editor-fixture   # once: the E2E media fixtures are gitignored
 npm test          # unit + architecture boundary tests
 npm run build     # tsc -b across all three configs, then vite build
 npx playwright test   # real Chrome, includes a real MP4 render

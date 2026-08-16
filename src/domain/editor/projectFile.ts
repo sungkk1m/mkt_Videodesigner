@@ -8,13 +8,22 @@ import {
   type Result,
 } from '../../shared/errors/appError';
 import {PROJECT_SCHEMA_VERSION} from './constants';
-import {parseProject} from './project';
+import {migrateProject} from './migrate';
 import type {EditorProject} from './types';
 
 export const PROJECT_FILE_KIND = 'mkt-videodesigner/project';
 
 /** Metadata-only documents stay tiny; anything larger is not one of ours. */
 export const MAX_PROJECT_FILE_BYTES = 1_000_000;
+
+/**
+ * Envelope versions this build can read. v1 files are upgraded by
+ * `migrateProject`. Day1 Design Ref: §3.6.
+ */
+export const SUPPORTED_PROJECT_FILE_VERSIONS: readonly number[] = [
+  1,
+  PROJECT_SCHEMA_VERSION,
+];
 
 export interface ProjectFile {
   kind: typeof PROJECT_FILE_KIND;
@@ -50,13 +59,40 @@ const invalid = (message: string, details?: Record<string, unknown>) =>
   );
 
 /**
- * Imported media cannot resolve in a new session, so the source starts missing
- * and the relink flow owns restoring it. Design Ref: §3.6.
+ * Imported media cannot resolve in a new session, so every source starts
+ * missing and the relink flow owns restoring it. Design Ref: §3.6.
  */
-const markSourceUnresolved = (project: EditorProject): EditorProject =>
-  project.source
-    ? {...project, source: {...project.source, status: 'missing'}}
-    : project;
+const markSourceUnresolved = (project: EditorProject): EditorProject => {
+  const settings = project.templateSettings;
+
+  if (settings.template === 'three-scene') {
+    return settings.source
+      ? {
+          ...project,
+          templateSettings: {
+            ...settings,
+            source: {...settings.source, status: 'missing'},
+          },
+        }
+      : project;
+  }
+
+  return {
+    ...project,
+    templateSettings: {
+      ...settings,
+      panelA: withMissingSource(settings.panelA),
+      panelB: withMissingSource(settings.panelB),
+    },
+  };
+};
+
+const withMissingSource = <TPanel extends {source: {status: string} | null}>(
+  panel: TPanel,
+): TPanel =>
+  panel.source
+    ? {...panel, source: {...panel.source, status: 'missing' as const}}
+    : panel;
 
 export const parseProjectFile = (text: string): Result<EditorProject> => {
   if (text.length > MAX_PROJECT_FILE_BYTES) {
@@ -92,14 +128,18 @@ export const parseProjectFile = (text: string): Result<EditorProject> => {
     );
   }
 
-  if (envelope.schemaVersion !== PROJECT_SCHEMA_VERSION) {
+  if (
+    envelope.schemaVersion === undefined ||
+    !SUPPORTED_PROJECT_FILE_VERSIONS.includes(envelope.schemaVersion)
+  ) {
     return invalid(
-      `지원하지 않는 프로젝트 버전입니다. 이 앱은 버전 ${PROJECT_SCHEMA_VERSION}만 가져올 수 있습니다.`,
+      `지원하지 않는 프로젝트 버전입니다. 이 앱은 버전 ${SUPPORTED_PROJECT_FILE_VERSIONS.join(', ')}을 가져올 수 있습니다.`,
       {schemaVersion: envelope.schemaVersion},
     );
   }
 
-  const result = parseProject(envelope.project);
+  // Day1 Design Ref: §3.6 — the second migration entry point.
+  const result = migrateProject(envelope.project);
 
   return result.ok ? ok(markSourceUnresolved(result.value)) : result;
 };

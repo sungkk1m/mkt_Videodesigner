@@ -1,0 +1,210 @@
+// Day1 Design Ref: §6.2 — panel A and panel B each get a dropzone plus metadata,
+// and the render blocker states its reason here rather than only on the header
+// button. Plan SC: FR-D03 "Day1은 영상 2개를 받으며, 둘 다 없으면 렌더를 차단한다".
+import type {Day1PanelKey} from '../../domain/editor/project';
+import type {
+  Day1Settings,
+  MediaReference,
+} from '../../domain/editor/types';
+import type {RelinkVerdict} from '../../domain/media/relink';
+import type {AppError} from '../../shared/errors/appError';
+import {Dropzone} from './Dropzone';
+import {SourceRepair} from './SourceRepair';
+
+const PANEL_LABELS: Record<Day1PanelKey, string> = {
+  panelA: '패널 A · 먼저 재생',
+  panelB: '패널 B · 나중에 재생',
+};
+
+const PANEL_TEST_KEY: Record<Day1PanelKey, string> = {
+  panelA: 'a',
+  panelB: 'b',
+};
+
+const PANELS: Day1PanelKey[] = ['panelA', 'panelB'];
+
+export interface Day1AssetPanelProps {
+  settings: Day1Settings;
+  disabled: boolean;
+  busy: boolean;
+  uploadError: AppError | null;
+  relinkVerdict: RelinkVerdict | null;
+  /** Panels with no video at all. A non-empty list blocks the render (FR-D03). */
+  missingPanels: Day1PanelKey[];
+  autosaveError: AppError | null;
+  supportsFilePicker: boolean;
+  panelUrl: (panel: Day1PanelKey) => string | null;
+  canGrantPermission: (panel: Day1PanelKey) => boolean;
+  onUpload: (panel: Day1PanelKey, file: File) => void;
+  onPickFile: (panel: Day1PanelKey) => void;
+  onRelink: (panel: Day1PanelKey, file: File) => void;
+  onGrantPermission: (panel: Day1PanelKey) => void;
+}
+
+const PanelBlock = ({
+  disabled,
+  busy,
+  canGrantPermission,
+  panel,
+  relinkVerdict,
+  source,
+  supportsFilePicker,
+  uploadError,
+  url,
+  onUpload,
+  onPickFile,
+  onRelink,
+  onGrantPermission,
+}: {
+  disabled: boolean;
+  busy: boolean;
+  canGrantPermission: boolean;
+  panel: Day1PanelKey;
+  relinkVerdict: RelinkVerdict | null;
+  source: MediaReference | null;
+  supportsFilePicker: boolean;
+  uploadError: AppError | null;
+  url: string | null;
+  onUpload: (file: File) => void;
+  onPickFile: () => void;
+  onRelink: (file: File) => void;
+  onGrantPermission: () => void;
+}) => {
+  const key = PANEL_TEST_KEY[panel];
+
+  return (
+    <section className="panel__group" data-testid={`day1-panel-${key}`}>
+      <h3 className="panel__subtitle">{PANEL_LABELS[panel]}</h3>
+
+      <Dropzone
+        disabled={disabled}
+        fileName={source?.name ?? null}
+        hint="영상을 끌어다 놓거나 클릭해 선택"
+        inputTestId={`day1-panel-${key}-input`}
+        kind="video"
+        onFile={onUpload}
+        previewUrl={url}
+        prompt={`패널 ${key.toUpperCase()} 영상`}
+      />
+
+      {supportsFilePicker ? (
+        <button
+          className="button button--secondary"
+          data-testid={`day1-panel-${key}-picker`}
+          disabled={disabled}
+          onClick={onPickFile}
+          type="button"
+        >
+          파일 선택 (다음 실행에서도 복구)
+        </button>
+      ) : null}
+
+      {source ? (
+        <dl className="metadata" data-testid={`day1-panel-${key}-metadata`}>
+          <div>
+            <dt>이름</dt>
+            <dd>{source.name}</dd>
+          </div>
+          <div>
+            <dt>길이</dt>
+            <dd>{((source.durationMs ?? 0) / 1000).toFixed(2)}초</dd>
+          </div>
+          <div>
+            <dt>해상도</dt>
+            <dd>
+              {source.width ?? '-'}×{source.height ?? '-'}
+            </dd>
+          </div>
+          <div>
+            <dt>재생</dt>
+            <dd>{url ? '디코딩 확인됨' : '연결 필요'}</dd>
+          </div>
+        </dl>
+      ) : null}
+
+      {source && source.status !== 'available' ? (
+        <SourceRepair
+          busy={busy}
+          error={uploadError}
+          inputTestId={`day1-panel-${key}-relink`}
+          onGrantPermission={canGrantPermission ? onGrantPermission : null}
+          onRelink={onRelink}
+          reference={source}
+          testId={`day1-panel-${key}-repair`}
+          verdict={relinkVerdict}
+        />
+      ) : null}
+    </section>
+  );
+};
+
+export const Day1AssetPanel = ({
+  settings,
+  disabled,
+  busy,
+  uploadError,
+  relinkVerdict,
+  missingPanels,
+  autosaveError,
+  supportsFilePicker,
+  panelUrl,
+  canGrantPermission,
+  onUpload,
+  onPickFile,
+  onRelink,
+  onGrantPermission,
+}: Day1AssetPanelProps) => (
+  <>
+    {missingPanels.length > 0 ? (
+      <p className="notice notice--warning" data-testid="day1-panels-blocker">
+        영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널:{' '}
+        {missingPanels.map((panel) => PANEL_TEST_KEY[panel].toUpperCase()).join(' · ')}
+      </p>
+    ) : null}
+
+    {PANELS.map((panel) => (
+      <PanelBlock
+        busy={busy}
+        canGrantPermission={canGrantPermission(panel)}
+        disabled={disabled}
+        key={panel}
+        onGrantPermission={() => onGrantPermission(panel)}
+        onPickFile={() => onPickFile(panel)}
+        onRelink={(file) => onRelink(panel, file)}
+        onUpload={(file) => onUpload(panel, file)}
+        panel={panel}
+        relinkVerdict={relinkVerdict}
+        source={settings[panel].source}
+        supportsFilePicker={supportsFilePicker}
+        uploadError={uploadError}
+        url={panelUrl(panel)}
+      />
+    ))}
+
+    <p className="panel__hint">
+      패널 A가 먼저 컬러로 재생되고, 그 사이 패널 B는 첫 프레임에서 흑백으로
+      멈춥니다. 전환 시점은 타임라인의 경계를 끌어 조절합니다.
+    </p>
+
+    {supportsFilePicker ? (
+      <p className="panel__hint">
+        “파일 선택”으로 올린 영상은 파일 접근 권한이 저장되어 새로고침 후에도 다시
+        연결됩니다. 끌어다 놓은 영상은 권한이 없어 다시 연결해야 합니다.
+      </p>
+    ) : null}
+
+    {busy ? <p className="panel__hint">확인 중…</p> : null}
+
+    {uploadError ? (
+      <p className="notice notice--error" data-testid="day1-source-error">
+        {uploadError.message}
+      </p>
+    ) : null}
+
+    {autosaveError ? (
+      <p className="notice notice--error" data-testid="autosave-error">
+        {autosaveError.message}
+      </p>
+    ) : null}
+  </>
+);

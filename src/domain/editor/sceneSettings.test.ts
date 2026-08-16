@@ -22,6 +22,7 @@ import {
   updateSceneTransform,
   updateSubtitleStyle,
 } from './project';
+import {scenesOf, sourceOf} from '../../test/fixtures/project';
 
 const withSource = () =>
   applySourceToAllScenes(createProject(15), testMediaReference());
@@ -40,8 +41,8 @@ describe('per-ratio transforms', () => {
       scale: 1.5,
     });
 
-    expect(activeTransform(project.scenes[0], '9:16').scale).toBe(1.5);
-    expect(activeTransform(project.scenes[0], '16:9').scale).toBe(1.5);
+    expect(activeTransform(scenesOf(project)[0], '9:16').scale).toBe(1.5);
+    expect(activeTransform(scenesOf(project)[0], '16:9').scale).toBe(1.5);
   });
 
   it('keeps other ratios unchanged once an override exists', () => {
@@ -54,13 +55,13 @@ describe('per-ratio transforms', () => {
       x: 10,
     });
 
-    expect(hasRatioOverride(project.scenes[0], '1:1')).toBe(true);
-    expect(activeTransform(project.scenes[0], '1:1')).toMatchObject({
+    expect(hasRatioOverride(scenesOf(project)[0], '1:1')).toBe(true);
+    expect(activeTransform(scenesOf(project)[0], '1:1')).toMatchObject({
       scale: 2,
       x: 10,
     });
-    expect(activeTransform(project.scenes[0], '9:16').scale).toBe(1.2);
-    expect(activeTransform(project.scenes[0], '16:9').scale).toBe(1.2);
+    expect(activeTransform(scenesOf(project)[0], '9:16').scale).toBe(1.2);
+    expect(activeTransform(scenesOf(project)[0], '16:9').scale).toBe(1.2);
   });
 
   it('falls back to the base framing when the override is removed', () => {
@@ -76,8 +77,8 @@ describe('per-ratio transforms', () => {
       false,
     );
 
-    expect(hasRatioOverride(project.scenes[0], '1:1')).toBe(false);
-    expect(activeTransform(project.scenes[0], '1:1').scale).toBe(1);
+    expect(hasRatioOverride(scenesOf(project)[0], '1:1')).toBe(false);
+    expect(activeTransform(scenesOf(project)[0], '1:1').scale).toBe(1);
   });
 
   it('renders the framing of the selected ratio', () => {
@@ -133,13 +134,13 @@ describe('transitions', () => {
       durationMs: 1000,
     });
 
-    expect(project.scenes[0].transitionOut.durationMs).toBe(1000);
+    expect(scenesOf(project)[0].transitionOut.durationMs).toBe(1000);
 
     // Shrinking the scene must shrink the transition with it.
     const shortened = moveTimelineBoundary(project, 0, 1200);
 
-    expect(shortened.scenes[0].durationMs).toBe(1200);
-    expect(shortened.scenes[0].transitionOut.durationMs).toBe(600);
+    expect(shortened.sections[0].durationMs).toBe(1200);
+    expect(scenesOf(shortened)[0].transitionOut.durationMs).toBe(600);
   });
 
   it('ignores the CTA out transition because nothing follows it', () => {
@@ -212,8 +213,8 @@ describe('subtitle style', () => {
       backgroundOpacity: 4,
     });
 
-    expect(project.scenes[1].subtitle.fontSize).toBe(120);
-    expect(project.scenes[1].subtitle.backgroundOpacity).toBe(1);
+    expect(scenesOf(project)[1].subtitle.fontSize).toBe(120);
+    expect(scenesOf(project)[1].subtitle.backgroundOpacity).toBe(1);
   });
 });
 

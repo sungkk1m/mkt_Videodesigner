@@ -2,7 +2,9 @@
 
 **https://sungkk1m.github.io/mkt_Videodesigner/**
 
-Chrome에서 서버 없이 3장면 UA 영상을 편집하고 다국어·다비율 MP4를 만드는 정적 웹 앱입니다.
+Chrome에서 서버 없이 UA 영상을 편집하고 다국어·다비율 MP4를 만드는 정적 웹 앱입니다.
+템플릿 2종을 지원합니다 — **3장면**(Hook·Gameplay·CTA, 영상 1개)과 **Day1**(Before/After
+분할 비교, 영상 2개 + 엔드카드).
 
 업로드한 영상과 문구는 애플리케이션 서버로 전송되지 않습니다. 편집, 미리보기,
 렌더, 저장이 모두 브라우저 안에서 끝납니다.
@@ -18,6 +20,7 @@ Chrome에서 서버 없이 3장면 UA 영상을 편집하고 다국어·다비�
 
 ```bash
 npm install
+npm run generate:editor-fixture   # 최초 1회: E2E 미디어 픽스처 생성 (gitignored)
 npm run dev            # 개발 서버
 npm test               # 유닛 테스트 (Vitest)
 npm run build          # 타입체크 + 프로덕션 빌드
@@ -29,17 +32,26 @@ npm run test:e2e       # 실제 Chrome 렌더 포함 E2E (Playwright)
 
 ## What It Does
 
+공통 기능:
+
 | 영역 | 기능 |
 |------|------|
-| 소재 | 영상 1개 업로드 후 Hook · Gameplay · CTA에 일괄 적용, 파일 지문 기반 재연결 |
-| 타임라인 | 고정 3장면, 15/30/60초 프리셋, 경계 드래그 시 총 길이 불변 |
+| 타임라인 | 고정 3구간, 15/30/60초 프리셋, 경계 드래그 시 총 길이 불변 |
 | 프레이밍 | Cover 고정 + Scale/X/Y, 비율별 프레이밍 override |
-| 카피 | ko / en / ja / zh-TW 4언어 Hook·자막·CTA 문구 |
-| Hook | 움직임·장면 전환·오디오·밝기 기반 후보 구간 추천 (휴리스틱) |
-| 오디오 | 원본·BGM·나레이션 볼륨, 나레이션 중 자동 더킹 |
 | 렌더 | Fast/Standard/High 프로필, 30/60fps, 9:16·1:1·16:9 |
 | Batch | 언어 × 비율 최대 12개 순차 렌더, 취소·실패 재시도, 폴더 저장 또는 다운로드 |
 | 저장 | IndexedDB 자동 저장과 새로고침 복구, JSON 내보내기·가져오기 |
+
+템플릿별 기능:
+
+| 영역 | 3장면 | Day1 |
+|------|-------|------|
+| 소재 | 영상 1개를 Hook · Gameplay · CTA에 일괄 적용 | 영상 2개 (둘 다 필수), 엔드카드 배너·앱아이콘 |
+| 구간 | Hook · Gameplay · CTA | 패널 A · 패널 B · 엔드카드 |
+| 문구 | 4언어 Hook·자막·CTA | 4언어 패널 라벨 A·B |
+| 고유 | Hook 후보 추천, 나레이션·TTS, 장면 전환 | 활성 패널만 재생 + 비활성 흑백 정지, 분할선 색·두께(스포이트), 아이콘 애니메이션 |
+
+> 템플릿 전환은 파괴적입니다. 이름·오디오·렌더 설정은 유지되고 장면/패널 설정은 초기화됩니다.
 
 ## Project Layout
 
@@ -62,12 +74,15 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 |------|------|
 | `docs/01-plan/features/browser-video-mvp.plan.md` | 요구사항과 범위 |
 | `docs/02-design/features/browser-video-mvp.design.md` | 설계, 모듈 완료 로그, 의도적 설계 편차 |
-| `docs/01-plan/conventions.md` | 코딩 컨벤션 |
+| `docs/archive/2026-07/day1-template/` | Day1 템플릿 PDCA 전체 (Plan·Design·모듈 증거·Check·리포트) — 사이클 완료 후 아카이브 |
+| `docs/01-plan/conventions.md` | 코딩 컨벤션 (§3.1 템플릿 규약) |
 | `docs/03-analysis/*.md` | 모듈별 검증 증거와 알려진 한계 |
 
 ## Status
 
-Do 단계 모듈 1~7 구현 및 검증 완료 (유닛 164, E2E 17).
+browser-video-mvp Do 모듈 1~7 완료. day1-template은 **PDCA 사이클 완료**
+(Match Rate 100%, Success Criteria 6/6 — 유닛 272, E2E 27 + 옵트인 60초 렌더 하네스 1).
+Day1 엔드카드는 9:16 · 1:1 · 16:9 세 규격 모두 bannerdesigner 좌표에 자동 배치됩니다.
 
 **GitHub Pages 배포 완료 (2026-07-28).** 라이브 사이트에서 업로드 → Hook 분석 →
 실제 MP4 렌더 → 자동 저장·복구까지 확인했습니다 (`npm run verify:deployment`).

@@ -1,15 +1,22 @@
 import {describe, expect, it, vi} from 'vitest';
 
+import {Day1Composition} from '../../compositions/Day1Composition';
+import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   applySourceToAllScenes,
-  buildCompositionProps,
+  buildEditorSnapshot,
   createProject,
+  setDay1PanelSource,
+  switchTemplate,
 } from '../../domain/editor/project';
-import type {ThreeSceneProps} from '../../domain/editor/types';
+import type {EditorSnapshot, ThreeSceneProps} from '../../domain/editor/types';
 import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
 import type {EditorRenderConfig} from '../../domain/render/types';
-import {createEditorRenderRequest, runEditorRender} from './renderEditor';
-import type {RenderMediaAdapter} from './types';
+import {
+  createEditorRenderRequest,
+  runEditorRender,
+  type EditorRenderMediaAdapter,
+} from './renderEditor';
 
 const CONFIG: EditorRenderConfig = {
   durationPreset: 15,
@@ -19,10 +26,40 @@ const CONFIG: EditorRenderConfig = {
   outputTarget: 'web-fs',
 };
 
-const snapshot = buildCompositionProps(
+const snapshot = buildEditorSnapshot(
   applySourceToAllScenes(createProject(15), testMediaReference()),
   testUrlResolver(),
 );
+
+/** A Day1 project with both panels filled, so the snapshot is renderable. */
+const day1Snapshot = (ratio: EditorRenderConfig['ratio'] = '9:16') => {
+  let project = switchTemplate(createProject(15), 'day1');
+
+  project = setDay1PanelSource(
+    project,
+    'panelA',
+    testMediaReference({id: 'media_panel_a'}),
+  );
+  project = setDay1PanelSource(
+    project,
+    'panelB',
+    testMediaReference({id: 'media_panel_b'}),
+  );
+
+  return buildEditorSnapshot(
+    {...project, selectedRatio: ratio},
+    testUrlResolver(),
+  );
+};
+
+/** Narrows the union so a test can assert on three-scene props. */
+const threeSceneProps = (input: EditorSnapshot): ThreeSceneProps => {
+  if (input.template !== 'three-scene') {
+    throw new Error(`expected a three-scene snapshot, got ${input.template}`);
+  }
+
+  return input.props;
+};
 
 describe('createEditorRenderRequest', () => {
   it('requests a 1080x1920 H.264/AAC MP4 at the project frame rate', () => {
@@ -42,8 +79,8 @@ describe('createEditorRenderRequest', () => {
   it('passes the frozen snapshot straight through as input props', () => {
     const request = createEditorRenderRequest(snapshot, CONFIG);
 
-    expect(request.inputProps).toBe(snapshot);
-    expect(request.inputProps.scenes[0]?.durationInFrames).toBe(120);
+    expect(request.inputProps).toBe(snapshot.props);
+    expect(threeSceneProps(snapshot).scenes[0]?.durationInFrames).toBe(120);
   });
 
   it('keeps the ArrayBuffer fallback available', () => {
@@ -52,23 +89,72 @@ describe('createEditorRenderRequest', () => {
         .outputTarget,
     ).toBe('arraybuffer');
   });
+
+  // Day1 Design Ref: §2.1 / Plan SC1 — a Day1 job must reach Day1Composition.
+  it('routes a three-scene snapshot to ThreeSceneComposition', () => {
+    const request = createEditorRenderRequest(snapshot, CONFIG);
+
+    expect(request.composition.id).toBe('three-scene-editor');
+    expect(request.composition.component).toBe(ThreeSceneComposition);
+  });
+
+  it('routes a Day1 snapshot to Day1Composition', () => {
+    const request = createEditorRenderRequest(day1Snapshot(), CONFIG);
+
+    expect(request.composition.id).toBe('day1-editor');
+    expect(request.composition.component).toBe(Day1Composition);
+    expect(request.composition.defaultProps).toBe(request.inputProps);
+  });
+
+  it('keeps encoding settings identical across templates', () => {
+    const {composition: _three, ...threeScene} = createEditorRenderRequest(
+      snapshot,
+      CONFIG,
+    );
+    const {composition: _day1, ...day1} = createEditorRenderRequest(
+      day1Snapshot(),
+      CONFIG,
+    );
+
+    expect({...day1, inputProps: null}).toEqual({
+      ...threeScene,
+      inputProps: null,
+    });
+  });
+
+  // FR-D04 — the split geometry follows the job's own output size, so a 16:9
+  // Day1 job must not carry the 9:16 layout.
+  it('carries the ratio-specific split layout for a Day1 job', () => {
+    const portrait = createEditorRenderRequest(day1Snapshot('9:16'), CONFIG);
+    const landscape = createEditorRenderRequest(day1Snapshot('16:9'), {
+      ...CONFIG,
+      ratio: '16:9',
+    });
+
+    expect(landscape.composition.width).toBe(1920);
+    expect(landscape.composition.height).toBe(1080);
+    expect(portrait.inputProps).toMatchObject({
+      layout: {orientation: 'vertical'},
+    });
+    expect(landscape.inputProps).toMatchObject({
+      layout: {orientation: 'horizontal'},
+    });
+  });
 });
 
 describe('runEditorRender', () => {
   it('forwards progress and reports output metrics', async () => {
     const blob = new Blob(['mp4'], {type: 'video/mp4'});
     const onProgress = vi.fn();
-    const renderMedia: RenderMediaAdapter<ThreeSceneProps> = vi.fn(
-      async (request) => {
-        request.onProgress?.({
-          encodedFrames: 900,
-          progress: 1,
-          renderEstimatedTime: 0,
-          doneIn: 900,
-        });
-        return {getBlob: async () => blob};
-      },
-    );
+    const renderMedia: EditorRenderMediaAdapter = vi.fn(async (request) => {
+      request.onProgress?.({
+        encodedFrames: 900,
+        progress: 1,
+        renderEstimatedTime: 0,
+        doneIn: 900,
+      });
+      return {getBlob: async () => blob};
+    });
     let now = 0;
 
     const result = await runEditorRender({
@@ -96,14 +182,33 @@ describe('runEditorRender', () => {
     });
   });
 
+  it('reports the same metric shape for a Day1 render', async () => {
+    const blob = new Blob(['day1'], {type: 'video/mp4'});
+    const renderMedia: EditorRenderMediaAdapter = vi.fn(async () => ({
+      getBlob: async () => blob,
+    }));
+
+    const result = await runEditorRender({
+      snapshot: day1Snapshot('1:1'),
+      config: {...CONFIG, ratio: '1:1'},
+      renderMedia,
+    });
+
+    expect(result.metrics).toMatchObject({
+      durationSeconds: 15,
+      fps: 60,
+      width: 1080,
+      height: 1080,
+      outputBytes: blob.size,
+    });
+  });
+
   it('propagates cancellation through the caller AbortSignal', async () => {
     const controller = new AbortController();
-    const renderMedia: RenderMediaAdapter<ThreeSceneProps> = vi.fn(
-      async (request) => {
-        expect(request.signal).toBe(controller.signal);
-        throw new DOMException('Aborted', 'AbortError');
-      },
-    );
+    const renderMedia: EditorRenderMediaAdapter = vi.fn(async (request) => {
+      expect(request.signal).toBe(controller.signal);
+      throw new DOMException('Aborted', 'AbortError');
+    });
 
     await expect(
       runEditorRender({

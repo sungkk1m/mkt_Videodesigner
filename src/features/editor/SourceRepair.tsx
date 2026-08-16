@@ -15,6 +15,12 @@ export interface SourceRepairProps {
   onRelink: (file: File) => void;
   /** Present only when a stored file handle can be re-authorised. */
   onGrantPermission: (() => void) | null;
+  /**
+   * Day1 Design Ref: §6.2 — two panels each need their own repair block, so the
+   * ids are overridable. The defaults are the three-scene ids the E2E suite uses.
+   */
+  testId?: string;
+  inputTestId?: string;
 }
 
 const STATUS_MESSAGE: Record<string, string> = {
@@ -31,6 +37,8 @@ export const SourceRepair = ({
   busy,
   onRelink,
   onGrantPermission,
+  testId = 'source-repair',
+  inputTestId = 'relink-input',
 }: SourceRepairProps) => {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,7 +50,7 @@ export const SourceRepair = ({
   };
 
   return (
-    <section className="repair" data-testid="source-repair">
+    <section className="repair" data-testid={testId}>
       <p className="notice notice--warning">
         {STATUS_MESSAGE[reference.status] ?? '원본 영상을 다시 연결하세요.'}
       </p>
@@ -77,7 +85,7 @@ export const SourceRepair = ({
         <span>파일 다시 연결</span>
         <input
           accept="video/*"
-          data-testid="relink-input"
+          data-testid={inputTestId}
           disabled={busy}
           onChange={handleChange}
           type="file"

@@ -1,6 +1,11 @@
 // Public barrel for the editor domain. Data shapes come from the Zod schema so
 // there is a single runtime source of truth. Design Ref: §10.2.
 import type {DuckingEnvelope} from '../audio/ducking';
+// Type-only, so the value-level cycle through `domain/day1` never forms.
+import type {IconAdjust, NormalizedRect} from '../day1/endCard';
+import type {SplitLayout} from '../day1/layout';
+import type {ActivePanel} from '../day1/playback';
+import type {DAY1_CARD_MOTIONS, DAY1_ICON_ANIMATIONS} from './constants';
 import type {
   HookMotionPreset,
   MediaTransform,
@@ -10,6 +15,13 @@ import type {
 } from './schema';
 
 export * from './constants';
+export type {ActivePanel} from '../day1/playback';
+export type {IconAdjust, NormalizedRect} from '../day1/endCard';
+export type {
+  PanelRect,
+  SplitLayout,
+  SplitOrientation,
+} from '../day1/layout';
 export type {DuckingEnvelope, NarrationWindow} from '../audio/ducking';
 export type {
   MediaKind,
@@ -22,6 +34,8 @@ export type {
   AudioMix,
   AudioTrack,
   CtaSceneSettings,
+  Day1Panel,
+  Day1Settings,
   DurationPreset,
   EditorProject,
   EditorScene,
@@ -36,7 +50,12 @@ export type {
   RatioTransforms,
   SceneKind,
   SceneTransition,
+  Section,
+  Sections,
   SubtitleStyle,
+  TemplateKind,
+  TemplateSettings,
+  ThreeSceneSettings,
   TransitionKind,
 } from './schema';
 
@@ -45,6 +64,13 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
   gameplay: 'Gameplay',
   cta: 'CTA',
 };
+
+/** Timeline clip names per Day1 section. Day1 Design Ref: §3.1. */
+export const DAY1_SECTION_LABELS = {
+  'panel-a': '패널 A',
+  'panel-b': '패널 B',
+  endcard: '엔드카드',
+} as const;
 
 export const DEFAULT_TRANSFORM: MediaTransform = {
   fit: 'cover',
@@ -148,3 +174,80 @@ export type ThreeSceneProps = {
   scenes: SceneRenderProps[];
   audio: AudioRenderProps;
 };
+
+/** Day1 Design Ref: §5.2 — one half of the split frame, with a resolved URL. */
+export interface Day1PanelRenderProps {
+  url: string | null;
+  trimBeforeFrames: number;
+  trimAfterFrames: number;
+  scale: number;
+  x: number;
+  y: number;
+  /** Locale-resolved label; empty hides the overlay. */
+  label: string;
+}
+
+/**
+ * Day1 Design Ref: §3.2 `labelStyle` — the reference GIF look, bold white text
+ * over a heavy black outline. The wording itself lives in `copy.day1Labels`.
+ */
+export interface Day1LabelStyle {
+  fontSize: number;
+  textColor: string;
+  outlineColor: string;
+  outlineWidthPx: number;
+  position: SubtitleStyle['position'];
+}
+
+/** Day1 Design Ref: §1.2 — one entry per section of the shared time axis. */
+export interface Day1SectionRenderProps {
+  id: string;
+  fromFrame: number;
+  durationInFrames: number;
+  /** null on the end card, which has no video panel. */
+  activePanel: ActivePanel | null;
+}
+
+export type Day1IconAnimation = (typeof DAY1_ICON_ANIMATIONS)[number];
+export type Day1CardMotion = (typeof DAY1_CARD_MOTIONS)[number];
+
+/** Day1 Design Ref: §5.3 — the two end card layers, banner under icon. */
+export interface Day1EndCardRenderProps {
+  bannerUrl: string | null;
+  iconUrl: string | null;
+  /**
+   * Where the icon sits, as fractions of the frame, with `iconAdjust` already
+   * folded in. Resolved here rather than in the composition so SC5 (overlay
+   * within 2px of the baked-in icon) is testable without rendering.
+   */
+  iconRect: NormalizedRect;
+  iconAnimation: Day1IconAnimation;
+  cardMotion: Day1CardMotion;
+}
+
+export type Day1Props = {
+  /**
+   * Resolved split geometry. Day1 Design Ref: §2.2 — the layout is computed once
+   * in the prop builder so the composition stays presentational and the geometry
+   * itself stays unit-testable in the domain.
+   */
+  layout: SplitLayout;
+  lineColor: string;
+  panelA: Day1PanelRenderProps;
+  panelB: Day1PanelRenderProps;
+  labelStyle: Day1LabelStyle;
+  endCard: Day1EndCardRenderProps;
+  sections: Day1SectionRenderProps[];
+  audio: AudioRenderProps;
+};
+
+/**
+ * One render job's frozen input, tagged with the template that produced it.
+ * Day1 Design Ref: §2.1 — the render path branches on the template exactly once,
+ * where this tag is read. The tag mirrors `templateSettings.template` rather than
+ * being inferred from the prop shape, so a third template adds one arm instead of
+ * a structural guess.
+ */
+export type EditorSnapshot =
+  | {template: 'three-scene'; props: ThreeSceneProps}
+  | {template: 'day1'; props: Day1Props};

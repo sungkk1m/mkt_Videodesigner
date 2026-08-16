@@ -77,7 +77,10 @@ test.describe('module-4 full editor', () => {
     await page.getByTestId('locale-ko').click();
 
     // --- Hook motion and transition --------------------------------------
+    // Only Trim and Transform open by default; the rest are collapsed.
     await page.getByTestId('timeline-clip-hook').click();
+    await page.getByTestId('section-hook').click();
+    await page.getByTestId('section-transition').click();
     await page.getByTestId('hook-emphasis').fill('3일');
     await page.getByTestId('hook-preset-focus').click();
     await expect(page.getByTestId('hook-preset-focus')).toHaveAttribute(

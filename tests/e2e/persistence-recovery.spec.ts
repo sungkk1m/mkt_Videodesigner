@@ -105,6 +105,43 @@ test.describe('module-3 persistence and recovery', () => {
     await expect(page.getByTestId('source-repair')).toBeVisible();
   });
 
+  // Plan SC3 / Day1 Design Ref: §3.6 — a project exported before the v2 schema
+  // split must still open, with every field intact, through the real import UI.
+  test('imports a v1 project export and upgrades it to v2', async ({page}) => {
+    await page.goto('/');
+    await page.getByTestId('project-menu-toggle').click();
+    await page
+      .getByTestId('project-import-input')
+      .setInputFiles(resolve(projectRoot, 'tests/fixtures/project-v1.json'));
+
+    await expect(page.getByLabel('프로젝트 이름')).toHaveValue('v1-regression');
+
+    // Section durations survived the move off the individual scenes.
+    await expect(page.getByTestId('timeline-duration-hook')).toHaveText('2.5초');
+    await expect(page.getByTestId('timeline-duration-gameplay')).toHaveText(
+      '9.5초',
+    );
+    await expect(page.getByTestId('timeline-duration-cta')).toHaveText('3.0초');
+
+    // Per-scene settings came across under templateSettings.
+    await expect(page.getByTestId('trim-in')).toHaveValue('1.00');
+    await expect(page.getByTestId('subtitle-position')).toHaveValue('top');
+
+    // The source is metadata only after an import, so relink still owns it.
+    await expect(page.getByTestId('source-repair')).toBeVisible();
+
+    // Four-locale copy is untouched by the split.
+    await page.getByTestId('tab-copy').click();
+    await expect(page.getByTestId('copy-hook')).toHaveValue('3일 만에 최강자');
+    await expect(page.getByTestId('copy-subtitle-gameplay')).toHaveValue(
+      '이렇게 성장했습니다',
+    );
+    await page.getByTestId('locale-en').click();
+    await expect(page.getByTestId('copy-hook')).toHaveValue(
+      'Strongest in 3 days',
+    );
+  });
+
   test('rejects a JSON file that is not a project export', async ({page}) => {
     await page.goto('/');
     await page.getByTestId('project-menu-toggle').click();
