@@ -4,7 +4,8 @@
 // or a swap would show up, not at 900.
 //
 // Opt-in: a pair of 60s 60fps renders is minutes of wall clock, which does not
-// belong in the default suite. Run it when the render path changes:
+// belong in the default suite. The 60fps is pinned by this spec, not inherited
+// from the app default (day1-render-fps D-06). Run it when the render path changes:
 //
 //   DAY1_LONGFORM=1 npx playwright test tests/e2e/day1-longform.spec.ts
 import {mkdir} from 'node:fs/promises';
@@ -77,6 +78,10 @@ test.describe('Day1 60s preset render cost', () => {
     await page.getByTestId('source-input').setInputFiles(PANEL_A_SOURCE);
     await page.getByRole('button', {name: '60초'}).click();
     await page.getByTestId('ratio-9:16').click();
+    // This benchmark pins 60fps itself (day1-render-fps D-06): it exists to
+    // measure the 3600-frame worst case, and inheriting the app default (now
+    // 30fps) would silently halve what it measures.
+    await page.getByTestId('stage-fps-60').click();
 
     const baseline = await renderAndMeasure(
       page,
@@ -92,6 +97,8 @@ test.describe('Day1 60s preset render cost', () => {
     await page.getByTestId('day1-panel-b-input').setInputFiles(PANEL_B_SOURCE);
     await page.getByRole('button', {name: '60초'}).click();
     await page.getByTestId('ratio-9:16').click();
+    // Same 60fps pin as the baseline above (D-06).
+    await page.getByTestId('stage-fps-60').click();
     await expect(page.getByTestId('day1-panels-blocker')).toHaveCount(0);
 
     const day1 = await renderAndMeasure(page, 'day1 60s', 'day1-60s-9x16.mp4');

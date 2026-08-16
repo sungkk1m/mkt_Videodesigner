@@ -1,10 +1,12 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-16T06:47:46.000Z",
+  "lastUpdated": "2026-08-16T10:05:00.000Z",
   "activeFeatures": [
-    "browser-video-mvp"
+    "browser-video-mvp",
+    "day1-endcard-video",
+    "day1-render-fps"
   ],
-  "primaryFeature": "day1-trim-ux",
+  "primaryFeature": "day1-render-fps",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -222,10 +224,70 @@
       "startedAt": "2026-08-15T07:38:21.000Z",
       "archivedAt": "2026-08-16T06:47:46.000Z",
       "archivedTo": "docs/archive/2026-08/day1-trim-ux/"
+    },
+    "day1-endcard-video": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "endcard-mode-flag-banner-or-video",
+        "video-slot-and-trim",
+        "probe-branch-by-slot",
+        "loop-when-shorter-than-3s",
+        "muted-endcard-video",
+        "trimstrip-reuse",
+        "cardmotion-kept-all-presets",
+        "no-migration-code-zod-default"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/day1-endcard-video.plan.md"
+      },
+      "timestamps": {
+        "started": "2026-08-16T08:10:00.000Z",
+        "lastUpdated": "2026-08-16T08:10:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "endCardMs": 3000,
+        "dependsOn": "day1-render-fps",
+        "splitRationale": "fps work changes EDITOR_FPS (composition fps); endcard video timing runs on top of it, so the fps cycle lands first"
+      }
+    },
+    "day1-render-fps": {
+      "phase": "completed",
+      "phaseNumber": 6,
+      "matchRate": 100,
+      "iterationCount": 0,
+      "requirements": [
+        "default-fps-30",
+        "header-chip-reads-project-fps",
+        "header-chip-becomes-30-60-toggle",
+        "toggle-respects-profile-allowed-fps",
+        "single-render-passes-profile",
+        "keep-stored-60fps-projects-as-is"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/day1-render-fps.plan.md",
+        "design": "docs/02-design/features/day1-render-fps.design.md",
+        "analysis": "docs/03-analysis/day1-render-fps.analysis.md",
+        "report": "docs/04-report/day1-render-fps.report.md"
+      },
+      "timestamps": {
+        "started": "2026-08-16T08:25:00.000Z",
+        "lastUpdated": "2026-08-16T10:05:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "blocks": "day1-endcard-video",
+        "reverses": "browser-video-mvp requirement 'default-60fps'",
+        "architectureOption": "A - inline replacement (no new files, no new CSS)",
+        "designFindings": "Plan missed 6 e2e assertions hardcoding _60fps / batch default; day1-longform benchmark silently halves from 3600 to 1800 frames unless pinned to 60"
+      }
     }
   },
   "pipeline": {
-    "currentPhase": "design",
+    "currentPhase": "report",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -289,13 +351,43 @@
         "to": "do",
         "scope": "module-7",
         "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-16T08:10:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-16T08:25:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-16T09:05:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-16T09:55:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "check",
+        "to": "report",
+        "at": "2026-08-16T10:05:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-15T07:04:23.912Z"
+    "lastActivity": "2026-08-16T10:05:00.000Z"
   },
   "history": [
     {
@@ -430,6 +522,42 @@
       "feature": "media-codec-compat",
       "phase": "do",
       "action": "registered"
+    },
+    {
+      "timestamp": "2026-08-16T08:10:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T08:25:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T09:05:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "design",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T09:55:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-16T09:55:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "check",
+      "action": "analyzed"
+    },
+    {
+      "timestamp": "2026-08-16T10:05:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "report",
+      "action": "completed"
     }
   ],
   "stateMachine": {

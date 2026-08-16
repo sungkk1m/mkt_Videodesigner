@@ -118,11 +118,11 @@ describe('transitions', () => {
 
     expect(props.scenes[0]?.transitionOut).toEqual({
       kind: 'fade',
-      durationInFrames: 24,
+      durationInFrames: 12,
     });
     expect(props.scenes[1]?.transitionIn).toEqual({
       kind: 'fade',
-      durationInFrames: 24,
+      durationInFrames: 12,
     });
     expect(props.scenes[0]?.transitionIn.kind).toBe('cut');
   });
@@ -221,8 +221,8 @@ describe('subtitle style', () => {
 describe('CTA background', () => {
   it('freezes the last gameplay frame when no CTA media exists', () => {
     const props = buildCompositionProps(withSource(), testUrlResolver());
-    // Gameplay runs 0-10s of the source at 60fps, so the last frame is 599.
-    expect(props.scenes[2]?.cta?.freezeSourceFrame).toBe(599);
+    // Gameplay runs 0-10s of the source at 30fps, so the last frame is 299.
+    expect(props.scenes[2]?.cta?.freezeSourceFrame).toBe(299);
     expect(props.scenes[2]?.cta?.mediaUrl).toBeNull();
   });
 

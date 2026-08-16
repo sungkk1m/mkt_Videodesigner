@@ -80,7 +80,22 @@ describe('createEditorRenderRequest', () => {
     const request = createEditorRenderRequest(snapshot, CONFIG);
 
     expect(request.inputProps).toBe(snapshot.props);
-    expect(threeSceneProps(snapshot).scenes[0]?.durationInFrames).toBe(120);
+    // The snapshot was built at the project's default 30fps: the 2s Hook is 60 frames.
+    expect(threeSceneProps(snapshot).scenes[0]?.durationInFrames).toBe(60);
+  });
+
+  it('maps the profile to its bitrate tier (day1-render-fps FR-05)', () => {
+    // The single render used to omit profile entirely and always fell back to
+    // Standard; this pins the mapping so the regression cannot come back.
+    expect(
+      createEditorRenderRequest(snapshot, {...CONFIG, profile: 'high'})
+        .videoBitrate,
+    ).toBe('highest');
+    expect(
+      createEditorRenderRequest(snapshot, {...CONFIG, profile: 'fast'})
+        .videoBitrate,
+    ).toBe('medium');
+    expect(createEditorRenderRequest(snapshot, CONFIG).videoBitrate).toBe('high');
   });
 
   it('keeps the ArrayBuffer fallback available', () => {

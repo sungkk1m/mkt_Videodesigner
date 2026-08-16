@@ -198,7 +198,8 @@ test.describe('module-3a editor vertical slice', () => {
     await page.getByRole('button', {name: '재생'}).click();
     await expect(page.getByRole('button', {name: '일시정지'})).toBeVisible();
     await page.getByRole('button', {name: '일시정지'}).click();
-    await page.getByLabel('재생 위치').fill('300');
+    // Frame 150 at the default 30fps is the 5-second mark.
+    await page.getByLabel('재생 위치').fill('150');
     await expect(page.getByTestId('transport-time')).toContainText('00:05.0');
     await expect(page.getByTestId('transport-time')).toContainText('00:15.0');
 
@@ -242,7 +243,7 @@ test.describe('module-3a editor vertical slice', () => {
     await page.getByRole('button', {name: '다운로드'}).click();
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toBe('ua-video_ko_9x16_15s_60fps.mp4');
+    expect(download.suggestedFilename()).toBe('ua-video_ko_9x16_15s_30fps.mp4');
 
     await mkdir(outputDirectory, {recursive: true});
     const outputPath = resolve(outputDirectory, 'editor-vertical-slice.mp4');
@@ -275,7 +276,8 @@ test.describe('module-3a editor vertical slice', () => {
       codec_name: 'h264',
       width: 1080,
       height: 1920,
-      r_frame_rate: '60/1',
+      // The new-project default is 30fps (day1-render-fps FR-01).
+      r_frame_rate: '30/1',
     });
     expect(audio?.codec_name).toBe('aac');
     expect(Number(probe.format.duration)).toBeGreaterThan(14.5);

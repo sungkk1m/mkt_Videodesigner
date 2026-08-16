@@ -166,7 +166,7 @@ describe('audio render props', () => {
     expect(audio.bgm).toEqual({
       url: 'blob:audio',
       volume: 0.6,
-      startInFrames: 30,
+      startInFrames: 15,
       loop: true,
     });
     expect(audio.narration).toEqual([
@@ -174,15 +174,15 @@ describe('audio render props', () => {
         kind: 'gameplay',
         url: 'blob:audio',
         volume: 1,
-        fromFrame: 120,
-        durationInFrames: 240,
+        fromFrame: 60,
+        durationInFrames: 120,
       },
     ]);
     expect(audio.ducking).toEqual({
       enabled: true,
       targetGain: 0.25,
-      attackInFrames: 9,
-      releaseInFrames: 18,
+      attackInFrames: 5,
+      releaseInFrames: 9,
     });
   });
 
@@ -202,8 +202,8 @@ describe('audio render props', () => {
     const project = setNarration(base(), 'ko', 'hook', narration(9000));
     const {audio} = buildCompositionProps(project, testUrlResolver('blob:audio'));
 
-    // The Hook scene is 2s at 60fps.
-    expect(audio.narration[0]?.durationInFrames).toBe(120);
+    // The Hook scene is 2s at the default 30fps.
+    expect(audio.narration[0]?.durationInFrames).toBe(60);
   });
 
   it('drops a track whose audio cannot be resolved', () => {

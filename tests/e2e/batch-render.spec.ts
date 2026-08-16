@@ -27,17 +27,20 @@ test.describe('module-7 batch render', () => {
     await uploadFixture(page);
     await page.getByTestId('open-batch').click();
 
-    // Standard defaults to 1080p60 and allows both frame rates.
+    // Standard allows both frame rates; new projects default to 30fps
+    // (day1-render-fps FR-01), with 60 one click away.
     await expect(page.getByTestId('batch-profile-standard')).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await expect(page.getByTestId('batch-fps-60')).toHaveAttribute(
+    await expect(page.getByTestId('batch-fps-30')).toHaveAttribute(
       'aria-pressed',
       'true',
     );
 
-    // Fast is 30fps only and must not silently keep 60.
+    // Fast is 30fps only and must not silently keep 60 — pick 60 first so the
+    // clamp actually has something to clamp now that the default is 30.
+    await page.getByTestId('batch-fps-60').click();
     await page.getByTestId('batch-profile-fast').click();
     await expect(page.getByTestId('batch-fps-60')).toBeDisabled();
     await expect(page.getByTestId('batch-fps-30')).toHaveAttribute(
