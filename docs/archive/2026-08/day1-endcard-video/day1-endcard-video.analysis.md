@@ -2,7 +2,7 @@
 
 > **Project**: mkt-videodesigner
 > **Date**: 2026-08-17
-> **Design Doc**: [day1-endcard-video.design.md](../02-design/features/day1-endcard-video.design.md)
+> **Design Doc**: [day1-endcard-video.design.md](day1-endcard-video.design.md)
 > **Verdict**: **Match Rate 100% (structural 100 · functional 100 · runtime 100)** — 렌더 차단 이슈 0건
 
 ---

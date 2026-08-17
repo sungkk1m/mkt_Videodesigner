@@ -3,7 +3,7 @@
 > **Project**: mkt-videodesigner
 > **Date**: 2026-08-16
 > **Match Rate**: 100% (iteration 0회)
-> **Documents**: [Plan](../01-plan/features/day1-render-fps.plan.md) · [Design](../02-design/features/day1-render-fps.design.md) · [Analysis](../03-analysis/day1-render-fps.analysis.md)
+> **Documents**: [Plan](day1-render-fps.plan.md) · [Design](day1-render-fps.design.md) · [Analysis](day1-render-fps.analysis.md)
 
 ---
 

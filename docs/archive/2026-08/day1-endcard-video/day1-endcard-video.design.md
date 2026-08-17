@@ -7,14 +7,14 @@
 > **Author**: ksk@superplanet.net
 > **Date**: 2026-08-17
 > **Status**: Draft
-> **Planning Doc**: [day1-endcard-video.plan.md](../../01-plan/features/day1-endcard-video.plan.md)
+> **Planning Doc**: [day1-endcard-video.plan.md](day1-endcard-video.plan.md)
 
 ### Pipeline References
 
 | Phase | Document | Status |
 |-------|----------|--------|
 | Phase 1 | Schema Definition | 이 문서 §3 |
-| Phase 2 | [Coding Conventions](../../01-plan/conventions.md) | ✅ |
+| Phase 2 | [Coding Conventions](../../../01-plan/conventions.md) | ✅ |
 | Phase 4 | API Spec | N/A — 브라우저 전용 |
 
 ---
@@ -41,7 +41,7 @@
 
 ### 1.2 Design Principles
 
-- 트림 reconcile은 도메인 커맨드에서 ([project.ts:889](../../../src/domain/editor/project.ts) `setDay1TrimInMs` 선례)
+- 트림 reconcile은 도메인 커맨드에서 ([project.ts:889](../../../../src/domain/editor/project.ts) `setDay1TrimInMs` 선례)
 - 컴포지션은 계산하지 않는다 — 프레임 값은 prop 빌더가 만든다 (기존 §2.2 관행)
 - 렌더를 막지 않는다 — 3초 미만은 루프로 채우고 안내만 한다 (Plan 결정)
 
@@ -287,7 +287,7 @@ N/A — 브라우저 전용.
 
 ### 5.5 자산 카운트 배지
 
-인스펙터 섹션 요약의 `endCardAssetCount`([Day1Inspector.tsx:294](../../../src/features/editor/Day1Inspector.tsx))는 모드별로 센다: banner 모드 = banner+appIcon 중 채운 수(기존), video 모드 = video 유무 (0/1).
+인스펙터 섹션 요약의 `endCardAssetCount`([Day1Inspector.tsx:294](../../../../src/features/editor/Day1Inspector.tsx))는 모드별로 센다: banner 모드 = banner+appIcon 중 채운 수(기존), video 모드 = video 유무 (0/1).
 
 ---
 

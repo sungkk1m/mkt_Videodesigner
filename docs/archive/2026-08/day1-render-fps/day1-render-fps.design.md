@@ -7,14 +7,14 @@
 > **Author**: ksk@superplanet.net
 > **Date**: 2026-08-16
 > **Status**: Draft
-> **Planning Doc**: [day1-render-fps.plan.md](../../01-plan/features/day1-render-fps.plan.md)
+> **Planning Doc**: [day1-render-fps.plan.md](day1-render-fps.plan.md)
 
 ### Pipeline References
 
 | Phase | Document | Status |
 |-------|----------|--------|
 | Phase 1 | Schema Definition | N/A — 스키마 변경 없음 (상수 값만 바뀐다) |
-| Phase 2 | [Coding Conventions](../../01-plan/conventions.md) | ✅ |
+| Phase 2 | [Coding Conventions](../../../01-plan/conventions.md) | ✅ |
 | Phase 3 | Mockup | N/A — 기존 `.segmented` 패턴 재사용 |
 | Phase 4 | API Spec | N/A — 브라우저 전용, 서버 API 없음 |
 
@@ -68,7 +68,7 @@
 
 **Selected**: **Option A — 인라인 교체**
 
-**Rationale**: bkit 템플릿의 기본 권장은 C지만 여기서는 A가 맞다. 헤더 툴바는 이미 길이 프리셋 세그먼트를 인라인으로 렌더하므로([EditorWorkspace.tsx:895-909](../../../src/features/editor/EditorWorkspace.tsx)), fps만 컴포넌트로 빼면 바로 옆 형제와 구조가 어긋난다. 중복이라 부를 것도 JSX 15줄뿐이고, 실제 규칙인 `allowedFps`는 `PROFILE_SPECS` 단일 출처에서 파생되므로 복제되지 않는다. 프로젝트 CLAUDE.md §2("단일 용도 코드에 추상화 금지")·§3("주변 코드 스타일에 맞출 것)과도 일치한다.
+**Rationale**: bkit 템플릿의 기본 권장은 C지만 여기서는 A가 맞다. 헤더 툴바는 이미 길이 프리셋 세그먼트를 인라인으로 렌더하므로([EditorWorkspace.tsx:895-909](../../../../src/features/editor/EditorWorkspace.tsx)), fps만 컴포넌트로 빼면 바로 옆 형제와 구조가 어긋난다. 중복이라 부를 것도 JSX 15줄뿐이고, 실제 규칙인 `allowedFps`는 `PROFILE_SPECS` 단일 출처에서 파생되므로 복제되지 않는다. 프로젝트 CLAUDE.md §2("단일 용도 코드에 추상화 금지")·§3("주변 코드 스타일에 맞출 것)과도 일치한다.
 
 B가 없애는 중복은 15줄인데, 그 대가로 `batch-fps-*` testid 유지를 위한 prefix prop이 붙고 Plan §2.2가 범위 밖으로 선언한 BatchDialog와 그 e2e 스펙까지 열어야 한다. 값어치가 맞지 않는다.
 
@@ -125,7 +125,7 @@ B가 없애는 중복은 15줄인데, 그 대가로 `batch-fps-*` testid 유지�
 
 ## 3. Data Model
 
-스키마 변경 없음. `editorProjectSchema`의 `fps`·`render.fps` 필드 정의와 [schema.ts:455](../../../src/domain/editor/schema.ts)의 불변식은 그대로다. 바뀌는 것은 **초기값**뿐이다.
+스키마 변경 없음. `editorProjectSchema`의 `fps`·`render.fps` 필드 정의와 [schema.ts:455](../../../../src/domain/editor/schema.ts)의 불변식은 그대로다. 바뀌는 것은 **초기값**뿐이다.
 
 ```typescript
 // domain/editor/constants.ts — 유일한 값 변경
@@ -145,9 +145,9 @@ createProject() → {
 
 | Writer | `project.fps` | `project.render.fps` | 위치 |
 |--------|:-------------:|:--------------------:|------|
-| `createProject` | `EDITOR_FPS` | `EDITOR_FPS` | [project.ts:213, 224](../../../src/domain/editor/project.ts) |
-| `setRenderFps` | `fpsForProfile(...)` | `fpsForProfile(...)` | [project.ts:248-259](../../../src/domain/editor/project.ts) |
-| `setRenderProfile` | `fpsForProfile(...)` | `fpsForProfile(...)` | [project.ts:240-246](../../../src/domain/editor/project.ts) |
+| `createProject` | `EDITOR_FPS` | `EDITOR_FPS` | [project.ts:213, 224](../../../../src/domain/editor/project.ts) |
+| `setRenderFps` | `fpsForProfile(...)` | `fpsForProfile(...)` | [project.ts:248-259](../../../../src/domain/editor/project.ts) |
+| `setRenderProfile` | `fpsForProfile(...)` | `fpsForProfile(...)` | [project.ts:240-246](../../../../src/domain/editor/project.ts) |
 
 **설계 결정 D-03**: 헤더는 **표시에 `project.fps`를, 쓰기에 `setRenderFps`를** 쓴다. 표시가 `project.fps`인 이유는 바로 아래 `<Player fps={project.fps}>`가 있어 헤더 칩이 그 Player를 설명하는 라벨로 읽히기 때문이다. 이 비대칭이 안전한 근거가 위 불변식이므로, 이를 **명시적 단위 테스트로 고정한다** (§8.2 U-03).
 
@@ -179,7 +179,7 @@ N/A — 브라우저 전용 정적 앱이다. 서버 엔드포인트가 없다.
 
 **D-01 — 제자리 교체.** 칩과 세그먼트의 순서를 바꾸지 않는다. `output-size` 칩(읽기 전용 결과)을 divider 왼쪽으로 옮겨 "왼쪽=조작 / 오른쪽=결과"로 재편하는 안도 있었으나, 이 사이클의 요구와 무관한 레이아웃 변경이라 채택하지 않았다. `1080×1920` 다음에 `[30fps│60fps]`가 오는 순서는 "결과 → 그 결과를 바꾸는 컨트롤"로 자연스럽게 읽힌다.
 
-**D-02 — 신규 CSS 0줄.** `.segmented` / `.segmented__item` / `.segmented__item--on` / `:disabled`가 [styles.css:120-157](../../../src/app/styles.css)에 이미 있고, `.stage__toolbar`가 이미 `.segmented` 자식(길이 프리셋)을 담고 있다. Plan §5 R3(칩 스타일과 어긋남)은 **실현되지 않는다** — 이 설계 단계에서 해소된 위험으로 기록한다.
+**D-02 — 신규 CSS 0줄.** `.segmented` / `.segmented__item` / `.segmented__item--on` / `:disabled`가 [styles.css:120-157](../../../../src/app/styles.css)에 이미 있고, `.stage__toolbar`가 이미 `.segmented` 자식(길이 프리셋)을 담고 있다. Plan §5 R3(칩 스타일과 어긋남)은 **실현되지 않는다** — 이 설계 단계에서 해소된 위험으로 기록한다.
 
 ### 5.2 User Flow
 
@@ -224,8 +224,8 @@ Batch 다이얼로그를 열면 → batch-fps-* 가 같은 값을 이미 보여�
 | 상황 | 처리 | 근거 |
 |------|------|------|
 | 프로파일이 허용하지 않는 fps 클릭 | 버튼이 `disabled`라 클릭 자체가 불가 | FR-03 |
-| 그럼에도 `setRenderFps`가 불허 값으로 호출됨 (프로그램적 경로) | `fpsForProfile`이 프로파일의 첫 허용값으로 클램프 | [project.ts:252](../../../src/domain/editor/project.ts) — 기존 동작 |
-| 저장 문서의 `render.fps`가 프로파일 허용 목록 밖 | `parseProject` 실패 → `PROJECT_INVALID` | [schema.ts:455](../../../src/domain/editor/schema.ts) — 기존 동작 |
+| 그럼에도 `setRenderFps`가 불허 값으로 호출됨 (프로그램적 경로) | `fpsForProfile`이 프로파일의 첫 허용값으로 클램프 | [project.ts:252](../../../../src/domain/editor/project.ts) — 기존 동작 |
+| 저장 문서의 `render.fps`가 프로파일 허용 목록 밖 | `parseProject` 실패 → `PROJECT_INVALID` | [schema.ts:455](../../../../src/domain/editor/schema.ts) — 기존 동작 |
 | 렌더 중 fps 변경 시도 | 버튼 `disabled` | FR-04. 진행 중인 job은 이미 스냅샷을 얼려둔 상태라 값이 바뀌어도 오염되지 않지만, UI가 거짓말하지 않도록 잠근다 |
 
 **새 에러 코드를 추가하지 않는다.**
@@ -287,12 +287,12 @@ N/A — 사용자 입력이 두 개의 미리 정의된 정수(`30`, `60`) 중 �
 
 | # | 파일 | 위치 | 현재 | 변경 |
 |---|------|------|------|------|
-| 1 | [pages-subpath.spec.ts](../../../tests/e2e/pages-subpath.spec.ts) | :111 | `ua-video_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
-| 2 | [editor-vertical-slice.spec.ts](../../../tests/e2e/editor-vertical-slice.spec.ts) | :245 | `ua-video_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
-| 3 | [editor-full.spec.ts](../../../tests/e2e/editor-full.spec.ts) | :127 | `ua-video_ko_1x1_15s_60fps.mp4` | `_30fps.mp4` |
-| 4 | [day1-template.spec.ts](../../../tests/e2e/day1-template.spec.ts) | :260 | `ua-video_ko_${spec.file}_15s_60fps.mp4` | `_30fps.mp4` |
-| 5 | [day1-template.spec.ts](../../../tests/e2e/day1-template.spec.ts) | :610 | `v1-regression_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
-| 6 | [batch-render.spec.ts](../../../tests/e2e/batch-render.spec.ts) | :35 | `batch-fps-60`이 기본 `aria-pressed="true"` | `batch-fps-30`이 기본 `"true"` (주석 "Standard defaults to 1080p60"도 함께 수정) |
+| 1 | [pages-subpath.spec.ts](../../../../tests/e2e/pages-subpath.spec.ts) | :111 | `ua-video_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
+| 2 | [editor-vertical-slice.spec.ts](../../../../tests/e2e/editor-vertical-slice.spec.ts) | :245 | `ua-video_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
+| 3 | [editor-full.spec.ts](../../../../tests/e2e/editor-full.spec.ts) | :127 | `ua-video_ko_1x1_15s_60fps.mp4` | `_30fps.mp4` |
+| 4 | [day1-template.spec.ts](../../../../tests/e2e/day1-template.spec.ts) | :260 | `ua-video_ko_${spec.file}_15s_60fps.mp4` | `_30fps.mp4` |
+| 5 | [day1-template.spec.ts](../../../../tests/e2e/day1-template.spec.ts) | :610 | `v1-regression_ko_9x16_15s_60fps.mp4` | `_30fps.mp4` |
+| 6 | [batch-render.spec.ts](../../../../tests/e2e/batch-render.spec.ts) | :35 | `batch-fps-60`이 기본 `aria-pressed="true"` | `batch-fps-30`이 기본 `"true"` (주석 "Standard defaults to 1080p60"도 함께 수정) |
 
 **D-06 — `day1-longform.spec.ts`는 60fps를 명시적으로 고정한다.**
 이 스펙은 fps를 지정하지 않고 앱 기본값을 물려받는 opt-in 벤치마크다. 60초 프리셋 × 60fps = 3600프레임에서 디코더 누수를 보려고 만들어졌는데, 기본값이 30이 되면 코드 변경 없이 1800프레임을 재게 되어 **측정 대상이 조용히 절반으로 가벼워진다**. 렌더 직전에 `stage-fps-60`을 클릭해 60을 명시하고, 파일 상단 주석에 "기본값이 아니라 이 스펙이 60을 고정한다"를 남긴다. 60fps는 여전히 선택 가능하므로 3600프레임은 실제 도달 가능한 최악 조건이다.

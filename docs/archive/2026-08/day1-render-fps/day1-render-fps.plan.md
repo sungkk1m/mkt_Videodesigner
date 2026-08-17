@@ -41,15 +41,15 @@ fps 선택 경로와 표시를 정리하고 기본값을 30으로 내린다. 세
 
 ### 1.2 Background
 
-30/60 선택 자체는 이미 구현돼 있다 — [profile.ts](../../../src/domain/render/profile.ts)의 `FRAME_RATES`, `setRenderFps`([project.ts:248](../../../src/domain/editor/project.ts)), [BatchDialog.tsx](../../../src/features/editor/BatchDialog.tsx)의 세그먼트 컨트롤(`batch-fps-30`/`batch-fps-60`). 없는 것은 기능이 아니라 **접근 경로와 정직한 표시**다.
+30/60 선택 자체는 이미 구현돼 있다 — [profile.ts](../../../../src/domain/render/profile.ts)의 `FRAME_RATES`, `setRenderFps`([project.ts:248](../../../../src/domain/editor/project.ts)), [BatchDialog.tsx](../../../../src/features/editor/BatchDialog.tsx)의 세그먼트 컨트롤(`batch-fps-30`/`batch-fps-60`). 없는 것은 기능이 아니라 **접근 경로와 정직한 표시**다.
 
 코드를 읽고 확인한 사실 세 가지:
 
-1. **헤더 칩은 하드코딩이다.** [EditorWorkspace.tsx:915](../../../src/features/editor/EditorWorkspace.tsx)의 `<span className="stage__chip">60fps</span>`는 `project.fps`를 읽지 않는다. 바로 위 `output-size` 칩은 실제 값을 읽으므로, 이 칩만 거짓말을 한다.
+1. **헤더 칩은 하드코딩이다.** [EditorWorkspace.tsx:915](../../../../src/features/editor/EditorWorkspace.tsx)의 `<span className="stage__chip">60fps</span>`는 `project.fps`를 읽지 않는다. 바로 위 `output-size` 칩은 실제 값을 읽으므로, 이 칩만 거짓말을 한다.
 
-2. **fps 값 자체는 이미 단일 렌더에 반영된다.** 단일 렌더는 `project.fps`([EditorWorkspace.tsx:431](../../../src/features/editor/EditorWorkspace.tsx)), Batch는 `project.render.fps`([useRenderQueue.ts:190](../../../src/features/editor/useRenderQueue.ts))를 쓴다. `setRenderFps`와 `setRenderProfile`이 **항상 두 필드를 같이 갱신**하므로 둘은 어긋나지 않는다. 즉 Batch에서 30을 고르면 단일 렌더도 실제로 30으로 나간다. 문제는 "값이 안 먹는 것"이 아니라 "Batch를 열어야만 바꿀 수 있고, 헤더는 계속 60이라고 말하는 것"이다.
+2. **fps 값 자체는 이미 단일 렌더에 반영된다.** 단일 렌더는 `project.fps`([EditorWorkspace.tsx:431](../../../../src/features/editor/EditorWorkspace.tsx)), Batch는 `project.render.fps`([useRenderQueue.ts:190](../../../../src/features/editor/useRenderQueue.ts))를 쓴다. `setRenderFps`와 `setRenderProfile`이 **항상 두 필드를 같이 갱신**하므로 둘은 어긋나지 않는다. 즉 Batch에서 30을 고르면 단일 렌더도 실제로 30으로 나간다. 문제는 "값이 안 먹는 것"이 아니라 "Batch를 열어야만 바꿀 수 있고, 헤더는 계속 60이라고 말하는 것"이다.
 
-3. **단일 렌더는 `profile`을 전달하지 않는다.** [EditorWorkspace.tsx:426-432](../../../src/features/editor/EditorWorkspace.tsx)의 `EditorRenderConfig`에 `profile` 키가 없다. `EditorRenderConfig.profile`은 optional이고 기본 Standard이므로, 프로젝트가 `fast`나 `high`여도 단일 렌더는 언제나 Standard 비트레이트로 나간다. fps와 같은 줄, 같은 원인이라 같이 고친다.
+3. **단일 렌더는 `profile`을 전달하지 않는다.** [EditorWorkspace.tsx:426-432](../../../../src/features/editor/EditorWorkspace.tsx)의 `EditorRenderConfig`에 `profile` 키가 없다. `EditorRenderConfig.profile`은 optional이고 기본 Standard이므로, 프로젝트가 `fast`나 `high`여도 단일 렌더는 언제나 Standard 비트레이트로 나간다. fps와 같은 줄, 같은 원인이라 같이 고친다.
 
 ### 1.3 Related Documents
 
@@ -97,7 +97,7 @@ fps 선택 경로와 표시를 정리하고 기본값을 30으로 내린다. 세
 | Category | Criteria | Measurement Method |
 |----------|----------|-------------------|
 | 하위 호환 | 저장된 60fps 프로젝트가 60fps 그대로 열리고 렌더된다 | 60fps 픽스처 → `parseProject` → 헤더 칩 60 표시 확인 |
-| 스키마 불변식 | `render.fps`가 프로파일 허용 목록 안에 있다 | [schema.ts:455](../../../src/domain/editor/schema.ts) `fpsForProfile` 검사. 기본 `standard`가 `[60, 30]`을 허용하므로 30 기본값은 그대로 통과 |
+| 스키마 불변식 | `render.fps`가 프로파일 허용 목록 안에 있다 | [schema.ts:455](../../../../src/domain/editor/schema.ts) `fpsForProfile` 검사. 기본 `standard`가 `[60, 30]`을 허용하므로 30 기본값은 그대로 통과 |
 | 표시 정합성 | 헤더 칩 = `project.fps` = 출력 파일명 fps 세그먼트 | `buildOutputFileName`이 이미 `{fps}fps`를 파일명에 넣으므로 산출물로 교차 검증 가능 |
 | 접근성 | 토글이 `aria-pressed`와 `role="group"`을 갖는다 | 기존 `.segmented` 패턴 준수 |
 
@@ -149,17 +149,17 @@ fps 선택 경로와 표시를 정리하고 기본값을 30으로 내린다. 세
 
 | Resource | Operation | Code Path | Impact |
 |----------|-----------|-----------|--------|
-| `EDITOR_FPS` | READ | [project.ts:213](../../../src/domain/editor/project.ts) `createProject` → `fps` | **Breaking (의도)** — 신규 프로젝트 컴포지션 fps가 30이 된다 |
-| `EDITOR_FPS` | READ | [project.ts:224](../../../src/domain/editor/project.ts) `createProject` → `render.fps` | **Breaking (의도)** — 신규 프로젝트 렌더 fps가 30이 된다 |
-| `EDITOR_FPS` | READ | [project.test.ts:37](../../../src/domain/editor/project.test.ts) | **None** — 심볼 비교(`toBe(EDITOR_FPS)`)라 통과. 테스트 *이름*의 "60fps" 문구만 실제와 어긋난다 |
-| `EDITOR_FPS` | READ | [timeline.test.ts:68,71](../../../src/domain/timeline/timeline.test.ts) | **Breaking** — 하드코딩 기대값 `[120,600,180]`/`[180,3240,180]`이 30fps에서 틀려진다 (FR-07) |
-| `EDITOR_FPS` | READ | [timeline.test.ts:77-86](../../../src/domain/timeline/timeline.test.ts) | **None** — `15 * EDITOR_FPS`, `>= EDITOR_FPS` 형태의 심볼 단언 |
-| `project.fps` | READ | [EditorWorkspace.tsx:224,371,431,931,943,1065](../../../src/features/editor/EditorWorkspace.tsx) — 재생 위치·시크·단일 렌더·Player 2곳 | **검증 필요** — 30fps에서 시크/재생 위치 계산이 정확한지 |
-| `project.render.fps` | READ | [useRenderQueue.ts:190,196](../../../src/features/editor/useRenderQueue.ts) Batch 스냅샷·config | **None** — `setRenderFps`가 두 필드를 함께 갱신하므로 정합 유지 |
-| `project.render.fps` | VALIDATE | [schema.ts:455](../../../src/domain/editor/schema.ts) `fpsForProfile` 불변식 | **검증 필요** — 기본 `standard`가 `[60,30]`을 허용하므로 통과해야 함 |
-| `setRenderFps` | CALL | [projectStore.ts:272](../../../src/features/editor/projectStore.ts) → [EditorWorkspace.tsx:1032](../../../src/features/editor/EditorWorkspace.tsx) `onFps` | **None** — 헤더 토글이 같은 액션을 호출한다 |
+| `EDITOR_FPS` | READ | [project.ts:213](../../../../src/domain/editor/project.ts) `createProject` → `fps` | **Breaking (의도)** — 신규 프로젝트 컴포지션 fps가 30이 된다 |
+| `EDITOR_FPS` | READ | [project.ts:224](../../../../src/domain/editor/project.ts) `createProject` → `render.fps` | **Breaking (의도)** — 신규 프로젝트 렌더 fps가 30이 된다 |
+| `EDITOR_FPS` | READ | [project.test.ts:37](../../../../src/domain/editor/project.test.ts) | **None** — 심볼 비교(`toBe(EDITOR_FPS)`)라 통과. 테스트 *이름*의 "60fps" 문구만 실제와 어긋난다 |
+| `EDITOR_FPS` | READ | [timeline.test.ts:68,71](../../../../src/domain/timeline/timeline.test.ts) | **Breaking** — 하드코딩 기대값 `[120,600,180]`/`[180,3240,180]`이 30fps에서 틀려진다 (FR-07) |
+| `EDITOR_FPS` | READ | [timeline.test.ts:77-86](../../../../src/domain/timeline/timeline.test.ts) | **None** — `15 * EDITOR_FPS`, `>= EDITOR_FPS` 형태의 심볼 단언 |
+| `project.fps` | READ | [EditorWorkspace.tsx:224,371,431,931,943,1065](../../../../src/features/editor/EditorWorkspace.tsx) — 재생 위치·시크·단일 렌더·Player 2곳 | **검증 필요** — 30fps에서 시크/재생 위치 계산이 정확한지 |
+| `project.render.fps` | READ | [useRenderQueue.ts:190,196](../../../../src/features/editor/useRenderQueue.ts) Batch 스냅샷·config | **None** — `setRenderFps`가 두 필드를 함께 갱신하므로 정합 유지 |
+| `project.render.fps` | VALIDATE | [schema.ts:455](../../../../src/domain/editor/schema.ts) `fpsForProfile` 불변식 | **검증 필요** — 기본 `standard`가 `[60,30]`을 허용하므로 통과해야 함 |
+| `setRenderFps` | CALL | [projectStore.ts:272](../../../../src/features/editor/projectStore.ts) → [EditorWorkspace.tsx:1032](../../../../src/features/editor/EditorWorkspace.tsx) `onFps` | **None** — 헤더 토글이 같은 액션을 호출한다 |
 | `setRenderProfile` | CALL | BatchDialog `onProfile` | **None** — `fpsForProfile`로 fps를 이미 클램프한다 |
-| `EditorRenderConfig.profile` | READ | [renderEditor.ts](../../../src/infrastructure/render/renderEditor.ts) → 비트레이트 결정 | **Breaking (의도)** — 단일 렌더가 이제 실제 프로파일을 받는다 |
+| `EditorRenderConfig.profile` | READ | [renderEditor.ts](../../../../src/infrastructure/render/renderEditor.ts) → 비트레이트 결정 | **Breaking (의도)** — 단일 렌더가 이제 실제 프로파일을 받는다 |
 | `buildOutputFileName` | READ | `config.fps` → 파일명 `{fps}fps` 세그먼트 | **None** — 값만 30으로 바뀐다 |
 | `PROFILE_SPECS` / `fpsForProfile` | READ | BatchDialog, `setRenderFps`, 스키마 | **None** — 로직 무변경 |
 
@@ -188,7 +188,7 @@ fps 선택 경로와 표시를 정리하고 기본값을 30으로 내린다. 세
 |----------|---------|----------|-----------|
 | fps 컨트롤 위치 | 헤더 칩을 토글로 / 헤더에 별도 세그먼트 / 인스펙터 | **헤더 칩을 토글로** | 버그(거짓 표시)와 신규 기능(단일 경로 컨트롤)이 한 지점으로 합쳐진다. 상태를 보여주던 자리가 그대로 상태를 바꾸는 자리가 되므로 헤더에 요소가 늘지 않고, `output-size` 칩 옆이라 위치도 자연스럽다 |
 | `project.fps` vs `render.fps` 정리 | 한 필드로 통합 / **두 필드 유지** | **두 필드 유지** | 필드가 둘인 것은 냄새지만, `setRenderFps`/`setRenderProfile`이 항상 함께 갱신해 실제로 어긋나지 않는다. 통합은 스키마 변경과 마이그레이션을 부르며 이 사이클의 목적(표시 정합성 + 접근 경로)과 무관하다. 별도 항목으로 기록만 남긴다 |
-| profile 누락 수정 범위 | 별도 사이클 / **이 사이클에 포함** | **포함** | 같은 줄([EditorWorkspace.tsx:426-432](../../../src/features/editor/EditorWorkspace.tsx))의 같은 원인이다. fps만 고치면 profile은 계속 틀린 채로 남는다. 변경량 1줄 |
+| profile 누락 수정 범위 | 별도 사이클 / **이 사이클에 포함** | **포함** | 같은 줄([EditorWorkspace.tsx:426-432](../../../../src/features/editor/EditorWorkspace.tsx))의 같은 원인이다. fps만 고치면 profile은 계속 틀린 채로 남는다. 변경량 1줄 |
 | 기본값 변경 방식 | `EDITOR_FPS` 상수 변경 / 신규 프로젝트에서만 분기 | **상수 변경** | `EDITOR_FPS`는 이미 신규 프로젝트 초기값 전용이다. 저장된 문서는 자기 값을 갖고 있으므로 상수 변경만으로 "신규는 30, 기존은 유지"가 성립한다 |
 
 ### 7.3 Clean Architecture Approach
@@ -231,8 +231,8 @@ domain/timeline/timeline.test.ts      하드코딩 프레임 기대값 갱신
 
 구현 중 마주치되 **손대지 않을** 것들. 기록만 남긴다.
 
-- [EditorWorkspace.tsx:2](../../../src/features/editor/EditorWorkspace.tsx) 파일 상단 주석 "Module 3A is 9:16 and 60fps only." — 비율이 선택 가능해진 시점에 이미 낡았고, 이 사이클로 더 낡는다. 별도로 정리
-- [project.test.ts:34](../../../src/domain/editor/project.test.ts) 테스트 이름 "starts as a 15-second 60fps project" — 단언은 심볼이라 통과하지만 이름이 사실과 어긋난다
+- [EditorWorkspace.tsx:2](../../../../src/features/editor/EditorWorkspace.tsx) 파일 상단 주석 "Module 3A is 9:16 and 60fps only." — 비율이 선택 가능해진 시점에 이미 낡았고, 이 사이클로 더 낡는다. 별도로 정리
+- [project.test.ts:34](../../../../src/domain/editor/project.test.ts) 테스트 이름 "starts as a 15-second 60fps project" — 단언은 심볼이라 통과하지만 이름이 사실과 어긋난다
 - `project.fps`와 `project.render.fps` 이중 필드 (§7.2)
 - `.bkit/state/pdca-status.json`의 `browser-video-mvp.requirements`에 남아 있는 `default-60fps` / `metadata.defaultFps: 60`
 

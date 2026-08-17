@@ -46,9 +46,9 @@
 
 ### 1.2 Background
 
-현재 엔드카드는 `mkt_bannerdesigner` 산출물을 전제로 설계돼 있다. `APP_ICON_RECT`가 배너디자이너 CSS에서 그대로 옮겨온 상수이고, 아이콘 오버레이의 존재 이유 자체가 "배너에 이미 구워진 아이콘 위에 정확히 겹쳐 애니메이션을 얹기 위함"이다([endCard.ts](../../../src/domain/day1/endCard.ts), [EndCardScene.tsx](../../../src/compositions/day1/EndCardScene.tsx)).
+현재 엔드카드는 `mkt_bannerdesigner` 산출물을 전제로 설계돼 있다. `APP_ICON_RECT`가 배너디자이너 CSS에서 그대로 옮겨온 상수이고, 아이콘 오버레이의 존재 이유 자체가 "배너에 이미 구워진 아이콘 위에 정확히 겹쳐 애니메이션을 얹기 위함"이다([endCard.ts](../../../../src/domain/day1/endCard.ts), [EndCardScene.tsx](../../../../src/compositions/day1/EndCardScene.tsx)).
 
-이 구조는 배너디자이너를 거친 소재에는 잘 맞지만, 그 바깥을 시도할 수 없다. 영상 컴포넌트([SceneVideo.tsx](../../../src/compositions/shared/SceneVideo.tsx))와 트림 UI([TrimStrip.tsx](../../../src/features/editor/TrimStrip.tsx))는 직전 사이클에서 이미 만들어져 분할 구간이 쓰고 있으므로, 엔드카드에 영상을 붙이는 데 필요한 부품은 대부분 존재한다.
+이 구조는 배너디자이너를 거친 소재에는 잘 맞지만, 그 바깥을 시도할 수 없다. 영상 컴포넌트([SceneVideo.tsx](../../../../src/compositions/shared/SceneVideo.tsx))와 트림 UI([TrimStrip.tsx](../../../../src/features/editor/TrimStrip.tsx))는 직전 사이클에서 이미 만들어져 분할 구간이 쓰고 있으므로, 엔드카드에 영상을 붙이는 데 필요한 부품은 대부분 존재한다.
 
 ### 1.3 Related Documents
 
@@ -158,18 +158,18 @@
 
 | Resource | Operation | Code Path | Impact |
 |----------|-----------|-----------|--------|
-| `endCard` 스키마 | READ (parse) | [migrate.ts](../../../src/domain/editor/migrate.ts) → `parseProject` | **검증 필요** — `mode` 없는 v2 문서. zod `.default()`로 통과해야 함 (SC2) |
-| `endCard` 스키마 | READ/WRITE | [projectFile.ts](../../../src/domain/editor/projectFile.ts) | **검증 필요** — 저장·불러오기 왕복에서 신규 필드 보존 |
-| `endCard` 스키마 | READ | [schema.ts:455 불변식](../../../src/domain/editor/schema.ts) `refineDay1` | **검증 필요** — 영상 모드에 맞는 불변식 필요 여부 판단 |
-| `Day1EndCardRenderProps` | BUILD | [project.ts](../../../src/domain/editor/project.ts) prop 빌더 (`iconRect` 계산 지점) | **Breaking** — 분기 추가 |
-| `Day1EndCardRenderProps` | READ | [EndCardScene.tsx](../../../src/compositions/day1/EndCardScene.tsx) | **Breaking** — 영상 경로 추가 |
-| `Day1EndCardRenderProps` | TEST | [day1Props.test.ts](../../../src/domain/editor/day1Props.test.ts) | **검증 필요** — 기존 단언 유지 + 영상 케이스 추가 |
-| `appIconRect` / `APP_ICON_RECT` | READ | prop 빌더, [endCard.test.ts](../../../src/domain/day1/endCard.test.ts) | **None** — 배너 모드 전용, 손대지 않음 |
-| `setEndCardAsset` | CALL | [Day1Inspector.tsx](../../../src/features/editor/Day1Inspector.tsx) `onEndCardAsset` | **Breaking** — 슬롯 유니온 확장 |
-| `TrimStrip` | RENDER | [Day1Inspector.tsx](../../../src/features/editor/Day1Inspector.tsx) 패널 트림 | **None** — 원시값 props라 새 호출부만 추가 |
-| `SceneVideo` | RENDER | [SplitFrame.tsx](../../../src/compositions/day1/SplitFrame.tsx) | **검증 필요** — 재사용 시 엔드카드가 요구하는 `<Loop>` 조합이 기존 사용처에 영향 없어야 함 |
-| `day1PanelsShorterThanSection` | CALL | [useRenderQueue.ts](../../../src/features/editor/useRenderQueue.ts), [EditorWorkspace.tsx](../../../src/features/editor/EditorWorkspace.tsx) | **None** — 엔드카드는 루프로 채우므로 이 게이트를 확장하지 않는다 |
-| `DAY1_END_CARD_MS` | READ | [playback.ts](../../../src/domain/day1/playback.ts) `day1SectionDurations` | **None** — 3초 고정 유지 |
+| `endCard` 스키마 | READ (parse) | [migrate.ts](../../../../src/domain/editor/migrate.ts) → `parseProject` | **검증 필요** — `mode` 없는 v2 문서. zod `.default()`로 통과해야 함 (SC2) |
+| `endCard` 스키마 | READ/WRITE | [projectFile.ts](../../../../src/domain/editor/projectFile.ts) | **검증 필요** — 저장·불러오기 왕복에서 신규 필드 보존 |
+| `endCard` 스키마 | READ | [schema.ts:455 불변식](../../../../src/domain/editor/schema.ts) `refineDay1` | **검증 필요** — 영상 모드에 맞는 불변식 필요 여부 판단 |
+| `Day1EndCardRenderProps` | BUILD | [project.ts](../../../../src/domain/editor/project.ts) prop 빌더 (`iconRect` 계산 지점) | **Breaking** — 분기 추가 |
+| `Day1EndCardRenderProps` | READ | [EndCardScene.tsx](../../../../src/compositions/day1/EndCardScene.tsx) | **Breaking** — 영상 경로 추가 |
+| `Day1EndCardRenderProps` | TEST | [day1Props.test.ts](../../../../src/domain/editor/day1Props.test.ts) | **검증 필요** — 기존 단언 유지 + 영상 케이스 추가 |
+| `appIconRect` / `APP_ICON_RECT` | READ | prop 빌더, [endCard.test.ts](../../../../src/domain/day1/endCard.test.ts) | **None** — 배너 모드 전용, 손대지 않음 |
+| `setEndCardAsset` | CALL | [Day1Inspector.tsx](../../../../src/features/editor/Day1Inspector.tsx) `onEndCardAsset` | **Breaking** — 슬롯 유니온 확장 |
+| `TrimStrip` | RENDER | [Day1Inspector.tsx](../../../../src/features/editor/Day1Inspector.tsx) 패널 트림 | **None** — 원시값 props라 새 호출부만 추가 |
+| `SceneVideo` | RENDER | [SplitFrame.tsx](../../../../src/compositions/day1/SplitFrame.tsx) | **검증 필요** — 재사용 시 엔드카드가 요구하는 `<Loop>` 조합이 기존 사용처에 영향 없어야 함 |
+| `day1PanelsShorterThanSection` | CALL | [useRenderQueue.ts](../../../../src/features/editor/useRenderQueue.ts), [EditorWorkspace.tsx](../../../../src/features/editor/EditorWorkspace.tsx) | **None** — 엔드카드는 루프로 채우므로 이 게이트를 확장하지 않는다 |
+| `DAY1_END_CARD_MS` | READ | [playback.ts](../../../../src/domain/day1/playback.ts) `day1SectionDurations` | **None** — 3초 고정 유지 |
 
 ### 6.3 Verification
 

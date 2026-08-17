@@ -3,7 +3,7 @@
 > **Project**: mkt-videodesigner
 > **Date**: 2026-08-17
 > **Match Rate**: 100% (iteration 0회)
-> **Documents**: [Plan](../01-plan/features/day1-endcard-video.plan.md) · [Design](../02-design/features/day1-endcard-video.design.md) · [Analysis](../03-analysis/day1-endcard-video.analysis.md)
+> **Documents**: [Plan](day1-endcard-video.plan.md) · [Design](day1-endcard-video.design.md) · [Analysis](day1-endcard-video.analysis.md)
 
 ---
 
@@ -37,7 +37,7 @@
 
 ## Success Criteria Final Status — 6/6 Met
 
-SC1 전환 보존 ✅ · SC2 v2 무마이그레이션 ✅ · SC3 트림 창 미리보기=렌더 ✅ · SC4 2초 루프 ✅ · SC5 무음 ✅ · SC6 배너 회귀 0 ✅ (근거: [analysis §2](../03-analysis/day1-endcard-video.analysis.md))
+SC1 전환 보존 ✅ · SC2 v2 무마이그레이션 ✅ · SC3 트림 창 미리보기=렌더 ✅ · SC4 2초 루프 ✅ · SC5 무음 ✅ · SC6 배너 회귀 0 ✅ (근거: [analysis §2](day1-endcard-video.analysis.md))
 
 ## Learnings
 

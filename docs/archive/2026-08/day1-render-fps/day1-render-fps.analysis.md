@@ -2,7 +2,7 @@
 
 > **Project**: mkt-videodesigner
 > **Date**: 2026-08-16
-> **Design Doc**: [day1-render-fps.design.md](../02-design/features/day1-render-fps.design.md)
+> **Design Doc**: [day1-render-fps.design.md](day1-render-fps.design.md)
 > **Verdict**: **Match Rate 100% (structural 100 · functional 100 · runtime 100)** — 렌더 차단 이슈 0건
 
 ---
