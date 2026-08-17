@@ -1,13 +1,24 @@
 # GitHub Pages deployment for the static editor.
 #
-# GATE: this workflow is manual (`workflow_dispatch`) on purpose. Design §2.4 and
-# §7 require Remotion commercial-use approval before any internal deployment, and
-# docs/03-analysis/browser-video-mvp.remotion-license-review.md records that the
-# project is still under the evaluation clause. Do not add a `push` trigger until
-# that review is closed.
+# LICENSE NOTE: this workflow used to be manual-only, on the reading that any
+# deployment needed Remotion commercial-use approval first. §6 of
+# docs/03-analysis/browser-video-mvp.remotion-license-review.md revised that:
+# deploying in order to evaluate the tool stays inside the Free License
+# evaluation clause, and §7 lists deployment as explicitly *not* a trigger. The
+# trigger that does matter is using a rendered MP4 in a live or paid campaign —
+# buy a Company License before that, regardless of how this file is configured.
+#
+# Docs-only commits are skipped: the PDCA cycle pushes a lot of markdown, and
+# none of it changes the built app.
 name: Deploy to GitHub Pages
 
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '.bkit/**'
+      - '**.md'
   workflow_dispatch:
 
 permissions:
@@ -31,6 +42,12 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # ci.yml runs these too, but it runs *beside* this workflow rather than
+      # before it. Now that a push deploys on its own, the gate has to live on
+      # the path that publishes: a red suite must not reach the live URL.
+      - name: Unit tests
+        run: npm test
 
       # `base: './'` in vite.config.ts keeps every asset, worker, and font URL
       # relative, so the app also works from a repository subpath. Design §8.4 #9.
