@@ -1,13 +1,10 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-17T14:03:20.042Z",
+  "lastUpdated": "2026-08-17T14:20:00.000Z",
   "activeFeatures": [
-    "browser-video-mvp",
-    "day1-trim-preview — gap analysis + 테스트 검증",
-    "day1-endcard-audio",
-    "day1-endcard-audio — 실렌더 오디오 측정 검증"
+    "browser-video-mvp"
   ],
-  "primaryFeature": "day1-endcard-audio",
+  "primaryFeature": null,
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -250,43 +247,13 @@
       "archivedAt": "2026-08-17T13:40:00.000Z",
       "archivedTo": "docs/archive/2026-08/day1-trim-preview/"
     },
-    "day1-trim-preview — gap analysis + 테스트 검증": {
-      "phase": "act",
-      "phaseNumber": 5,
-      "matchRate": null,
-      "iterationCount": 0,
-      "requirements": [],
-      "documents": {},
-      "timestamps": {
-        "started": "2026-08-17T12:56:59.037Z",
-        "lastUpdated": "2026-08-17T12:56:59.037Z"
-      },
-      "previousPhase": "check",
-      "autoAdvanced": true
-    },
     "day1-endcard-audio": {
-      "phase": "check",
-      "startedAt": "2026-08-17T13:55:00.000Z",
-      "documents": {
-        "plan": "docs/01-plan/features/day1-endcard-audio.plan.md",
-        "analysis": "docs/03-analysis/day1-endcard-audio.analysis.md"
-      },
+      "phase": "archived",
       "matchRate": 100,
-      "iterationCount": 0
-    },
-    "day1-endcard-audio — 실렌더 오디오 측정 검증": {
-      "phase": "act",
-      "phaseNumber": 5,
-      "matchRate": null,
       "iterationCount": 0,
-      "requirements": [],
-      "documents": {},
-      "timestamps": {
-        "started": "2026-08-17T14:03:20.041Z",
-        "lastUpdated": "2026-08-17T14:03:20.041Z"
-      },
-      "previousPhase": "check",
-      "autoAdvanced": true
+      "startedAt": "2026-08-17T13:55:00.000Z",
+      "archivedAt": "2026-08-17T14:20:00.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-endcard-audio/"
     }
   },
   "pipeline": {
