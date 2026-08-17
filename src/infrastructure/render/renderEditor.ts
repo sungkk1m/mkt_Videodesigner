@@ -51,7 +51,7 @@ export const createEditorRenderRequest = (
     videoBitrate: profile.videoBitrate,
     muted: false,
     outputTarget: config.outputTarget,
-    hardwareAcceleration: 'prefer-hardware',
+    hardwareAcceleration: 'no-preference',
     pageResponsiveness: 'medium',
     signal,
     onProgress,

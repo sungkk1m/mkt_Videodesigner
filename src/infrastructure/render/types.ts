@@ -83,7 +83,13 @@ export interface WebRenderRequest<TProps> {
   videoBitrate: Extract<WebRendererQuality, 'medium' | 'high' | 'very-high'>;
   muted: false;
   outputTarget: OutputTarget;
-  hardwareAcceleration: 'prefer-hardware';
+  // Never 'prefer-hardware'. Chrome treats it as a requirement, not a hint: if
+  // no H.264 hardware encoder is exposed, VideoEncoder.isConfigSupported returns
+  // false and mediabunny throws before the first frame. Measured on Windows
+  // Chrome 151, where 'prefer-hardware' failed for every codec/level/bitrate/
+  // orientation while 'no-preference' passed all of them. 'no-preference' still
+  // uses hardware wherever the browser has it.
+  hardwareAcceleration: 'no-preference';
   pageResponsiveness: 'medium';
   signal?: AbortSignal;
   onProgress?: (progress: RenderProgress) => void;

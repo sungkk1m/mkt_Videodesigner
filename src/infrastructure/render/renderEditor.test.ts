@@ -100,6 +100,22 @@ describe('createEditorRenderRequest', () => {
     expect(createEditorRenderRequest(snapshot, CONFIG).videoBitrate).toBe('high');
   });
 
+  it('never asks for hardware-only encoding, at any profile', () => {
+    // 'prefer-hardware' is a requirement in Chrome, not a hint. On a machine with
+    // no H.264 hardware encoder it killed every Day1 render with "This specific
+    // encoder configuration (avc1.640028, 6000000 bps, 1080x1920, hardware
+    // acceleration: prefer-hardware) is not supported by this browser." Measured
+    // on Windows Chrome 151: 'prefer-hardware' failed across every level (4.0-5.1),
+    // bitrate (3-12 Mbps), profile, and orientation, while 'no-preference' passed
+    // all of them — so the tier was the only cause and the only thing to fix.
+    for (const profile of ['fast', 'standard', 'high'] as const) {
+      expect(
+        createEditorRenderRequest(snapshot, {...CONFIG, profile})
+          .hardwareAcceleration,
+      ).toBe('no-preference');
+    }
+  });
+
   it('keeps the ArrayBuffer fallback available', () => {
     expect(
       createEditorRenderRequest(snapshot, {...CONFIG, outputTarget: 'arraybuffer'})
