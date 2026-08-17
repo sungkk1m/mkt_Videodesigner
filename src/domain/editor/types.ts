@@ -5,7 +5,11 @@ import type {DuckingEnvelope} from '../audio/ducking';
 import type {IconAdjust, NormalizedRect} from '../day1/endCard';
 import type {SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
-import type {DAY1_CARD_MOTIONS, DAY1_ICON_ANIMATIONS} from './constants';
+import type {
+  DAY1_CARD_MOTIONS,
+  DAY1_END_CARD_MODES,
+  DAY1_ICON_ANIMATIONS,
+} from './constants';
 import type {
   HookMotionPreset,
   MediaTransform,
@@ -210,9 +214,16 @@ export interface Day1SectionRenderProps {
 
 export type Day1IconAnimation = (typeof DAY1_ICON_ANIMATIONS)[number];
 export type Day1CardMotion = (typeof DAY1_CARD_MOTIONS)[number];
+export type Day1EndCardMode = (typeof DAY1_END_CARD_MODES)[number];
 
-/** Day1 Design Ref: §5.3 — the two end card layers, banner under icon. */
+/**
+ * Day1 Design Ref: §5.3 — the two end card layers, banner under icon.
+ * Endcard-Video Design D-03 — extended flat rather than as a union: `mode` is
+ * the single truth the composition branches on, and the other side's fields
+ * are simply inactive, so the banner path stays untouched.
+ */
 export interface Day1EndCardRenderProps {
+  mode: Day1EndCardMode;
   bannerUrl: string | null;
   iconUrl: string | null;
   /**
@@ -223,6 +234,13 @@ export interface Day1EndCardRenderProps {
   iconRect: NormalizedRect;
   iconAnimation: Day1IconAnimation;
   cardMotion: Day1CardMotion;
+  videoUrl: string | null;
+  /** Window into the source in frames, already converted at project fps. */
+  videoTrimBeforeFrames: number;
+  videoTrimAfterFrames: number;
+  /** day1-endcard-audio FR-01 — the video's own audio and its gain. */
+  videoAudioEnabled: boolean;
+  videoAudioVolume: number;
 }
 
 export type Day1Props = {

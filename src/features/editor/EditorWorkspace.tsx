@@ -51,6 +51,7 @@ import type {
   VideoRenderer,
 } from '../../domain/ports';
 import {buildOutputFileName} from '../../domain/render/fileName';
+import {FRAME_RATES, PROFILE_SPECS} from '../../domain/render/profile';
 import type {
   EditorRenderConfig,
   EditorRenderMetrics,
@@ -207,7 +208,11 @@ export const EditorWorkspace = ({
       relinkPanel: (panel, reference) => store().relinkDay1Panel(panel, reference),
       setPanelStatus: (panel, status) => store().setDay1PanelStatus(panel, status),
       setEndCardAsset: (slot, reference) =>
-        store().setDay1EndCard({[slot]: reference}),
+        // Endcard-Video D-04 — the video slot goes through its own command so
+        // setting it also resets the trim window; images stay on the patch.
+        slot === 'video'
+          ? store().setDay1EndCardVideo(reference)
+          : store().setDay1EndCard({[slot]: reference}),
     }),
     [store],
   );
@@ -277,6 +282,7 @@ export const EditorWorkspace = ({
     day1?.panelB.source?.id,
     day1?.endCard.banner?.id,
     day1?.endCard.appIcon?.id,
+    day1?.endCard.video?.id,
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -438,6 +444,9 @@ export const EditorWorkspace = ({
       fps: project.fps,
       ratio: project.selectedRatio,
       locale: project.selectedLocale,
+      // day1-render-fps FR-05/D-05 — without this the single render always fell
+      // back to the Standard bitrate, whatever profile the project had chosen.
+      profile: project.render.profile,
       outputTarget: capabilities.preferredOutputTarget,
     };
     const fileName = buildOutputFileName(project.name, config);
@@ -926,7 +935,29 @@ export const EditorWorkspace = ({
           <span className="stage__chip" data-testid="output-size">
             {output.width}×{output.height}
           </span>
-          <span className="stage__chip">60fps</span>
+          {/* day1-render-fps FR-02/D-01 — the chip that used to hardcode "60fps"
+              is now the control itself, so the display can never disagree with
+              project.fps. Allowed rates derive from the profile (FR-03). */}
+          <div aria-label="프레임 레이트" className="segmented" role="group">
+            {FRAME_RATES.map((entry) => (
+              <button
+                aria-pressed={project.fps === entry}
+                className={`segmented__item${
+                  project.fps === entry ? ' segmented__item--on' : ''
+                }`}
+                data-testid={`stage-fps-${entry}`}
+                disabled={
+                  isRendering ||
+                  !PROFILE_SPECS[project.render.profile].allowedFps.includes(entry)
+                }
+                key={entry}
+                onClick={() => store().setRenderFps(entry)}
+                type="button"
+              >
+                {entry}fps
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
@@ -979,6 +1010,8 @@ export const EditorWorkspace = ({
           onEndCardAsset={(slot, file) =>
             void day1Assets.setEndCardAsset(slot, file)
           }
+          onEndCardTrimIn={(ms) => store().setDay1EndCardTrimIn(ms)}
+          onEndCardTrimLength={(ms) => store().setDay1EndCardTrimLength(ms)}
           onLabelStyle={(patch) => store().setDay1LabelStyle(patch)}
           onLabelText={(locale, panel, value) =>
             store().setDay1LabelAt(locale, panel, value)

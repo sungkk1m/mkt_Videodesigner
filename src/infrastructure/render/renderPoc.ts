@@ -52,7 +52,7 @@ export const createPocRenderRequest = (
     videoBitrate: config.width === 1080 ? 'high' : 'medium',
     muted: false,
     outputTarget: config.outputTarget,
-    hardwareAcceleration: 'prefer-hardware',
+    hardwareAcceleration: 'no-preference',
     pageResponsiveness: 'medium',
     signal,
     onProgress,

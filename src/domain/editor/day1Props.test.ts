@@ -65,14 +65,14 @@ describe('buildDay1Props', () => {
       'panel-b',
       'endcard',
     ]);
-    expect(sections.map((section) => section.fromFrame)).toEqual([0, 360, 720]);
-    // 15s preset at 60fps: 6000/6000/3000ms.
+    expect(sections.map((section) => section.fromFrame)).toEqual([0, 180, 360]);
+    // 15s preset at 30fps: 6000/6000/3000ms.
     expect(sections.map((section) => section.durationInFrames)).toEqual([
-      360, 360, 180,
+      180, 180, 90,
     ]);
     expect(
       sections.reduce((sum, section) => sum + section.durationInFrames, 0),
-    ).toBe(15 * 60);
+    ).toBe(15 * 30);
   });
 
   it('maps the active panel onto the section axis, with none on the end card', () => {
@@ -91,10 +91,10 @@ describe('buildDay1Props', () => {
     expect(props?.panelA.url).toBe(TEST_SOURCE_URL);
     expect(props?.panelB.url).toBe(TEST_SOURCE_URL);
     expect(props?.panelA.trimBeforeFrames).toBe(0);
-    expect(props?.panelA.trimAfterFrames).toBe(360);
+    expect(props?.panelA.trimAfterFrames).toBe(180);
     // Panel B starts one second into its own source.
-    expect(props?.panelB.trimBeforeFrames).toBe(60);
-    expect(props?.panelB.trimAfterFrames).toBe(420);
+    expect(props?.panelB.trimBeforeFrames).toBe(30);
+    expect(props?.panelB.trimAfterFrames).toBe(210);
   });
 
   it('keeps a missing panel source as a null URL so the preview can prompt', () => {
@@ -234,6 +234,58 @@ describe('buildDay1Props end card', () => {
     );
 
     expect(props?.endCard.iconRect).toEqual(APP_ICON_RECT['16:9']);
+  });
+
+  it('carries the video mode with its trim window in frames (U-06)', () => {
+    // 5s source, window moved to 1s..4s, at the 30fps default.
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 5000}),
+        videoTrim: {inMs: 1000, outMs: 4000},
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.mode).toBe('video');
+    expect(props?.endCard.videoUrl).toBe(TEST_SOURCE_URL);
+    expect(props?.endCard.videoTrimBeforeFrames).toBe(30);
+    expect(props?.endCard.videoTrimAfterFrames).toBe(120);
+    // The banner side still resolves — inactive, not erased (D-02).
+    expect(props?.endCard.bannerUrl).toBe(TEST_SOURCE_URL);
+  });
+
+  // day1-trim-preview Plan SC2 — a user-shortened window reaches the renderer
+  // frame-exact; the always-on loop then fills the 3s card from these frames.
+  it('carries a shortened 2s window in frames for the loop to fill (SC2)', () => {
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 12_000}),
+        videoTrim: {inMs: 2600, outMs: 4600},
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.videoTrimBeforeFrames).toBe(78);
+    expect(props?.endCard.videoTrimAfterFrames).toBe(138);
+  });
+
+  // day1-endcard-audio Plan SC1 — the audio settings reach the composition.
+  it('carries the end-card audio toggle and volume (SC1)', () => {
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 5000}),
+        videoTrim: {inMs: 0, outMs: 3000},
+        videoAudioEnabled: true,
+        videoAudioVolume: 0.7,
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.videoAudioEnabled).toBe(true);
+    expect(props?.endCard.videoAudioVolume).toBe(0.7);
   });
 
   it('folds iconAdjust into the rectangle so the composition needs no maths', () => {

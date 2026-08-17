@@ -1,10 +1,10 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-16T06:47:46.000Z",
+  "lastUpdated": "2026-08-17T14:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp"
   ],
-  "primaryFeature": "day1-trim-ux",
+  "primaryFeature": null,
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -222,10 +222,42 @@
       "startedAt": "2026-08-15T07:38:21.000Z",
       "archivedAt": "2026-08-16T06:47:46.000Z",
       "archivedTo": "docs/archive/2026-08/day1-trim-ux/"
+    },
+    "day1-endcard-video": {
+      "phase": "archived",
+      "matchRate": 100,
+      "iterationCount": 0,
+      "startedAt": "2026-08-16T08:10:00.000Z",
+      "archivedAt": "2026-08-17T10:10:00.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-endcard-video/"
+    },
+    "day1-render-fps": {
+      "phase": "archived",
+      "matchRate": 100,
+      "iterationCount": 0,
+      "startedAt": "2026-08-16T08:25:00.000Z",
+      "archivedAt": "2026-08-17T10:10:00.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-render-fps/"
+    },
+    "day1-trim-preview": {
+      "phase": "archived",
+      "matchRate": 100,
+      "iterationCount": 0,
+      "startedAt": "2026-08-17T12:30:00.000Z",
+      "archivedAt": "2026-08-17T13:40:00.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-trim-preview/"
+    },
+    "day1-endcard-audio": {
+      "phase": "archived",
+      "matchRate": 100,
+      "iterationCount": 0,
+      "startedAt": "2026-08-17T13:55:00.000Z",
+      "archivedAt": "2026-08-17T14:20:00.000Z",
+      "archivedTo": "docs/archive/2026-08/day1-endcard-audio/"
     }
   },
   "pipeline": {
-    "currentPhase": "design",
+    "currentPhase": "archived",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -289,13 +321,67 @@
         "to": "do",
         "scope": "module-7",
         "at": "2026-07-28T10:30:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-16T08:10:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-16T08:25:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-16T09:05:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-16T09:55:00.000Z"
+      },
+      {
+        "feature": "day1-render-fps",
+        "from": "check",
+        "to": "report",
+        "at": "2026-08-16T10:05:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-17T01:30:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "do",
+        "at": "2026-08-17T09:35:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "check",
+        "at": "2026-08-17T09:35:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "report",
+        "at": "2026-08-17T09:35:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-15T07:04:23.912Z"
+    "lastActivity": "2026-08-17T14:03:20.042Z"
   },
   "history": [
     {
@@ -430,6 +516,90 @@
       "feature": "media-codec-compat",
       "phase": "do",
       "action": "registered"
+    },
+    {
+      "timestamp": "2026-08-16T08:10:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T08:25:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T09:05:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "design",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-16T09:55:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-16T09:55:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "check",
+      "action": "analyzed"
+    },
+    {
+      "timestamp": "2026-08-16T10:05:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "report",
+      "action": "completed"
+    },
+    {
+      "timestamp": "2026-08-17T01:30:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "design",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "check",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "report",
+      "action": "completed"
+    },
+    {
+      "timestamp": "2026-08-17T10:10:00.000Z",
+      "feature": "day1-render-fps",
+      "phase": "archived",
+      "action": "archived"
+    },
+    {
+      "timestamp": "2026-08-17T10:10:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "archived",
+      "action": "archived"
+    },
+    {
+      "timestamp": "2026-08-17T12:56:59.038Z",
+      "feature": "day1-trim-preview — gap analysis + 테스트 검증",
+      "phase": "act",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-17T14:03:20.042Z",
+      "feature": "day1-endcard-audio — 실렌더 오디오 측정 검증",
+      "phase": "act",
+      "action": "updated"
     }
   ],
   "stateMachine": {

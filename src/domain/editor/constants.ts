@@ -19,6 +19,8 @@ export const DAY1_SECTION_ORDER = ['panel-a', 'panel-b', 'endcard'] as const;
 
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;
+/** The two mutually exclusive end-card treatments. Endcard-Video Design §3.1. */
+export const DAY1_END_CARD_MODES = ['banner', 'video'] as const;
 
 /** Design Ref: §3.5 Locales. */
 export const LOCALES = ['ko', 'en', 'ja', 'zh-TW'] as const;
@@ -31,7 +33,9 @@ export const HOOK_MOTION_PRESETS = ['impact', 'caption', 'focus'] as const;
 export const SUBTITLE_POSITIONS = ['top', 'center', 'bottom'] as const;
 export const SUBTITLE_ALIGNMENTS = ['left', 'center', 'right'] as const;
 
-export const EDITOR_FPS = 60;
+// day1-render-fps Design Ref: §3 — new-project default only; stored documents
+// keep their own fps (D-07). 30 is the UA-creative default, 60 stays selectable.
+export const EDITOR_FPS = 30;
 
 /** Design Ref: §3.5 — 1-12 unique locale/ratio jobs. */
 export const MAX_BATCH_JOBS = 12;

@@ -19,7 +19,7 @@ import type {AppError} from '../../shared/errors/appError';
 import type {MediaSession} from './useMediaSession';
 import {VIDEO_PICKER_OPTIONS} from './useEditorSource';
 
-export type Day1EndCardSlot = 'banner' | 'appIcon';
+export type Day1EndCardSlot = 'banner' | 'appIcon' | 'video';
 
 export interface Day1AssetCommands {
   setPanelSource: (panel: Day1PanelKey, source: MediaReference | null) => void;
@@ -285,7 +285,12 @@ export const useDay1Assets = ({
       setBusy(true);
       setUploadError(null);
 
-      const result = await resolver.probeImage(file);
+      // Endcard-Video FR-03 — the video slot needs the video probe (duration,
+      // decodability); the two image slots keep the image probe.
+      const result =
+        slot === 'video'
+          ? await resolver.probe(file)
+          : await resolver.probeImage(file);
 
       setBusy(false);
 

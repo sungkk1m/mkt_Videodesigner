@@ -13,6 +13,9 @@ import {
   parseProject,
   relinkDay1PanelSource,
   resetDay1Transform,
+  setDay1EndCardTrimInMs,
+  setDay1EndCardTrimLengthMs,
+  setDay1EndCardVideo,
   setDay1LabelText,
   setDay1PanelSource,
   setDay1PanelSourceStatus,
@@ -365,6 +368,138 @@ describe('Day1 split, labels, and end card', () => {
       scale: 2,
     });
     expect(parseProject(clamped).ok).toBe(true);
+  });
+
+  // Endcard-Video Design §8.2 U-03..U-07.
+  it('setting the end-card video resets its trim to the 3s window (U-03/U-04)', () => {
+    const long = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-long', durationMs: 5000}),
+    );
+    const short = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-short', durationMs: 2000}),
+    );
+
+    expect(day1(long).endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
+    // A source shorter than the card gets a window covering all of it; the
+    // always-on loop fills the remainder (D-01).
+    expect(day1(short).endCard.videoTrim).toEqual({inMs: 0, outMs: 2000});
+    expect(parseProject(long).ok).toBe(true);
+    expect(parseProject(short).ok).toBe(true);
+  });
+
+  it('moves the end-card trim window and clamps it inside the source (U-05)', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 5000}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimInMs(base, 1000)).endCard.videoTrim,
+    ).toEqual({inMs: 1000, outMs: 4000});
+    // Same clamp the panels use: the window slides back to stay inside.
+    expect(
+      day1(setDay1EndCardTrimInMs(base, 4000)).endCard.videoTrim,
+    ).toEqual({inMs: 2000, outMs: 5000});
+  });
+
+  // day1-trim-preview FR-05/FR-08 — the window length becomes adjustable so a
+  // single cut of a multi-cut carousel can loop the 3s card (Plan SC1).
+  it('adjusts the end-card window length within 0.5s–3s and the source', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 12_000}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 2000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 2000});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 100)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 500});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 9000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 3000});
+
+    // A source shorter than the requested length caps the window at the source.
+    const short = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-short', durationMs: 1500}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(short, 3000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 1500});
+    expect(parseProject(setDay1EndCardTrimLengthMs(base, 2000)).ok).toBe(true);
+  });
+
+  it('keeps the in point on length changes and the length on moves (FR-05)', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 12_000}),
+    );
+    const moved = setDay1EndCardTrimInMs(base, 4000);
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(moved, 1000)).endCard.videoTrim,
+    ).toEqual({inMs: 4000, outMs: 5000});
+
+    const two = setDay1EndCardTrimLengthMs(base, 2000);
+
+    expect(day1(setDay1EndCardTrimInMs(two, 3000)).endCard.videoTrim).toEqual({
+      inMs: 3000,
+      outMs: 5000,
+    });
+    // The same clamp the panels use, at the chosen length instead of 3s.
+    expect(
+      day1(setDay1EndCardTrimInMs(two, 11_500)).endCard.videoTrim,
+    ).toEqual({inMs: 10_000, outMs: 12_000});
+  });
+
+  // day1-endcard-audio Plan SC2 — audio settings ride the existing patch
+  // command, with the same clamp treatment as iconAdjust.
+  it('patches the end-card audio toggle and clamps its volume', () => {
+    const base = withPanels();
+
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioEnabled: false})).endCard
+        .videoAudioEnabled,
+    ).toBe(false);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: 5})).endCard
+        .videoAudioVolume,
+    ).toBe(1);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: -1})).endCard
+        .videoAudioVolume,
+    ).toBe(0);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: 0.4})).endCard
+        .videoAudioVolume,
+    ).toBe(0.4);
+  });
+
+  it('keeps the other treatment intact across mode switches (U-07 / SC1)', () => {
+    const banner = testMediaReference({id: 'banner', kind: 'image'});
+    const video = testMediaReference({id: 'ec', durationMs: 5000});
+
+    let project = updateDay1EndCard(withPanels(), {
+      banner,
+      iconAdjust: {dx: 0.1},
+    });
+
+    project = setDay1EndCardVideo(project, video);
+    project = updateDay1EndCard(project, {mode: 'video'});
+    project = updateDay1EndCard(project, {mode: 'banner'});
+
+    // Nothing was erased on the way there and back.
+    expect(day1(project).endCard.banner?.id).toBe('banner');
+    expect(day1(project).endCard.iconAdjust.dx).toBe(0.1);
+    expect(day1(project).endCard.video?.id).toBe('ec');
+    expect(day1(project).endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
+    expect(day1(project).endCard.mode).toBe('banner');
+    expect(parseProject(project).ok).toBe(true);
   });
 
   it('writes panel labels per locale (FR-D09)', () => {

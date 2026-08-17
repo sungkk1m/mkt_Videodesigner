@@ -16,6 +16,9 @@ export const activePanelForSection = (index: 0 | 1 | 2): ActivePanel | null =>
 /** Day1 Design Ref: §4.2 — the end card opens at a fixed three seconds. */
 export const DAY1_END_CARD_MS = 3000;
 
+/** day1-trim-preview FR-05 — shortest selectable end-card source window. */
+export const MIN_END_CARD_TRIM_MS = 500;
+
 /**
  * Starting section lengths for a preset: the end card takes its fixed slice and
  * the two panels split the rest evenly, which is Plan D2's "default halfway".

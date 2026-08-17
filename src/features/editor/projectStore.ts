@@ -26,6 +26,9 @@ import {
   setDay1PanelSource,
   setDay1PanelSourceStatus,
   setDay1RatioOverride,
+  setDay1EndCardTrimInMs,
+  setDay1EndCardTrimLengthMs,
+  setDay1EndCardVideo,
   setDay1TrimInMs,
   setRatioOverride,
   setSceneSubtitleText,
@@ -140,6 +143,10 @@ export interface ProjectStore {
   setDay1Split: (patch: Partial<Day1Settings['split']>) => void;
   setDay1LabelStyle: (patch: Partial<Day1Settings['labelStyle']>) => void;
   setDay1EndCard: (patch: Day1EndCardPatch) => void;
+  setDay1EndCardVideo: (reference: MediaReference | null) => void;
+  setDay1EndCardTrimIn: (ms: number) => void;
+  /** day1-trim-preview FR-05 — adjustable end-card window length. */
+  setDay1EndCardTrimLength: (ms: number) => void;
   /**
    * Label wording takes an explicit locale: the Day1 inspector edits all four at
    * once rather than following the header. Day1 Design Ref: §6.3.
@@ -321,6 +328,12 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: updateDay1LabelStyle(state.project, patch)})),
   setDay1EndCard: (patch) =>
     set((state) => ({project: updateDay1EndCard(state.project, patch)})),
+  setDay1EndCardVideo: (reference) =>
+    set((state) => ({project: setDay1EndCardVideo(state.project, reference)})),
+  setDay1EndCardTrimIn: (ms) =>
+    set((state) => ({project: setDay1EndCardTrimInMs(state.project, ms)})),
+  setDay1EndCardTrimLength: (ms) =>
+    set((state) => ({project: setDay1EndCardTrimLengthMs(state.project, ms)})),
   setDay1LabelAt: (locale, panel, value) =>
     set((state) => ({
       project: setDay1LabelText(state.project, locale, panel, value),

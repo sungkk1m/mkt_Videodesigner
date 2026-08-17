@@ -8,7 +8,13 @@
 import {describe, expect, it} from 'vitest';
 
 import {RATIO_DIMENSIONS} from '../editor/types';
-import {APP_ICON_RECT, DEFAULT_ICON_ADJUST, appIconRect} from './endCard';
+import {
+  APP_ICON_RECT,
+  DEFAULT_ICON_ADJUST,
+  END_CARD_AUDIO_FADE_S,
+  appIconRect,
+  endCardAudioVolumeAt,
+} from './endCard';
 
 describe('APP_ICON_RECT', () => {
   // Source: today-banner-designer.html `.tmpl-app-badge.size-* .ab-icon`.
@@ -152,5 +158,52 @@ describe('16:9, once bannerdesigner v1.18 gave it a layout', () => {
     // Scale about the centre, then the nudge.
     expect(moved.x + moved.w / 2).toBeCloseTo(base.x + base.w / 2 + 0.1, 10);
     expect(moved.y + moved.h / 2).toBeCloseTo(base.y + base.h / 2 - 0.2, 10);
+  });
+});
+
+// day1-endcard-audio FR-03/SC3 — the fade is a pure function so the Player and
+// the renderer compute the identical curve.
+describe('endCardAudioVolumeAt', () => {
+  const fps = 30;
+  const durationInFrames = 90;
+  const fadeFrames = END_CARD_AUDIO_FADE_S * fps;
+
+  it('holds the base volume through the body of the card', () => {
+    expect(endCardAudioVolumeAt(0, fps, durationInFrames, 1)).toBe(1);
+    expect(
+      endCardAudioVolumeAt(durationInFrames - fadeFrames - 1, fps, durationInFrames, 0.6),
+    ).toBe(0.6);
+  });
+
+  it('fades linearly to zero across the last quarter second', () => {
+    const midFade = durationInFrames - fadeFrames / 2;
+
+    expect(endCardAudioVolumeAt(midFade, fps, durationInFrames, 1)).toBeCloseTo(
+      0.5,
+      5,
+    );
+    expect(
+      endCardAudioVolumeAt(durationInFrames, fps, durationInFrames, 1),
+    ).toBe(0);
+  });
+
+  it('stays finite when the renderer probes with a NaN frame', () => {
+    // @remotion/media evaluates the volume callback with frame=NaN while the
+    // media is not ready and rejects the render if it gets NaN back.
+    expect(endCardAudioVolumeAt(Number.NaN, fps, durationInFrames, 0.8)).toBe(
+      0.8,
+    );
+  });
+
+  it('scales the fade by the chosen volume and never goes negative', () => {
+    const midFade = durationInFrames - fadeFrames / 2;
+
+    expect(
+      endCardAudioVolumeAt(midFade, fps, durationInFrames, 0.5),
+    ).toBeCloseTo(0.25, 5);
+    expect(
+      endCardAudioVolumeAt(durationInFrames + 10, fps, durationInFrames, 1),
+    ).toBe(0);
+    expect(endCardAudioVolumeAt(10, fps, durationInFrames, 0)).toBe(0);
   });
 });

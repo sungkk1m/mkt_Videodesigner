@@ -10,7 +10,7 @@ export interface ProfileSpec {
   label: string;
   /** Frame rates this profile allows, in preference order. */
   allowedFps: readonly FrameRate[];
-  videoBitrate: 'medium' | 'high' | 'highest';
+  videoBitrate: 'medium' | 'high' | 'very-high';
   audioBitrate: 'medium' | 'high';
   /** Korean summary shown next to the option. */
   hint: string;
@@ -34,7 +34,7 @@ export const PROFILE_SPECS: Record<RenderProfile, ProfileSpec> = {
   high: {
     label: 'High',
     allowedFps: [60, 30],
-    videoBitrate: 'highest',
+    videoBitrate: 'very-high',
     audioBitrate: 'high',
     hint: '최고 비트레이트 · 가장 느림',
   },

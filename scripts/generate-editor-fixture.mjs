@@ -68,6 +68,14 @@ const FIXTURES = [
     // A different tone, so an audio check can tell the two panels apart too.
     tone: 660,
   },
+  {
+    // Endcard-Video Design D-06 — deliberately shorter than the 3s end card so
+    // the always-on loop path is exercised by a real render.
+    name: 'endcard-2s',
+    colors: ['#ff6f00', '#00c853'],
+    size: '1080x1920',
+    tone: 880,
+  },
 ];
 
 await mkdir(fixtureDirectory, {recursive: true});

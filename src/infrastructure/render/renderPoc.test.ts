@@ -24,7 +24,7 @@ describe('createPocRenderRequest', () => {
     expect(request.audioCodec).toBe('aac');
     expect(request.muted).toBe(false);
     expect(request.outputTarget).toBe('web-fs');
-    expect(request.hardwareAcceleration).toBe('prefer-hardware');
+    expect(request.hardwareAcceleration).toBe('no-preference');
     expect(request.pageResponsiveness).toBe('medium');
   });
 });

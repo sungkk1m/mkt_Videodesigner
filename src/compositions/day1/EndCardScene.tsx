@@ -13,13 +13,14 @@ import {
   useVideoConfig,
 } from 'remotion';
 
+import {endCardAudioVolumeAt} from '../../domain/day1/endCard';
 import type {
   Day1CardMotion,
   Day1EndCardRenderProps,
   Day1IconAnimation,
   NormalizedRect,
 } from '../../domain/editor/types';
-import {CANVAS_COLOR} from '../shared/SceneVideo';
+import {CANVAS_COLOR, SceneVideo} from '../shared/SceneVideo';
 
 /** Ken Burns pushes in by this much across the whole section. */
 const KEN_BURNS_END_SCALE = 1.06;
@@ -160,6 +161,46 @@ export const EndCardScene = ({
 }) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
+
+  // Endcard-Video Design §2.1 — `mode` is the single truth; the other
+  // treatment's fields are inactive, not absent (D-02/D-03).
+  if (endCard.mode === 'video') {
+    return (
+      <AbsoluteFill style={{backgroundColor: CANVAS_COLOR, overflow: 'hidden'}}>
+        {endCard.videoUrl ? (
+          <AbsoluteFill
+            style={cardStyle(endCard.cardMotion, frame, fps, durationInFrames)}
+          >
+            {/* Always looping is branch-free and correct in both cases: a
+                source >= 3s has a window exactly as long as the card, so the
+                loop never fires; a shorter one loops to fill it (D-01).
+                day1-endcard-audio FR-01/FR-03 — the card's own audio follows
+                the trim window and the loop, gated by the toggle, with the
+                closing fade computed by the shared pure function so the
+                Player and the renderer agree. */}
+            <SceneVideo
+              loop
+              muted={!endCard.videoAudioEnabled}
+              scale={1}
+              src={endCard.videoUrl}
+              trimAfterFrames={endCard.videoTrimAfterFrames}
+              trimBeforeFrames={endCard.videoTrimBeforeFrames}
+              volume={(videoFrame) =>
+                endCardAudioVolumeAt(
+                  videoFrame,
+                  fps,
+                  durationInFrames,
+                  endCard.videoAudioVolume,
+                )
+              }
+              x={0}
+              y={0}
+            />
+          </AbsoluteFill>
+        ) : null}
+      </AbsoluteFill>
+    );
+  }
 
   return (
     <AbsoluteFill style={{backgroundColor: CANVAS_COLOR, overflow: 'hidden'}}>
