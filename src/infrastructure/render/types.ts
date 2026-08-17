@@ -1,3 +1,4 @@
+import type {WebRendererQuality} from '@remotion/web-renderer';
 import type {ComponentType} from 'react';
 
 import type {PocCompositionProps} from '../../compositions/RenderPocComposition';
@@ -75,8 +76,11 @@ export interface WebRenderRequest<TProps> {
   container: 'mp4';
   videoCodec: 'h264';
   audioCodec: 'aac';
-  audioBitrate: 'medium' | 'high';
-  videoBitrate: 'medium' | 'high' | 'highest';
+  // Extract ties these to the library union: a tier the web renderer does not
+  // accept (e.g. the old 'highest') resolves to never and fails compilation
+  // instead of throwing "Unsupported quality" at render time.
+  audioBitrate: Extract<WebRendererQuality, 'medium' | 'high'>;
+  videoBitrate: Extract<WebRendererQuality, 'medium' | 'high' | 'very-high'>;
   muted: false;
   outputTarget: OutputTarget;
   hardwareAcceleration: 'prefer-hardware';

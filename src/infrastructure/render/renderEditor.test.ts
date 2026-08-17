@@ -87,10 +87,12 @@ describe('createEditorRenderRequest', () => {
   it('maps the profile to its bitrate tier (day1-render-fps FR-05)', () => {
     // The single render used to omit profile entirely and always fell back to
     // Standard; this pins the mapping so the regression cannot come back.
+    // 'very-high' is the web renderer's top tier — 'highest' does not exist
+    // and makes renderMediaOnWeb throw before rendering starts.
     expect(
       createEditorRenderRequest(snapshot, {...CONFIG, profile: 'high'})
         .videoBitrate,
-    ).toBe('highest');
+    ).toBe('very-high');
     expect(
       createEditorRenderRequest(snapshot, {...CONFIG, profile: 'fast'})
         .videoBitrate,
