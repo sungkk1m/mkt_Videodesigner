@@ -271,6 +271,23 @@ describe('buildDay1Props end card', () => {
     expect(props?.endCard.videoTrimAfterFrames).toBe(138);
   });
 
+  // day1-endcard-audio Plan SC1 — the audio settings reach the composition.
+  it('carries the end-card audio toggle and volume (SC1)', () => {
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 5000}),
+        videoTrim: {inMs: 0, outMs: 3000},
+        videoAudioEnabled: true,
+        videoAudioVolume: 0.7,
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.videoAudioEnabled).toBe(true);
+    expect(props?.endCard.videoAudioVolume).toBe(0.7);
+  });
+
   it('folds iconAdjust into the rectangle so the composition needs no maths', () => {
     const adjust = {dx: 0.02, dy: -0.03, scale: 1.25};
     const project = withEndCard({iconAdjust: adjust});

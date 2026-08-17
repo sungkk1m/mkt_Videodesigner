@@ -157,6 +157,8 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
     cardMotion: 'ken-burns',
     video: null,
     videoTrim: {inMs: 0, outMs: 0},
+    videoAudioEnabled: true,
+    videoAudioVolume: 1,
   },
 };
 
@@ -1036,6 +1038,12 @@ export const updateDay1EndCard = (
         dy: clamp(adjust.dy, -MAX_ICON_ADJUST, MAX_ICON_ADJUST),
         scale: clamp(adjust.scale, MIN_ICON_SCALE, MAX_ICON_SCALE),
       },
+      // day1-endcard-audio FR-01 — same clamp treatment as iconAdjust.
+      videoAudioVolume: clamp(
+        patch.videoAudioVolume ?? current.videoAudioVolume,
+        0,
+        1,
+      ),
     },
   });
 };
@@ -1382,6 +1390,10 @@ const buildEndCardProps = (
       videoTrimBeforeFrames + 1,
       msToFrames(endCard.videoTrim.outMs, project.fps),
     ),
+    // day1-endcard-audio FR-01 — straight through; the fade is computed in the
+    // composition from these plus the section length.
+    videoAudioEnabled: endCard.videoAudioEnabled,
+    videoAudioVolume: endCard.videoAudioVolume,
   });
 };
 

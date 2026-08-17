@@ -101,3 +101,33 @@ export const appIconRect = (
   };
 };
 
+
+/** day1-endcard-audio FR-03 — how long the closing fade lasts. */
+export const END_CARD_AUDIO_FADE_S = 0.25;
+
+/**
+ * day1-endcard-audio FR-03 — per-frame gain for the end-card video's own
+ * audio: the chosen volume through the body, a linear fade to zero across the
+ * final quarter second so a loop cut at 15s never pops. Pure so the Player and
+ * the renderer compute the identical curve (same rule as `duckedVolumeAt`).
+ */
+export const endCardAudioVolumeAt = (
+  frame: number,
+  fps: number,
+  durationInFrames: number,
+  volume: number,
+): number => {
+  const fadeFrames = END_CARD_AUDIO_FADE_S * fps;
+  const fadeStart = durationInFrames - fadeFrames;
+
+  // Inverted so a NaN probe frame falls through to the body volume —
+  // @remotion/media evaluates the callback before the media is ready and
+  // rejects the whole render if it ever gets NaN back.
+  if (frame > fadeStart) {
+    const remaining = Math.max(0, durationInFrames - frame);
+
+    return volume * Math.min(1, remaining / fadeFrames);
+  }
+
+  return volume;
+};

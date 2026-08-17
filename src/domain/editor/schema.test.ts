@@ -145,6 +145,8 @@ describe('parseProject — Day1 payload', () => {
           cardMotion: 'ken-burns',
           video: null,
           videoTrim: {inMs: 0, outMs: 0},
+          videoAudioEnabled: true,
+          videoAudioVolume: 1,
         },
       },
     };
@@ -189,6 +191,48 @@ describe('parseProject — Day1 payload', () => {
       expect(endCard.video).toBeNull();
       expect(endCard.videoTrim).toEqual({inMs: 0, outMs: 0});
     }
+  });
+
+  // day1-endcard-audio Plan SC1 — the same zero-migration story: a document
+  // saved before this cycle has no audio keys and parses as audible at 100%.
+  it('defaults a legacy endCard without the audio fields to enabled at 1', () => {
+    const project = day1Project();
+    const {
+      videoAudioEnabled: _e,
+      videoAudioVolume: _vol,
+      ...legacyEndCard
+    } = project.templateSettings.template === 'day1'
+      ? project.templateSettings.endCard
+      : (() => {
+          throw new Error('fixture must be day1');
+        })();
+    const legacy = {
+      ...project,
+      templateSettings: {...project.templateSettings, endCard: legacyEndCard},
+    };
+
+    const result = parseProject(legacy);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok && result.value.templateSettings.template === 'day1') {
+      const {endCard} = result.value.templateSettings;
+
+      expect(endCard.videoAudioEnabled).toBe(true);
+      expect(endCard.videoAudioVolume).toBe(1);
+    }
+  });
+
+  it('rejects an out-of-range end-card audio volume (SC1)', () => {
+    const project = day1Project();
+
+    if (project.templateSettings.template !== 'day1') {
+      throw new Error('fixture must be day1');
+    }
+
+    project.templateSettings.endCard.videoAudioVolume = 1.5;
+
+    expect(parseProject(project).ok).toBe(false);
   });
 
   it('rejects an end-card trim window past its source (U-08)', () => {

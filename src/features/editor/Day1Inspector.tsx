@@ -583,6 +583,35 @@ export const Day1Inspector = ({
                 </p>
               ) : null}
 
+              {/* day1-endcard-audio FR-01 — the card video's own audio; the
+                  panels' audio path is untouched. */}
+              <label className="field field--toggle">
+                <input
+                  checked={endCard.videoAudioEnabled}
+                  data-testid="day1-endcard-audio-toggle"
+                  disabled={disabled || !endCard.video}
+                  onChange={(event) =>
+                    onEndCard({videoAudioEnabled: event.target.checked})
+                  }
+                  type="checkbox"
+                />
+                <span>영상 오디오 사용 (끝 0.25초 페이드아웃)</span>
+              </label>
+              <PercentField
+                disabled={
+                  disabled || !endCard.video || !endCard.videoAudioEnabled
+                }
+                label="오디오 볼륨"
+                max={1}
+                min={0}
+                onChange={(videoAudioVolume) =>
+                  onEndCard({videoAudioVolume})
+                }
+                step={0.01}
+                testId="day1-endcard-audio-volume"
+                value={endCard.videoAudioVolume}
+              />
+
               {/* day1-trim-preview FR-06 — a window shorter than the card loops
                   to fill it; the bar shows exactly how the 3s slot is covered. */}
               {endCard.video && endCardTrimLenMs < DAY1_END_CARD_MS ? (

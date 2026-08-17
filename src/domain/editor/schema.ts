@@ -275,6 +275,13 @@ export const day1SettingsSchema = z.object({
      * of it and playback loops to fill the card (Endcard-Video Design D-01).
      */
     videoTrim: mediaTrimSchema.default({inMs: 0, outMs: 0}),
+    /**
+     * day1-endcard-audio FR-01/FR-05 — the video's own audio, on by default.
+     * The `.default()`s are again the entire migration story: documents saved
+     * while the card was hard-muted parse as audible at full volume.
+     */
+    videoAudioEnabled: z.boolean().default(true),
+    videoAudioVolume: z.number().min(0).max(1).default(1),
   }),
 });
 

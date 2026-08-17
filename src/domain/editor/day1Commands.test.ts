@@ -464,6 +464,29 @@ describe('Day1 split, labels, and end card', () => {
     ).toEqual({inMs: 10_000, outMs: 12_000});
   });
 
+  // day1-endcard-audio Plan SC2 — audio settings ride the existing patch
+  // command, with the same clamp treatment as iconAdjust.
+  it('patches the end-card audio toggle and clamps its volume', () => {
+    const base = withPanels();
+
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioEnabled: false})).endCard
+        .videoAudioEnabled,
+    ).toBe(false);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: 5})).endCard
+        .videoAudioVolume,
+    ).toBe(1);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: -1})).endCard
+        .videoAudioVolume,
+    ).toBe(0);
+    expect(
+      day1(updateDay1EndCard(base, {videoAudioVolume: 0.4})).endCard
+        .videoAudioVolume,
+    ).toBe(0.4);
+  });
+
   it('keeps the other treatment intact across mode switches (U-07 / SC1)', () => {
     const banner = testMediaReference({id: 'banner', kind: 'image'});
     const video = testMediaReference({id: 'ec', durationMs: 5000});

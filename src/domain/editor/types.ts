@@ -238,6 +238,9 @@ export interface Day1EndCardRenderProps {
   /** Window into the source in frames, already converted at project fps. */
   videoTrimBeforeFrames: number;
   videoTrimAfterFrames: number;
+  /** day1-endcard-audio FR-01 — the video's own audio and its gain. */
+  videoAudioEnabled: boolean;
+  videoAudioVolume: number;
 }
 
 export type Day1Props = {

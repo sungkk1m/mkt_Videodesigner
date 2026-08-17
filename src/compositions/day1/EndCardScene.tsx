@@ -13,6 +13,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 
+import {endCardAudioVolumeAt} from '../../domain/day1/endCard';
 import type {
   Day1CardMotion,
   Day1EndCardRenderProps,
@@ -173,14 +174,25 @@ export const EndCardScene = ({
             {/* Always looping is branch-free and correct in both cases: a
                 source >= 3s has a window exactly as long as the card, so the
                 loop never fires; a shorter one loops to fill it (D-01).
-                Muted by design — the project audio track owns the mix (FR-05). */}
+                day1-endcard-audio FR-01/FR-03 — the card's own audio follows
+                the trim window and the loop, gated by the toggle, with the
+                closing fade computed by the shared pure function so the
+                Player and the renderer agree. */}
             <SceneVideo
               loop
-              muted
+              muted={!endCard.videoAudioEnabled}
               scale={1}
               src={endCard.videoUrl}
               trimAfterFrames={endCard.videoTrimAfterFrames}
               trimBeforeFrames={endCard.videoTrimBeforeFrames}
+              volume={(videoFrame) =>
+                endCardAudioVolumeAt(
+                  videoFrame,
+                  fps,
+                  durationInFrames,
+                  endCard.videoAudioVolume,
+                )
+              }
               x={0}
               y={0}
             />
