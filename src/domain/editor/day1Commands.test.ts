@@ -14,6 +14,7 @@ import {
   relinkDay1PanelSource,
   resetDay1Transform,
   setDay1EndCardTrimInMs,
+  setDay1EndCardTrimLengthMs,
   setDay1EndCardVideo,
   setDay1LabelText,
   setDay1PanelSource,
@@ -408,6 +409,59 @@ describe('Day1 split, labels, and end card', () => {
     expect(
       day1(setDay1EndCardTrimInMs(base, 4000)).endCard.videoTrim,
     ).toEqual({inMs: 2000, outMs: 5000});
+  });
+
+  // day1-trim-preview FR-05/FR-08 — the window length becomes adjustable so a
+  // single cut of a multi-cut carousel can loop the 3s card (Plan SC1).
+  it('adjusts the end-card window length within 0.5s–3s and the source', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 12_000}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 2000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 2000});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 100)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 500});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(base, 9000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 3000});
+
+    // A source shorter than the requested length caps the window at the source.
+    const short = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-short', durationMs: 1500}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(short, 3000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 1500});
+    expect(parseProject(setDay1EndCardTrimLengthMs(base, 2000)).ok).toBe(true);
+  });
+
+  it('keeps the in point on length changes and the length on moves (FR-05)', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 12_000}),
+    );
+    const moved = setDay1EndCardTrimInMs(base, 4000);
+
+    expect(
+      day1(setDay1EndCardTrimLengthMs(moved, 1000)).endCard.videoTrim,
+    ).toEqual({inMs: 4000, outMs: 5000});
+
+    const two = setDay1EndCardTrimLengthMs(base, 2000);
+
+    expect(day1(setDay1EndCardTrimInMs(two, 3000)).endCard.videoTrim).toEqual({
+      inMs: 3000,
+      outMs: 5000,
+    });
+    // The same clamp the panels use, at the chosen length instead of 3s.
+    expect(
+      day1(setDay1EndCardTrimInMs(two, 11_500)).endCard.videoTrim,
+    ).toEqual({inMs: 10_000, outMs: 12_000});
   });
 
   it('keeps the other treatment intact across mode switches (U-07 / SC1)', () => {

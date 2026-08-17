@@ -1,10 +1,12 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-17T10:10:00.000Z",
+  "lastUpdated": "2026-08-17T12:56:59.038Z",
   "activeFeatures": [
-    "browser-video-mvp"
+    "browser-video-mvp",
+    "day1-trim-preview",
+    "day1-trim-preview — gap analysis + 테스트 검증"
   ],
-  "primaryFeature": null,
+  "primaryFeature": "day1-trim-preview",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -238,6 +240,30 @@
       "startedAt": "2026-08-16T08:25:00.000Z",
       "archivedAt": "2026-08-17T10:10:00.000Z",
       "archivedTo": "docs/archive/2026-08/day1-render-fps/"
+    },
+    "day1-trim-preview": {
+      "phase": "check",
+      "startedAt": "2026-08-17T12:30:00.000Z",
+      "documents": {
+        "plan": "docs/01-plan/features/day1-trim-preview.plan.md",
+        "analysis": "docs/03-analysis/day1-trim-preview.analysis.md"
+      },
+      "matchRate": 100,
+      "iterationCount": 0
+    },
+    "day1-trim-preview — gap analysis + 테스트 검증": {
+      "phase": "act",
+      "phaseNumber": 5,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-17T12:56:59.037Z",
+        "lastUpdated": "2026-08-17T12:56:59.037Z"
+      },
+      "previousPhase": "check",
+      "autoAdvanced": true
     }
   },
   "pipeline": {
@@ -365,7 +391,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-17T10:10:00.000Z"
+    "lastActivity": "2026-08-17T12:56:59.038Z"
   },
   "history": [
     {
@@ -572,6 +598,12 @@
       "feature": "day1-endcard-video",
       "phase": "archived",
       "action": "archived"
+    },
+    {
+      "timestamp": "2026-08-17T12:56:59.038Z",
+      "feature": "day1-trim-preview — gap analysis + 테스트 검증",
+      "phase": "act",
+      "action": "updated"
     }
   ],
   "stateMachine": {

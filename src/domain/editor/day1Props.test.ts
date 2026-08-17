@@ -255,6 +255,22 @@ describe('buildDay1Props end card', () => {
     expect(props?.endCard.bannerUrl).toBe(TEST_SOURCE_URL);
   });
 
+  // day1-trim-preview Plan SC2 — a user-shortened window reaches the renderer
+  // frame-exact; the always-on loop then fills the 3s card from these frames.
+  it('carries a shortened 2s window in frames for the loop to fill (SC2)', () => {
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 12_000}),
+        videoTrim: {inMs: 2600, outMs: 4600},
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.videoTrimBeforeFrames).toBe(78);
+    expect(props?.endCard.videoTrimAfterFrames).toBe(138);
+  });
+
   it('folds iconAdjust into the rectangle so the composition needs no maths', () => {
     const adjust = {dx: 0.02, dy: -0.03, scale: 1.25};
     const project = withEndCard({iconAdjust: adjust});

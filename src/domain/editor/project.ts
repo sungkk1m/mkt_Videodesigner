@@ -4,6 +4,7 @@ import {appIconRect} from '../day1/endCard';
 import {splitLayout} from '../day1/layout';
 import {
   DAY1_END_CARD_MS,
+  MIN_END_CARD_TRIM_MS,
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
@@ -1068,7 +1069,17 @@ export const setDay1EndCardVideo = (
   });
 };
 
-/** Endcard-Video FR-07 — mirrors `setDay1TrimInMs` with the fixed 3s section. */
+/**
+ * day1-trim-preview FR-05 — the length the user chose, surviving moves. {0,0}
+ * (no video picked yet) falls back to the full 3s card.
+ */
+const endCardWindowMs = (endCard: Day1Settings['endCard']): number => {
+  const lengthMs = endCard.videoTrim.outMs - endCard.videoTrim.inMs;
+
+  return lengthMs > 0 ? lengthMs : DAY1_END_CARD_MS;
+};
+
+/** Endcard-Video FR-07 — mirrors `setDay1TrimInMs` at the chosen window length. */
 export const setDay1EndCardTrimInMs = (
   project: EditorProject,
   inMs: number,
@@ -1086,7 +1097,37 @@ export const setDay1EndCardTrimInMs = (
       videoTrim: reconcileTrim(
         {inMs, outMs: inMs},
         settings.endCard.video?.durationMs ?? 0,
-        DAY1_END_CARD_MS,
+        endCardWindowMs(settings.endCard),
+      ),
+    },
+  });
+};
+
+/**
+ * day1-trim-preview FR-05 — window length 0.5s..3s, capped by the source, so a
+ * single cut can loop the 3s card. `reconcileTrim` slides the in point back
+ * when the longer window would leave the source.
+ */
+export const setDay1EndCardTrimLengthMs = (
+  project: EditorProject,
+  lengthMs: number,
+): EditorProject => {
+  const settings = day1Of(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const {videoTrim} = settings.endCard;
+
+  return withDay1(project, {
+    ...settings,
+    endCard: {
+      ...settings.endCard,
+      videoTrim: reconcileTrim(
+        {inMs: videoTrim.inMs, outMs: videoTrim.inMs},
+        settings.endCard.video?.durationMs ?? 0,
+        clamp(Math.round(lengthMs), MIN_END_CARD_TRIM_MS, DAY1_END_CARD_MS),
       ),
     },
   });

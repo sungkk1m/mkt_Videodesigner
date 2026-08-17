@@ -997,6 +997,7 @@ export const EditorWorkspace = ({
             void day1Assets.setEndCardAsset(slot, file)
           }
           onEndCardTrimIn={(ms) => store().setDay1EndCardTrimIn(ms)}
+          onEndCardTrimLength={(ms) => store().setDay1EndCardTrimLength(ms)}
           onLabelStyle={(patch) => store().setDay1LabelStyle(patch)}
           onLabelText={(locale, panel, value) =>
             store().setDay1LabelAt(locale, panel, value)

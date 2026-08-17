@@ -31,7 +31,10 @@ import {
   type MediaTransform,
   type SubtitleStyle,
 } from '../../domain/editor/types';
-import {DAY1_END_CARD_MS} from '../../domain/day1/playback';
+import {
+  DAY1_END_CARD_MS,
+  MIN_END_CARD_TRIM_MS,
+} from '../../domain/day1/playback';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
@@ -121,6 +124,8 @@ export interface Day1InspectorProps {
   onEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => void;
   /** Endcard-Video FR-07 — trim moves only through the reconciling command. */
   onEndCardTrimIn: (ms: number) => void;
+  /** day1-trim-preview FR-05 — window length, same reconciliation rule. */
+  onEndCardTrimLength: (ms: number) => void;
   resolveEndCardUrl: (slot: Day1EndCardSlot) => string | null;
 }
 
@@ -300,9 +305,14 @@ export const Day1Inspector = ({
   onEndCard,
   onEndCardAsset,
   onEndCardTrimIn,
+  onEndCardTrimLength,
   resolveEndCardUrl,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
+  // day1-trim-preview FR-05 — the chosen window length; {0,0} (no video yet)
+  // reads as the full 3s card, mirroring the domain fallback.
+  const endCardTrimLenMs =
+    endCard.videoTrim.outMs - endCard.videoTrim.inMs || DAY1_END_CARD_MS;
   // Endcard-Video §5.5 — the badge counts the active treatment's assets only.
   const endCardAssetBadge =
     endCard.mode === 'video'
@@ -546,25 +556,65 @@ export const Day1Inspector = ({
                 previewUrl={null}
               />
 
-              {/* Endcard-Video FR-07 — same strip as the panels, on the fixed
-                  3s section. */}
+              {/* Endcard-Video FR-07 / day1-trim-preview FR-05 — same strip as
+                  the panels, at the chosen window length with an out-handle. */}
               <TrimStrip
                 disabled={disabled}
                 inMs={endCard.videoTrim.inMs}
+                maxLengthMs={DAY1_END_CARD_MS}
+                minLengthMs={MIN_END_CARD_TRIM_MS}
                 onCommit={onEndCardTrimIn}
+                onCommitLength={onEndCardTrimLength}
+                playbackSlotMs={DAY1_END_CARD_MS}
                 sampler={frameSampler}
-                sectionDurationMs={DAY1_END_CARD_MS}
+                sectionDurationMs={endCardTrimLenMs}
                 sourceDurationMs={endCard.video?.durationMs ?? 0}
                 sourceId={endCard.video?.id ?? null}
                 testIdPrefix="day1-endcard"
                 url={resolveEndCardUrl('video')}
               />
 
-              {endCard.video &&
-              (endCard.video.durationMs ?? 0) < DAY1_END_CARD_MS ? (
-                <p className="panel__hint" data-testid="day1-endcard-loop-note">
-                  영상이 3초보다 짧아 3초를 채울 때까지 반복 재생됩니다.
+              {endCard.video ? (
+                <p className="panel__hint" data-testid="day1-endcard-trim-range">
+                  소스 구간 {formatSeconds(endCard.videoTrim.inMs)}s –{' '}
+                  {formatSeconds(endCard.videoTrim.outMs)}s · 구간{' '}
+                  {formatSeconds(endCardTrimLenMs)}s · 슬롯{' '}
+                  {formatSeconds(DAY1_END_CARD_MS)}s
                 </p>
+              ) : null}
+
+              {/* day1-trim-preview FR-06 — a window shorter than the card loops
+                  to fill it; the bar shows exactly how the 3s slot is covered. */}
+              {endCard.video && endCardTrimLenMs < DAY1_END_CARD_MS ? (
+                <>
+                  <p
+                    className="panel__hint"
+                    data-testid="day1-endcard-loop-note"
+                  >
+                    선택 구간 {formatSeconds(endCardTrimLenMs)}s가 3초보다 짧아
+                    3초를 채울 때까지 반복 재생됩니다.
+                  </p>
+                  <div
+                    aria-hidden
+                    className="loopfill"
+                    data-testid="day1-endcard-loop-fill"
+                  >
+                    <span
+                      className="loopfill__seg"
+                      style={{flexGrow: endCardTrimLenMs}}
+                    >
+                      선택 컷 {formatSeconds(endCardTrimLenMs)}s
+                    </span>
+                    <span
+                      className="loopfill__rest"
+                      style={{
+                        flexGrow: DAY1_END_CARD_MS - endCardTrimLenMs,
+                      }}
+                    >
+                      루프 {formatSeconds(DAY1_END_CARD_MS - endCardTrimLenMs)}s
+                    </span>
+                  </div>
+                </>
               ) : null}
             </>
           )}
