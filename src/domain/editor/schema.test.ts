@@ -137,11 +137,14 @@ describe('parseProject — Day1 payload', () => {
           position: 'center',
         },
         endCard: {
+          mode: 'banner',
           banner: null,
           appIcon: null,
           iconAdjust: {dx: 0, dy: 0, scale: 1},
           iconAnimation: 'pop',
           cardMotion: 'ken-burns',
+          video: null,
+          videoTrim: {inMs: 0, outMs: 0},
         },
       },
     };
@@ -157,6 +160,61 @@ describe('parseProject — Day1 payload', () => {
     const project = day1Project();
 
     expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('defaults a legacy endCard without the video fields to banner mode (U-01/SC2)', () => {
+    // A v2 document saved before endcard-video has no mode/video/videoTrim
+    // keys. The zod defaults are the entire migration story — this parsing
+    // succeeding is what lets the cycle ship no migration code.
+    const project = day1Project();
+    const {mode: _m, video: _v, videoTrim: _t, ...legacyEndCard} =
+      project.templateSettings.template === 'day1'
+        ? project.templateSettings.endCard
+        : (() => {
+            throw new Error('fixture must be day1');
+          })();
+    const legacy = {
+      ...project,
+      templateSettings: {...project.templateSettings, endCard: legacyEndCard},
+    };
+
+    const result = parseProject(legacy);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok && result.value.templateSettings.template === 'day1') {
+      const {endCard} = result.value.templateSettings;
+
+      expect(endCard.mode).toBe('banner');
+      expect(endCard.video).toBeNull();
+      expect(endCard.videoTrim).toEqual({inMs: 0, outMs: 0});
+    }
+  });
+
+  it('rejects an end-card trim window past its source (U-08)', () => {
+    const project = day1Project();
+
+    if (project.templateSettings.template !== 'day1') {
+      throw new Error('fixture must be day1');
+    }
+
+    project.templateSettings.endCard = {
+      ...project.templateSettings.endCard,
+      video: {
+        id: 'ec',
+        kind: 'video',
+        name: 'endcard.mp4',
+        mimeType: 'video/mp4',
+        sizeBytes: 1,
+        lastModified: 0,
+        durationMs: 2000,
+        fingerprint: 'f',
+        status: 'available',
+      },
+      videoTrim: {inMs: 0, outMs: 3000},
+    };
+
+    expect(parseProject(project).ok).toBe(false);
   });
 
   it('rejects three-scene section ids on a Day1 project', () => {

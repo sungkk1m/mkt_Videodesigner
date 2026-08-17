@@ -1,12 +1,12 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-16T10:05:00.000Z",
+  "lastUpdated": "2026-08-17T09:35:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-endcard-video",
     "day1-render-fps"
   ],
-  "primaryFeature": "day1-render-fps",
+  "primaryFeature": "day1-endcard-video",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -226,9 +226,9 @@
       "archivedTo": "docs/archive/2026-08/day1-trim-ux/"
     },
     "day1-endcard-video": {
-      "phase": "plan",
-      "phaseNumber": 1,
-      "matchRate": null,
+      "phase": "completed",
+      "phaseNumber": 6,
+      "matchRate": 100,
       "iterationCount": 0,
       "requirements": [
         "endcard-mode-flag-banner-or-video",
@@ -241,17 +241,23 @@
         "no-migration-code-zod-default"
       ],
       "documents": {
-        "plan": "docs/01-plan/features/day1-endcard-video.plan.md"
+        "plan": "docs/01-plan/features/day1-endcard-video.plan.md",
+        "design": "docs/02-design/features/day1-endcard-video.design.md",
+        "analysis": "docs/03-analysis/day1-endcard-video.analysis.md",
+        "report": "docs/04-report/day1-endcard-video.report.md"
       },
       "timestamps": {
         "started": "2026-08-16T08:10:00.000Z",
-        "lastUpdated": "2026-08-16T08:10:00.000Z"
+        "lastUpdated": "2026-08-17T09:35:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
         "endCardMs": 3000,
         "dependsOn": "day1-render-fps",
-        "splitRationale": "fps work changes EDITOR_FPS (composition fps); endcard video timing runs on top of it, so the fps cycle lands first"
+        "splitRationale": "fps work changes EDITOR_FPS (composition fps); endcard video timing runs on top of it, so the fps cycle lands first",
+        "architectureOption": "C - Pragmatic (panel-symmetric commands, flat props, SceneVideo loop prop)",
+        "r2Resolution": "@remotion/media Video has native loop prop composing with trim; no Loop wrapper; always-on loop",
+        "realDefectsCaughtInCheck": "session.retain missing endCard.video (black endcard, caught by pixel assertion); markSourceUnresolved missing video demotion (caught by U-02)"
       }
     },
     "day1-render-fps": {
@@ -381,13 +387,37 @@
         "from": "check",
         "to": "report",
         "at": "2026-08-16T10:05:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-17T01:30:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "do",
+        "at": "2026-08-17T09:35:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "check",
+        "at": "2026-08-17T09:35:00.000Z"
+      },
+      {
+        "feature": "day1-endcard-video",
+        "from": null,
+        "to": "report",
+        "at": "2026-08-17T09:35:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-16T10:05:00.000Z"
+    "lastActivity": "2026-08-17T09:35:00.000Z"
   },
   "history": [
     {
@@ -556,6 +586,30 @@
     {
       "timestamp": "2026-08-16T10:05:00.000Z",
       "feature": "day1-render-fps",
+      "phase": "report",
+      "action": "completed"
+    },
+    {
+      "timestamp": "2026-08-17T01:30:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "design",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
+      "phase": "check",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-17T09:35:00.000Z",
+      "feature": "day1-endcard-video",
       "phase": "report",
       "action": "completed"
     }

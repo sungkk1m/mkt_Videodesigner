@@ -83,6 +83,15 @@ const markSourceUnresolved = (project: EditorProject): EditorProject => {
       ...settings,
       panelA: withMissingSource(settings.panelA),
       panelB: withMissingSource(settings.panelB),
+      // Endcard-Video U-02 — the end-card video is playback-critical like the
+      // panel sources, so it follows the same rule. (banner/appIcon predate
+      // this cycle and keep their existing behaviour.)
+      endCard: settings.endCard.video
+        ? {
+            ...settings.endCard,
+            video: {...settings.endCard.video, status: 'missing'},
+          }
+        : settings.endCard,
     },
   };
 };

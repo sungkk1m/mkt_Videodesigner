@@ -1,7 +1,13 @@
 import {describe, expect, it} from 'vitest';
 
 import {testMediaReference} from '../../test/fixtures/media';
-import {applySourceToAllScenes, createProject} from './project';
+import {
+  applySourceToAllScenes,
+  createProject,
+  setDay1EndCardVideo,
+  switchTemplate,
+  updateDay1EndCard,
+} from './project';
 import {
   MAX_PROJECT_FILE_BYTES,
   PROJECT_FILE_KIND,
@@ -29,6 +35,31 @@ describe('serializeProjectFile', () => {
           source: {...testMediaReference(), status: 'missing'},
         },
       });
+    }
+  });
+
+  it('round-trips the end-card video mode and trim (U-02)', () => {
+    const project = updateDay1EndCard(
+      setDay1EndCardVideo(
+        switchTemplate(createProject(15), 'day1'),
+        testMediaReference({id: 'ec', durationMs: 5000}),
+      ),
+      {mode: 'video'},
+    );
+    const result = parseProjectFile(serializeProjectFile(project));
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok && result.value.templateSettings.template === 'day1') {
+      const {endCard} = result.value.templateSettings;
+
+      expect(endCard.mode).toBe('video');
+      // Same rule as every reference: metadata survives, resolution does not.
+      expect(endCard.video).toEqual({
+        ...testMediaReference({id: 'ec', durationMs: 5000}),
+        status: 'missing',
+      });
+      expect(endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
     }
   });
 

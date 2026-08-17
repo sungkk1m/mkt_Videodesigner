@@ -207,7 +207,11 @@ export const EditorWorkspace = ({
       relinkPanel: (panel, reference) => store().relinkDay1Panel(panel, reference),
       setPanelStatus: (panel, status) => store().setDay1PanelStatus(panel, status),
       setEndCardAsset: (slot, reference) =>
-        store().setDay1EndCard({[slot]: reference}),
+        // Endcard-Video D-04 — the video slot goes through its own command so
+        // setting it also resets the trim window; images stay on the patch.
+        slot === 'video'
+          ? store().setDay1EndCardVideo(reference)
+          : store().setDay1EndCard({[slot]: reference}),
     }),
     [store],
   );
@@ -277,6 +281,7 @@ export const EditorWorkspace = ({
     day1?.panelB.source?.id,
     day1?.endCard.banner?.id,
     day1?.endCard.appIcon?.id,
+    day1?.endCard.video?.id,
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -991,6 +996,7 @@ export const EditorWorkspace = ({
           onEndCardAsset={(slot, file) =>
             void day1Assets.setEndCardAsset(slot, file)
           }
+          onEndCardTrimIn={(ms) => store().setDay1EndCardTrimIn(ms)}
           onLabelStyle={(patch) => store().setDay1LabelStyle(patch)}
           onLabelText={(locale, panel, value) =>
             store().setDay1LabelAt(locale, panel, value)
