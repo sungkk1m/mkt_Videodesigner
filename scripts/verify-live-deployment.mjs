@@ -78,6 +78,9 @@ await step('upload and probe a real file', async () => {
 });
 
 await step('Hook analyzer worker chunk runs', async () => {
+  // The Hook drawer moved into the left-rail tabs; the button only exists on
+  // the hook tab (mirrors tests/e2e/hook-analysis.spec.ts).
+  await page.getByTestId('tab-hook').click();
   await page.getByTestId('hook-analyze').click();
   await page.getByTestId('hook-candidates').waitFor({timeout: 120_000});
   const count = await page
