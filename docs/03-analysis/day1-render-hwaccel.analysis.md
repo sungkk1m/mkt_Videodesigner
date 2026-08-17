@@ -124,7 +124,23 @@ opt-in 스펙이 실 mp4를 내려받아 ffprobe로 검사한 결과:
 [render-fps] 60fps -> {"rFrameRate":"60/1","avgFrameRate":"54000/899","frameCount":900,"durationSeconds":15.082667}
 ```
 
-### 3.2 Day1 렌더 경로 무회귀
+### 3.2 빌드 산출물 실측 — 실제 브라우저로 나가는 값
+
+소스가 아니라 `npm run build` 산출물(`dist/`)을 직접 grep해서, 최종 번들이 내보내는 값을 확인했다.
+소스 수정이 번들까지 반영됐는지는 별개 사실이므로 따로 검증한다.
+
+| 항목 | 실측 |
+|---|---|
+| `hardwareAcceleration:'no-preference'` **설정** 사이트 | **2곳** (에디터 렌더 + PoC 렌더) |
+| `hardwareAcceleration:'prefer-hardware'` **설정** 사이트 | **0곳** |
+| 번들에 남은 `prefer-hardware` 문자열 | 4개 — 전부 mediabunny의 입력 검증 허용값 배열(`![...].includes()` 가드)과 에러 문구. 설정으로 쓰이는 곳 없음 |
+
+```
+Bitrate,muted:!1,outputTarget:t.outputTarget,hardwareAcceleration:`no-preference`,pageResponsiveness:`medi
+medium`,muted:!1,outputTarget:e.outputTarget,hardwareAcceleration:`no-preference`,pageResponsiveness:`medi
+```
+
+### 3.3 Day1 렌더 경로 무회귀
 
 `day1-template.spec.ts`가 실 렌더로 3개 비율 전수 통과:
 
@@ -152,9 +168,67 @@ Day1 batch(로케일 × 비율), 엔드카드 좌표, v1 마이그레이션 렌�
 통과하되 `configure()` 단계에서 죽는 경우가 이론적으로 남아 있으므로, 실 렌더 확인 전까지
 이 사이클은 완결이 아니다.
 
+### 4.1 대체 환경으로 검증 시도 — 실패 (Playwright Chromium은 대역이 될 수 없음)
+
+별개 컨테이너 환경에서 실렌더를 대신 시도했으나 **불가**로 확인됐다. 원인은 tier가 아니라
+코덱 부재다:
+
+| 코덱 | 지원 |
+|---|:---:|
+| H.264 (`avc1.640028` / `avc1.42001f`) | ❌ 없음 |
+| VP8 / VP9 / AV1 | ✅ |
+
+Playwright 번들 Chromium은 오픈소스 빌드라 H.264가 아예 빠져 있다. 따라서 3개 tier가 전부
+실패하지만, 이는 문제의 머신처럼 "tier에서 갈리는" 상황이 아니라 **출발선에 서지 못하는** 상황이다.
+이 환경은 Windows Chrome 151의 대역이 될 수 없다. (실제 Chrome 설치는 프록시가
+`dl.google.com`을 403으로 차단해 중단 — 우회하지 않았다.)
+
+부수 확인 하나: H.264가 없는 환경에서 사전 게이트는 "렌더 가능"이라 해놓고 렌더에서 죽는 게
+아니라 **정직하게 "렌더 불가"를 반환**했다. §1.5에 적은 게이트/렌더 tier 불일치가 실제로
+해소됐음을 보여준다.
+
 ---
 
-## 5. Match Rate
+## 5. 배포 상태 (2026-08-18 기준)
+
+사용자는 배포된 Pages 주소로 확인하기를 선호한다. 그러나 커밋 시점에 **GitHub 전역 장애**로
+배포가 막혀 있다:
+
+```
+GitHub Status: "Partial System Outage" (indicator: major)
+  Actions ......... major_outage    ← Pages deploy 차단
+  Pages ........... degraded_performance
+  API Requests .... major_outage
+  Issues .......... major_outage    ← Issue 생성 불가
+```
+
+| 단계 | 상태 |
+|---|:---:|
+| 커밋 → `origin/main` (`e012522`) | ✅ (git 프로토콜은 API 장애와 무관) |
+| CI (tsc + 유닛) | ✅ success |
+| Pages `build` 잡 | ✅ success (Vite 빌드 통과) |
+| Pages `deploy` 잡 | ❌ `actions/deploy-pages@v4` 다운로드 429→429→502 |
+
+실패는 `Set up job` 단계 — 우리 코드 실행 **전**이다. 1회 재실행했고 `build`까지는 통과했으나
+`deploy`에서 같은 사유로 막혔다. 장애 해소 후 재실행하면 된다.
+
+---
+
+## 6. 다음 세션에서 할 일
+
+1. **Pages 배포 재실행** — GitHub Actions 복구 확인 후:
+   `gh run rerun 32041120715` (또는 워크플로 재실행). 빌드는 이미 통과했으므로 배포 단계만 남음.
+2. **Windows Chrome 데스크탑에서 Day1 mp4 렌더 1회** — §4의 유일한 미확인 항목.
+   배포 주소 또는 `git pull && npm run dev` 후 `localhost:5173`.
+   - 성공 → 이 사이클 완결. `/pdca report day1-render-hwaccel` → `archive`.
+   - 실패 → 에러 메시지 전문 수집. `configure()` 단계 실패라면 tier가 아닌 다른 축이므로
+     §1.3 매트릭스를 `configure()` 기준으로 다시 설계해야 한다.
+3. (선택) 게이트에 실제 프로파일 bitrate를 전달하는 축 — §1.5 참고. 실측상 bitrate는 판별
+   요인이 아니었으므로 우선순위 낮음. 포트 시그니처 변경이 필요하다.
+
+---
+
+## 7. Match Rate
 
 설계 문서 없이 진행한 버그 수정 사이클이므로 구조적 대조 대상이 없다. 대신 실측 기준:
 
