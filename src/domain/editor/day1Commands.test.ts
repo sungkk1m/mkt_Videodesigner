@@ -13,6 +13,8 @@ import {
   parseProject,
   relinkDay1PanelSource,
   resetDay1Transform,
+  setDay1EndCardTrimInMs,
+  setDay1EndCardVideo,
   setDay1LabelText,
   setDay1PanelSource,
   setDay1PanelSourceStatus,
@@ -372,6 +374,62 @@ describe('Day1 split, labels, and end card', () => {
       scale: 2,
     });
     expect(parseProject(clamped).ok).toBe(true);
+  });
+
+  // Endcard-Video Design §8.2 U-03..U-07.
+  it('setting the end-card video resets its trim to the 3s window (U-03/U-04)', () => {
+    const long = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-long', durationMs: 5000}),
+    );
+    const short = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec-short', durationMs: 2000}),
+    );
+
+    expect(day1(long).endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
+    // A source shorter than the card gets a window covering all of it; the
+    // always-on loop fills the remainder (D-01).
+    expect(day1(short).endCard.videoTrim).toEqual({inMs: 0, outMs: 2000});
+    expect(parseProject(long).ok).toBe(true);
+    expect(parseProject(short).ok).toBe(true);
+  });
+
+  it('moves the end-card trim window and clamps it inside the source (U-05)', () => {
+    const base = setDay1EndCardVideo(
+      withPanels(),
+      testMediaReference({id: 'ec', durationMs: 5000}),
+    );
+
+    expect(
+      day1(setDay1EndCardTrimInMs(base, 1000)).endCard.videoTrim,
+    ).toEqual({inMs: 1000, outMs: 4000});
+    // Same clamp the panels use: the window slides back to stay inside.
+    expect(
+      day1(setDay1EndCardTrimInMs(base, 4000)).endCard.videoTrim,
+    ).toEqual({inMs: 2000, outMs: 5000});
+  });
+
+  it('keeps the other treatment intact across mode switches (U-07 / SC1)', () => {
+    const banner = testMediaReference({id: 'banner', kind: 'image'});
+    const video = testMediaReference({id: 'ec', durationMs: 5000});
+
+    let project = updateDay1EndCard(withPanels(), {
+      banner,
+      iconAdjust: {dx: 0.1},
+    });
+
+    project = setDay1EndCardVideo(project, video);
+    project = updateDay1EndCard(project, {mode: 'video'});
+    project = updateDay1EndCard(project, {mode: 'banner'});
+
+    // Nothing was erased on the way there and back.
+    expect(day1(project).endCard.banner?.id).toBe('banner');
+    expect(day1(project).endCard.iconAdjust.dx).toBe(0.1);
+    expect(day1(project).endCard.video?.id).toBe('ec');
+    expect(day1(project).endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
+    expect(day1(project).endCard.mode).toBe('banner');
+    expect(parseProject(project).ok).toBe(true);
   });
 
   it('writes panel labels per locale (FR-D09)', () => {

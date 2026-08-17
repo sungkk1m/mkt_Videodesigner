@@ -5,6 +5,7 @@
 import type {Day1PanelKey} from '../../domain/editor/project';
 import {
   DAY1_CARD_MOTIONS,
+  DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
   LOCALES,
   MAX_ICON_ADJUST,
@@ -21,6 +22,7 @@ import {
   type ActivePanel,
   type AspectRatio,
   type Day1CardMotion,
+  type Day1EndCardMode,
   type Day1IconAnimation,
   type Day1Settings,
   type Locale,
@@ -29,6 +31,7 @@ import {
   type MediaTransform,
   type SubtitleStyle,
 } from '../../domain/editor/types';
+import {DAY1_END_CARD_MS} from '../../domain/day1/playback';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
@@ -82,6 +85,12 @@ const CARD_MOTION_LABELS: Record<Day1CardMotion, string> = {
 const END_CARD_LABELS: Record<Day1EndCardSlot, string> = {
   banner: '완성 배너 PNG',
   appIcon: '앱 아이콘 PNG',
+  video: '엔드카드 영상',
+};
+
+const END_CARD_MODE_LABELS: Record<Day1EndCardMode, string> = {
+  banner: '배너+아이콘',
+  video: '영상',
 };
 
 export interface Day1InspectorProps {
@@ -110,6 +119,8 @@ export interface Day1InspectorProps {
   onLabelText: (locale: Locale, panel: ActivePanel, value: string) => void;
   onEndCard: (patch: Day1EndCardPatch) => void;
   onEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => void;
+  /** Endcard-Video FR-07 — trim moves only through the reconciling command. */
+  onEndCardTrimIn: (ms: number) => void;
   resolveEndCardUrl: (slot: Day1EndCardSlot) => string | null;
 }
 
@@ -288,12 +299,19 @@ export const Day1Inspector = ({
   onLabelText,
   onEndCard,
   onEndCardAsset,
+  onEndCardTrimIn,
   resolveEndCardUrl,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
-  const endCardAssetCount = (['banner', 'appIcon'] as Day1EndCardSlot[]).filter(
-    (slot) => endCard[slot] !== null,
-  ).length;
+  // Endcard-Video §5.5 — the badge counts the active treatment's assets only.
+  const endCardAssetBadge =
+    endCard.mode === 'video'
+      ? `에셋 ${endCard.video ? 1 : 0}/1`
+      : `에셋 ${
+          (['banner', 'appIcon'] as const).filter(
+            (slot) => endCard[slot] !== null,
+          ).length
+        }/2`;
 
   return (
     <aside aria-label="Day1 속성" className="inspector">
@@ -441,47 +459,116 @@ export const Day1Inspector = ({
         </InspectorSection>
 
         <InspectorSection
-          badge={`에셋 ${endCardAssetCount}/2`}
+          badge={endCardAssetBadge}
           id="day1-endcard"
           title="엔드카드"
         >
-          {endCard.banner ? null : (
+          {/* Endcard-Video FR-09 — the two treatments are an either/or; the
+              inactive side's settings stay stored, just hidden (D-02). */}
+          <div aria-label="엔드카드 방식" className="segmented" role="group">
+            {DAY1_END_CARD_MODES.map((mode) => (
+              <button
+                aria-pressed={endCard.mode === mode}
+                className={`segmented__item${
+                  endCard.mode === mode ? ' segmented__item--on' : ''
+                }`}
+                data-testid={`day1-endcard-mode-${mode}`}
+                disabled={disabled}
+                key={mode}
+                onClick={() => onEndCard({mode})}
+                type="button"
+              >
+                {END_CARD_MODE_LABELS[mode]}
+              </button>
+            ))}
+          </div>
+
+          {endCard.mode === 'banner' && !endCard.banner ? (
             <p className="notice notice--warning" data-testid="day1-banner-missing">
               배너를 올리지 않으면 마지막 구간이 빈 화면으로 렌더됩니다. 렌더 자체는
               막지 않습니다.
             </p>
+          ) : null}
+          {endCard.mode === 'video' && !endCard.video ? (
+            <p
+              className="notice notice--warning"
+              data-testid="day1-endcard-video-missing"
+            >
+              영상을 올리지 않으면 마지막 구간이 빈 화면으로 렌더됩니다. 렌더 자체는
+              막지 않습니다.
+            </p>
+          ) : null}
+
+          {endCard.mode === 'banner' ? (
+            <>
+              {(['banner', 'appIcon'] as Day1EndCardSlot[]).map((slot) => (
+                <AssetField
+                  disabled={disabled}
+                  inputTestId={`day1-endcard-${slot}`}
+                  key={slot}
+                  kind="image"
+                  label={END_CARD_LABELS[slot]}
+                  name={(endCard[slot] as MediaReference | null)?.name ?? null}
+                  onPick={(file) => onEndCardAsset(slot, file)}
+                  previewUrl={resolveEndCardUrl(slot)}
+                />
+              ))}
+
+              <div aria-label="아이콘 애니메이션" className="segmented" role="group">
+                {DAY1_ICON_ANIMATIONS.map((preset) => (
+                  <button
+                    aria-pressed={endCard.iconAnimation === preset}
+                    className={`segmented__item${
+                      endCard.iconAnimation === preset
+                        ? ' segmented__item--on'
+                        : ''
+                    }`}
+                    data-testid={`day1-icon-animation-${preset}`}
+                    disabled={disabled}
+                    key={preset}
+                    onClick={() => onEndCard({iconAnimation: preset})}
+                    type="button"
+                  >
+                    {ICON_ANIMATION_LABELS[preset]}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <AssetField
+                disabled={disabled}
+                inputTestId="day1-endcard-video"
+                kind="video"
+                label={END_CARD_LABELS.video}
+                name={endCard.video?.name ?? null}
+                onPick={(file) => onEndCardAsset('video', file)}
+                previewUrl={null}
+              />
+
+              {/* Endcard-Video FR-07 — same strip as the panels, on the fixed
+                  3s section. */}
+              <TrimStrip
+                disabled={disabled}
+                inMs={endCard.videoTrim.inMs}
+                onCommit={onEndCardTrimIn}
+                sampler={frameSampler}
+                sectionDurationMs={DAY1_END_CARD_MS}
+                sourceDurationMs={endCard.video?.durationMs ?? 0}
+                sourceId={endCard.video?.id ?? null}
+                testIdPrefix="day1-endcard"
+                url={resolveEndCardUrl('video')}
+              />
+
+              {endCard.video &&
+              (endCard.video.durationMs ?? 0) < DAY1_END_CARD_MS ? (
+                <p className="panel__hint" data-testid="day1-endcard-loop-note">
+                  영상이 3초보다 짧아 3초를 채울 때까지 반복 재생됩니다.
+                </p>
+              ) : null}
+            </>
           )}
 
-          {(['banner', 'appIcon'] as Day1EndCardSlot[]).map((slot) => (
-            <AssetField
-              disabled={disabled}
-              inputTestId={`day1-endcard-${slot}`}
-              key={slot}
-              kind="image"
-              label={END_CARD_LABELS[slot]}
-              name={(endCard[slot] as MediaReference | null)?.name ?? null}
-              onPick={(file) => onEndCardAsset(slot, file)}
-              previewUrl={resolveEndCardUrl(slot)}
-            />
-          ))}
-
-          <div aria-label="아이콘 애니메이션" className="segmented" role="group">
-            {DAY1_ICON_ANIMATIONS.map((preset) => (
-              <button
-                aria-pressed={endCard.iconAnimation === preset}
-                className={`segmented__item${
-                  endCard.iconAnimation === preset ? ' segmented__item--on' : ''
-                }`}
-                data-testid={`day1-icon-animation-${preset}`}
-                disabled={disabled}
-                key={preset}
-                onClick={() => onEndCard({iconAnimation: preset})}
-                type="button"
-              >
-                {ICON_ANIMATION_LABELS[preset]}
-              </button>
-            ))}
-          </div>
           <div aria-label="카드 모션" className="segmented" role="group">
             {DAY1_CARD_MOTIONS.map((motion) => (
               <button
@@ -500,58 +587,63 @@ export const Day1Inspector = ({
             ))}
           </div>
 
-          {/* Every ratio has bannerdesigner coordinates since its v1.18 added the
-              app-badge 16:9 layout, so there is no manual-placement case left. */}
-          <p className="panel__hint">
-            아이콘은 {ratio} 배너의 아이콘 좌표에 자동 배치됩니다. 어긋나면 아래에서
-            미세조정하세요.
-          </p>
+          {endCard.mode === 'banner' ? (
+            <>
+              {/* Every ratio has bannerdesigner coordinates since its v1.18 added
+                  the app-badge 16:9 layout, so there is no manual-placement case
+                  left. */}
+              <p className="panel__hint">
+                아이콘은 {ratio} 배너의 아이콘 좌표에 자동 배치됩니다. 어긋나면
+                아래에서 미세조정하세요.
+              </p>
 
-          <PlainField
-            disabled={disabled}
-            displayStep={0.01}
-            label="X 미세조정"
-            max={MAX_ICON_ADJUST}
-            min={-MAX_ICON_ADJUST}
-            onChange={(dx) => onEndCard({iconAdjust: {dx}})}
-            step={0.005}
-            suffix=""
-            testId="day1-icon-dx"
-            value={endCard.iconAdjust.dx}
-          />
-          <PlainField
-            disabled={disabled}
-            displayStep={0.01}
-            label="Y 미세조정"
-            max={MAX_ICON_ADJUST}
-            min={-MAX_ICON_ADJUST}
-            onChange={(dy) => onEndCard({iconAdjust: {dy}})}
-            step={0.005}
-            suffix=""
-            testId="day1-icon-dy"
-            value={endCard.iconAdjust.dy}
-          />
-          <PercentField
-            disabled={disabled}
-            label="아이콘 크기"
-            max={MAX_ICON_SCALE}
-            min={MIN_ICON_SCALE}
-            onChange={(scale) => onEndCard({iconAdjust: {scale}})}
-            step={0.01}
-            testId="day1-icon-scale"
-            value={endCard.iconAdjust.scale}
-          />
-          <button
-            className="button button--secondary"
-            disabled={disabled}
-            onClick={() => onEndCard({iconAdjust: {dx: 0, dy: 0, scale: 1}})}
-            type="button"
-          >
-            아이콘 위치 초기화
-          </button>
-          <p className="panel__hint">
-            배너에 아이콘이 이미 구워져 있어 100% 아래로 줄이면 밑이 드러납니다.
-          </p>
+              <PlainField
+                disabled={disabled}
+                displayStep={0.01}
+                label="X 미세조정"
+                max={MAX_ICON_ADJUST}
+                min={-MAX_ICON_ADJUST}
+                onChange={(dx) => onEndCard({iconAdjust: {dx}})}
+                step={0.005}
+                suffix=""
+                testId="day1-icon-dx"
+                value={endCard.iconAdjust.dx}
+              />
+              <PlainField
+                disabled={disabled}
+                displayStep={0.01}
+                label="Y 미세조정"
+                max={MAX_ICON_ADJUST}
+                min={-MAX_ICON_ADJUST}
+                onChange={(dy) => onEndCard({iconAdjust: {dy}})}
+                step={0.005}
+                suffix=""
+                testId="day1-icon-dy"
+                value={endCard.iconAdjust.dy}
+              />
+              <PercentField
+                disabled={disabled}
+                label="아이콘 크기"
+                max={MAX_ICON_SCALE}
+                min={MIN_ICON_SCALE}
+                onChange={(scale) => onEndCard({iconAdjust: {scale}})}
+                step={0.01}
+                testId="day1-icon-scale"
+                value={endCard.iconAdjust.scale}
+              />
+              <button
+                className="button button--secondary"
+                disabled={disabled}
+                onClick={() => onEndCard({iconAdjust: {dx: 0, dy: 0, scale: 1}})}
+                type="button"
+              >
+                아이콘 위치 초기화
+              </button>
+              <p className="panel__hint">
+                배너에 아이콘이 이미 구워져 있어 100% 아래로 줄이면 밑이 드러납니다.
+              </p>
+            </>
+          ) : null}
         </InspectorSection>
       </div>
     </aside>

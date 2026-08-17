@@ -2,7 +2,11 @@
 import {DEFAULT_AUDIO_MIX} from '../audio/mix';
 import {appIconRect} from '../day1/endCard';
 import {splitLayout} from '../day1/layout';
-import {activePanelForSection, day1SectionDurations} from '../day1/playback';
+import {
+  DAY1_END_CARD_MS,
+  activePanelForSection,
+  day1SectionDurations,
+} from '../day1/playback';
 import {DEFAULT_PROFILE, fpsForProfile, type FrameRate, type RenderProfile} from '../render/profile';
 import type {MediaReference} from '../media/reference';
 import {
@@ -54,6 +58,7 @@ import {
   type CtaRenderProps,
   type CtaSceneSettings,
   type Day1Panel,
+  type Day1EndCardRenderProps,
   type Day1PanelRenderProps,
   type Day1Props,
   type Day1SectionRenderProps,
@@ -143,11 +148,14 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
     position: 'top',
   },
   endCard: {
+    mode: 'banner',
     banner: null,
     appIcon: null,
     iconAdjust: {dx: 0, dy: 0, scale: 1},
     iconAnimation: 'pop',
     cardMotion: 'ken-burns',
+    video: null,
+    videoTrim: {inMs: 0, outMs: 0},
   },
 };
 
@@ -997,8 +1005,10 @@ export const updateDay1LabelStyle = (
   });
 };
 
+// `videoTrim` is excluded so it cannot bypass reconciliation — the trim moves
+// only through `setDay1EndCardTrimInMs` (Endcard-Video Design D-04).
 export type Day1EndCardPatch = Partial<
-  Omit<Day1Settings['endCard'], 'iconAdjust'>
+  Omit<Day1Settings['endCard'], 'iconAdjust' | 'videoTrim'>
 > & {iconAdjust?: Partial<IconAdjust>};
 
 /** FR-D11 ~ FR-D13 — banner, icon layer, nudge, and the motion presets. */
@@ -1025,6 +1035,59 @@ export const updateDay1EndCard = (
         dy: clamp(adjust.dy, -MAX_ICON_ADJUST, MAX_ICON_ADJUST),
         scale: clamp(adjust.scale, MIN_ICON_SCALE, MAX_ICON_SCALE),
       },
+    },
+  });
+};
+
+/**
+ * Endcard-Video FR-02/§3.4 — mirrors `setDay1PanelSource`: setting the video
+ * resets its trim window to the start. A source shorter than the 3s card gets
+ * a window covering all of it, which the always-on loop then fills (D-01).
+ */
+export const setDay1EndCardVideo = (
+  project: EditorProject,
+  reference: MediaReference | null,
+): EditorProject => {
+  const settings = day1Of(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return withDay1(project, {
+    ...settings,
+    endCard: {
+      ...settings.endCard,
+      video: reference,
+      videoTrim: reconcileTrim(
+        {inMs: 0, outMs: 0},
+        reference?.durationMs ?? 0,
+        DAY1_END_CARD_MS,
+      ),
+    },
+  });
+};
+
+/** Endcard-Video FR-07 — mirrors `setDay1TrimInMs` with the fixed 3s section. */
+export const setDay1EndCardTrimInMs = (
+  project: EditorProject,
+  inMs: number,
+): EditorProject => {
+  const settings = day1Of(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return withDay1(project, {
+    ...settings,
+    endCard: {
+      ...settings.endCard,
+      videoTrim: reconcileTrim(
+        {inMs, outMs: inMs},
+        settings.endCard.video?.durationMs ?? 0,
+        DAY1_END_CARD_MS,
+      ),
     },
   });
 };
@@ -1252,6 +1315,36 @@ export const buildCompositionProps = (
 };
 
 /**
+ * Endcard-Video Design §3.3 — both treatments resolved side by side; `mode` is
+ * what the composition branches on. The fps conversion happens only here, so
+ * the composition never computes frames itself.
+ */
+const buildEndCardProps = (
+  endCard: Day1Settings['endCard'],
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): Day1EndCardRenderProps => {
+  const videoTrimBeforeFrames = msToFrames(endCard.videoTrim.inMs, project.fps);
+
+  return Object.freeze({
+    mode: endCard.mode,
+    bannerUrl: resolveUrl(endCard.banner),
+    iconUrl: resolveUrl(endCard.appIcon),
+    iconRect: Object.freeze(
+      appIconRect(project.selectedRatio, endCard.iconAdjust),
+    ),
+    iconAnimation: endCard.iconAnimation,
+    cardMotion: endCard.cardMotion,
+    videoUrl: resolveUrl(endCard.video),
+    videoTrimBeforeFrames,
+    videoTrimAfterFrames: Math.max(
+      videoTrimBeforeFrames + 1,
+      msToFrames(endCard.videoTrim.outMs, project.fps),
+    ),
+  });
+};
+
+/**
  * Day1 counterpart of `buildCompositionProps`. Day1 Design Ref: §2.2 — the split
  * geometry, the section frame layout, and the resolved URLs are all baked in here
  * so the composition is presentational and the Player and the render job consume
@@ -1324,15 +1417,7 @@ export const buildDay1Props = (
     panelA: panelProps(settings.panelA, copy.day1Labels?.a ?? ''),
     panelB: panelProps(settings.panelB, copy.day1Labels?.b ?? ''),
     labelStyle: Object.freeze({...settings.labelStyle}),
-    endCard: Object.freeze({
-      bannerUrl: resolveUrl(endCard.banner),
-      iconUrl: resolveUrl(endCard.appIcon),
-      iconRect: Object.freeze(
-        appIconRect(project.selectedRatio, endCard.iconAdjust),
-      ),
-      iconAnimation: endCard.iconAnimation,
-      cardMotion: endCard.cardMotion,
-    }),
+    endCard: buildEndCardProps(endCard, project, resolveUrl),
     sections: Object.freeze(sections) as Day1SectionRenderProps[],
     // Plan §2.2 keeps narration and TTS out of Day1, so passing no scenes yields
     // an empty narration list: only BGM and the live panel's own audio play.

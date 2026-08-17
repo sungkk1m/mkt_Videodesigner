@@ -236,6 +236,25 @@ describe('buildDay1Props end card', () => {
     expect(props?.endCard.iconRect).toEqual(APP_ICON_RECT['16:9']);
   });
 
+  it('carries the video mode with its trim window in frames (U-06)', () => {
+    // 5s source, window moved to 1s..4s, at the 30fps default.
+    const props = buildDay1Props(
+      withEndCard({
+        mode: 'video',
+        video: testMediaReference({id: 'ec', durationMs: 5000}),
+        videoTrim: {inMs: 1000, outMs: 4000},
+      }),
+      testUrlResolver(),
+    );
+
+    expect(props?.endCard.mode).toBe('video');
+    expect(props?.endCard.videoUrl).toBe(TEST_SOURCE_URL);
+    expect(props?.endCard.videoTrimBeforeFrames).toBe(30);
+    expect(props?.endCard.videoTrimAfterFrames).toBe(120);
+    // The banner side still resolves — inactive, not erased (D-02).
+    expect(props?.endCard.bannerUrl).toBe(TEST_SOURCE_URL);
+  });
+
   it('folds iconAdjust into the rectangle so the composition needs no maths', () => {
     const adjust = {dx: 0.02, dy: -0.03, scale: 1.25};
     const project = withEndCard({iconAdjust: adjust});

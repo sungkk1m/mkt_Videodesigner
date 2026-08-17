@@ -19,6 +19,8 @@ export const DAY1_SECTION_ORDER = ['panel-a', 'panel-b', 'endcard'] as const;
 
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;
+/** The two mutually exclusive end-card treatments. Endcard-Video Design §3.1. */
+export const DAY1_END_CARD_MODES = ['banner', 'video'] as const;
 
 /** Design Ref: §3.5 Locales. */
 export const LOCALES = ['ko', 'en', 'ja', 'zh-TW'] as const;

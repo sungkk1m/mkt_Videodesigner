@@ -11,6 +11,7 @@ import {FRAME_RATES, RENDER_PROFILES, fpsForProfile} from '../render/profile';
 import {
   ASPECT_RATIOS,
   DAY1_CARD_MOTIONS,
+  DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
   DAY1_SECTION_ORDER,
   DURATION_PRESETS,
@@ -249,6 +250,13 @@ export const day1SettingsSchema = z.object({
     position: z.enum(SUBTITLE_POSITIONS),
   }),
   endCard: z.object({
+    /**
+     * Which of the two mutually exclusive treatments renders. The `.default`
+     * is the entire migration story (Endcard-Video Design §3.1): a stored v2
+     * document has no `mode` key and parses as the banner behaviour it was
+     * saved with — no migration code, no schemaVersion bump.
+     */
+    mode: z.enum(DAY1_END_CARD_MODES).default('banner'),
     /** Finished bannerdesigner export used as the card background. */
     banner: mediaReferenceSchema.nullable(),
     /** Same app icon as a separate layer so it can animate. Day1 Plan D4. */
@@ -260,6 +268,13 @@ export const day1SettingsSchema = z.object({
     }),
     iconAnimation: z.enum(DAY1_ICON_ANIMATIONS),
     cardMotion: z.enum(DAY1_CARD_MOTIONS),
+    /** One animated illustration that plays for the whole 3s end card. */
+    video: mediaReferenceSchema.nullable().default(null),
+    /**
+     * 3s window into `video`. When the source is shorter the window covers all
+     * of it and playback loops to fill the card (Endcard-Video Design D-01).
+     */
+    videoTrim: mediaTrimSchema.default({inMs: 0, outMs: 0}),
   }),
 });
 
@@ -386,6 +401,15 @@ const refineDay1 = (
       context,
     );
   });
+
+  // Endcard-Video Design §3.1 — the 3s window must stay inside its source,
+  // same rule the panels enforce above.
+  refineTrimInSource(
+    settings.endCard.videoTrim,
+    settings.endCard.video,
+    ['templateSettings', 'endCard', 'videoTrim'],
+    context,
+  );
 };
 
 export const editorProjectSchema = z
