@@ -18,6 +18,8 @@ import {
   createBrowserOutputWriter,
   supportsDirectoryPicker,
 } from '../infrastructure/output/browserOutputWriter';
+import {capturedReport} from '../infrastructure/render/debugLog';
+import {renderLogLevel} from '../infrastructure/render/logLevel';
 import {browserVideoRenderer} from '../infrastructure/render/browserVideoRenderer';
 import {createSupertonicProvider} from '../infrastructure/tts/supertonicProvider';
 import {createTtsCache} from '../infrastructure/tts/ttsCache';
@@ -59,6 +61,7 @@ export const App = () => {
 
   return (
     <EditorWorkspace
+      debugReport={renderLogLevel() === 'verbose' ? capturedReport : null}
       frameSampler={frameSampler}
       hookAnalyzer={hookAnalyzer}
       loadInitialProject={loadInitialProject}

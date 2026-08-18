@@ -137,6 +137,12 @@ export interface EditorWorkspaceProps {
   projectRepository: ProjectRepository;
   /** Null when the browser has no File System Access support. */
   mediaHandleStore: MediaHandleStore | null;
+  /**
+   * Null unless the URL asked for debug mode. Returns the captured render log
+   * with the given header on top. Injected, like `loadInitialProject`, so the
+   * feature layer stays off infrastructure.
+   */
+  debugReport: ((header: Record<string, unknown>) => string) | null;
   /** Injected by the app shell so features stay off the infrastructure layer. */
   loadInitialProject: (
     repository: ProjectRepository,
@@ -154,6 +160,7 @@ export const EditorWorkspace = ({
   supportsOutputDirectory,
   projectRepository,
   mediaHandleStore,
+  debugReport,
   loadInitialProject,
 }: EditorWorkspaceProps) => {
   const project = useProjectStore((state) => state.project);
@@ -164,6 +171,7 @@ export const EditorWorkspace = ({
   const [leftTab, setLeftTab] = useState<LeftTab>('assets');
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [debugLogCopied, setDebugLogCopied] = useState(false);
   const [outputDestination, setOutputDestination] = useState<
     'directory' | 'download'
   >('download');
@@ -488,6 +496,34 @@ export const EditorWorkspace = ({
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
+  /**
+   * Debug mode only. A stalled-decode report is unreadable without the machine
+   * and the settings it came from. The codec lists stay out of it: the domain
+   * port exposes blockers and warnings, which already name a missing codec, and
+   * widening the port for a debug string is not worth it.
+   */
+  const copyDebugLog = async () => {
+    if (!debugReport) {
+      return;
+    }
+
+    const report = debugReport({
+      userAgent: navigator.userAgent,
+      blockers: capabilities?.blockers ?? null,
+      warnings: capabilities?.warnings ?? null,
+      outputTarget: capabilities?.preferredOutputTarget ?? null,
+      template: day1 ? 'day1' : 'three-scene',
+      fps: project.fps,
+      profile: project.render.profile,
+      ratio: project.selectedRatio,
+      renderStatus: renderState.status,
+    });
+
+    await navigator.clipboard.writeText(report);
+    setDebugLogCopied(true);
+    window.setTimeout(() => setDebugLogCopied(false), 2000);
+  };
+
   const saveStateText =
     persistence.saveState.status === 'saving'
       ? '저장 중'
@@ -595,6 +631,16 @@ export const EditorWorkspace = ({
           <span className="editor__status" data-testid="editor-render-status">
             {renderStatusText}
           </span>
+          {debugReport ? (
+            <button
+              className="button button--secondary"
+              data-testid="copy-debug-log"
+              onClick={() => void copyDebugLog()}
+              type="button"
+            >
+              {debugLogCopied ? '복사됨' : '진단 로그 복사'}
+            </button>
+          ) : null}
           {renderState.status === 'completed' ? (
             <button
               className="button button--secondary"
