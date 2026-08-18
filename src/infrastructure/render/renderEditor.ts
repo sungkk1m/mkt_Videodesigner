@@ -11,6 +11,7 @@ import type {
   ThreeSceneProps,
 } from '../../domain/editor/types';
 import {DEFAULT_PROFILE, PROFILE_SPECS} from '../../domain/render/profile';
+import {renderLogLevel} from './logLevel';
 import type {
   EditorRenderConfig,
   EditorRenderMetrics,
@@ -53,6 +54,7 @@ export const createEditorRenderRequest = (
     outputTarget: config.outputTarget,
     hardwareAcceleration: 'no-preference',
     pageResponsiveness: 'medium',
+    logLevel: renderLogLevel(),
     signal,
     onProgress,
   } as const;

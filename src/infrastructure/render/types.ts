@@ -91,6 +91,11 @@ export interface WebRenderRequest<TProps> {
   // uses hardware wherever the browser has it.
   hardwareAcceleration: 'no-preference';
   pageResponsiveness: 'medium';
+  // 'verbose' makes @remotion/media name every keyframe bank it opens and every
+  // frame it evicts. A render that dies on a delayRender timeout leaves its last
+  // log line sitting on the stall, which is the only way to tell a slow decode
+  // apart from a decoder that never answered.
+  logLevel: 'info' | 'verbose';
   signal?: AbortSignal;
   onProgress?: (progress: RenderProgress) => void;
 }

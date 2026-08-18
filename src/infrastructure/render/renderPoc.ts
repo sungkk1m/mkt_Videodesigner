@@ -9,6 +9,7 @@ import type {
   RenderMediaAdapter,
   RenderProgress,
 } from './types';
+import {renderLogLevel} from './logLevel';
 
 const getDefaultHeapBytes = (): number | null => {
   const performanceWithMemory = performance as Performance & {
@@ -54,6 +55,7 @@ export const createPocRenderRequest = (
     outputTarget: config.outputTarget,
     hardwareAcceleration: 'no-preference',
     pageResponsiveness: 'medium',
+    logLevel: renderLogLevel(),
     signal,
     onProgress,
   };
