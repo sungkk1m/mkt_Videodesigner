@@ -514,6 +514,10 @@ export const EditorWorkspace = ({
     }
 
     const report = debugReport({
+      // Which bundle actually ran. A CDN-cached index.html keeps serving the
+      // previous one, and without this an unchanged behaviour is impossible to
+      // tell apart from an unchanged build.
+      build: __BUILD_ID__,
       userAgent: navigator.userAgent,
       blockers: capabilities?.blockers ?? null,
       warnings: capabilities?.warnings ?? null,
@@ -523,6 +527,9 @@ export const EditorWorkspace = ({
       profile: project.render.profile,
       ratio: project.selectedRatio,
       renderStatus: renderState.status,
+      // Day1 render speed — whether each panel was cropped, and why not if not.
+      sourceProxy:
+        queue.proxyNotes.length > 0 ? queue.proxyNotes.join(' | ') : 'none',
     });
 
     await navigator.clipboard.writeText(report);

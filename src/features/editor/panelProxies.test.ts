@@ -50,6 +50,7 @@ const fakeBuilder = (mode: 'rebase' | 'keep' = 'rebase') => {
         url: `blob:proxy-${build.mock.calls.length}`,
         sourceTimeOffsetSeconds: mode === 'rebase' ? fromSeconds : 0,
         sizeBytes: 1024,
+        elapsedMs: 1200,
       }),
   );
 
@@ -186,6 +187,70 @@ describe('createPanelProxies', () => {
 
     expect(builder.build).not.toHaveBeenCalled();
     expect(prepared.project).toBe(project);
+  });
+
+  it('reports what it did per panel, which is the whole diagnostic', async () => {
+    const proxies = createPanelProxies({
+      builder: fakeBuilder(),
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => undefined,
+    });
+
+    await proxies.prepare(projectWithPanels(), '9:16', signal());
+
+    expect(proxies.notes()).toEqual([
+      'panelA: 1242x1100 at 0,554 (-50% pixels) 0.0MB in 1200ms',
+      'panelB: 1242x1100 at 0,554 (-50% pixels) 0.0MB in 1200ms',
+    ]);
+  });
+
+  it('reports why it skipped, and why it failed', async () => {
+    const landscape = createPanelProxies({
+      builder: fakeBuilder(),
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => undefined,
+    });
+    const panned = {
+      source: testMediaReference({id: 'media_wide', width: 1920, height: 1080}),
+      trim: {inMs: 0, outMs: 6000},
+      transforms: {
+        base: {fit: 'cover' as const, scale: 1, x: 0, y: 10},
+        overrides: {},
+      },
+    };
+
+    await landscape.prepare(
+      day1ProjectFixture({panelA: panned, panelB: panned}),
+      '9:16',
+      signal(),
+    );
+
+    expect(landscape.notes()).toEqual([
+      'panelA: skipped, framing reaches outside the 1920x1080 source',
+      'panelB: skipped, framing reaches outside the 1920x1080 source',
+    ]);
+
+    const broken = createPanelProxies({
+      builder: {
+        build: vi.fn(async () =>
+          fail(
+            createAppError('MEDIA_PROBE_FAILED', 'nope', {
+              retryable: true,
+              cause: new Error('audio track: no encoder'),
+            }),
+          ),
+        ),
+      } as unknown as SourceProxyBuilder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => undefined,
+    });
+
+    await broken.prepare(projectWithPanels(), '9:16', signal());
+
+    expect(broken.notes()).toEqual([
+      'panelA: failed, audio track: no encoder',
+      'panelB: failed, audio track: no encoder',
+    ]);
   });
 
   it('releases every proxy it built', async () => {

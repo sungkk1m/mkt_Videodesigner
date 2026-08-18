@@ -29,7 +29,6 @@ import {
   ok,
   type Result,
 } from '../../shared/errors/appError';
-import {recordLine} from '../render/debugLog';
 
 /**
  * Bits per pixel per frame for the proxy, assuming a 60fps source — a 30fps one
@@ -37,14 +36,17 @@ import {recordLine} from '../render/debugLog';
  *
  * The source measured on 2026-08-18 carried 0.064 bits/px (1242x2208, 60fps,
  * 10.6Mbps), and the render's own H.264 pass is 5.7Mbps at 1080x1920/60. Feeding
- * the render a proxy at this rate was measured against the current path, both
- * scored on a lossless reference: the extra encode generation costs 0.002dB of
- * PSNR-Y and 4e-5 of SSIM, two orders of magnitude below the 0.5dB
- * just-noticeable threshold and below the final encoder's own run-to-run noise.
- * Cutting it to 0.064 bits/px was still only 0.09dB, so this rate has room to
- * spare for a hardware encoder that spends its bits less carefully than x264.
+ * the render a proxy at that rate was measured against the current path, both
+ * scored on a lossless reference: the extra encode generation cost 0.009dB of
+ * PSNR-Y, and even a deliberately crippled encoder at 0.064 bits/px only cost
+ * 0.09dB — two orders of magnitude below the 0.5dB just-noticeable threshold.
+ *
+ * So this is set for margin over the source rather than for headroom this
+ * measurement asked for. The lower rate also asks less of the hardware encoder,
+ * which on this user's machine has already refused one config outright
+ * (day1-render-hwaccel.analysis.md §1.1).
  */
-const PROXY_BITS_PER_PIXEL = 0.2;
+const PROXY_BITS_PER_PIXEL = 0.1;
 const ASSUMED_FPS = 60;
 
 const buildFailed = (cause: unknown) =>
@@ -59,7 +61,8 @@ const buildFailed = (cause: unknown) =>
  * timestamps, and the caller's trim arithmetic has to hold either way.
  */
 const readTimeOffset = async (blob: Blob, fromSeconds: number) => {
-  const input = new Input({formats: ALL_FORMATS, source: new UrlSource(URL.createObjectURL(blob))});
+  const url = URL.createObjectURL(blob);
+  const input = new Input({formats: ALL_FORMATS, source: new UrlSource(url)});
 
   try {
     const track = await input.getPrimaryVideoTrack();
@@ -67,6 +70,7 @@ const readTimeOffset = async (blob: Blob, fromSeconds: number) => {
     return fromSeconds - (track ? await track.getFirstTimestamp() : 0);
   } finally {
     input.dispose();
+    URL.revokeObjectURL(url);
   }
 };
 
@@ -94,18 +98,20 @@ export const createSourceProxyBuilder = (): SourceProxyBuilder => ({
           ),
         },
         trim: {start: fromSeconds, end: toSeconds},
+        showWarnings: false,
       });
 
       // A dropped track would be a silent content change — most likely the
-      // panel's own audio, which the live panel plays. Falling back to the
-      // original source is the only safe answer.
+      // panel's own audio, which the live panel plays. Its reason is also the one
+      // place mediabunny reports an encoder that refused the config, so it is
+      // carried out to the caller rather than collapsed into "failed".
       if (!conversion.isValid || conversion.discardedTracks.length > 0) {
         return fail(
           buildFailed(
             new Error(
-              `discarded-tracks: ${conversion.discardedTracks
-                .map((track) => track.reason)
-                .join(',')}`,
+              conversion.discardedTracks
+                .map((track) => `${track.track.type} track: ${track.reason}`)
+                .join('; ') || 'conversion reported itself invalid',
             ),
           ),
         );
@@ -117,25 +123,16 @@ export const createSourceProxyBuilder = (): SourceProxyBuilder => ({
       await conversion.execute();
 
       if (!target.buffer) {
-        return fail(buildFailed(new Error('empty-output')));
+        return fail(buildFailed(new Error('empty output')));
       }
 
       const blob = new Blob([target.buffer], {type: 'video/mp4'});
-
-      // Goes into the ?debug report, which is how a slow render gets diagnosed
-      // here: without it there is no way to tell a proxy that was skipped from
-      // one that was built.
-      recordLine('info', [
-        `Source proxy: ${crop.width}x${crop.height} at ${crop.left},${crop.top}`,
-        `${(toSeconds - fromSeconds).toFixed(2)}s`,
-        `${(blob.size / 1e6).toFixed(1)}MB`,
-        `in ${Math.round(performance.now() - startedAt)}ms`,
-      ]);
 
       return ok({
         url: URL.createObjectURL(blob),
         sourceTimeOffsetSeconds: await readTimeOffset(blob, fromSeconds),
         sizeBytes: blob.size,
+        elapsedMs: Math.round(performance.now() - startedAt),
       });
     } catch (error) {
       return fail(buildFailed(error));

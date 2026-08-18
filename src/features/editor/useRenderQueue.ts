@@ -47,6 +47,8 @@ export interface RenderQueueApi {
   running: boolean;
   notice: AppError | null;
   preflight: string[];
+  /** What the panel proxies did on the last run, for the ?debug report. */
+  proxyNotes: readonly string[];
   start: (
     project: EditorProject,
     context: PreflightContext,
@@ -160,6 +162,7 @@ export const useRenderQueue = ({
   const [running, setRunning] = useState(false);
   const [notice, setNotice] = useState<AppError | null>(null);
   const [preflight, setPreflight] = useState<string[]>([]);
+  const [proxyNotes, setProxyNotes] = useState<readonly string[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
 
@@ -179,6 +182,8 @@ export const useRenderQueue = ({
         resolveUrl,
         release: releaseUrl,
       });
+
+      setProxyNotes([]);
 
       // Design Ref: §2.2 — strictly sequential; the MVP never renders in parallel.
       for (;;) {
@@ -204,6 +209,7 @@ export const useRenderQueue = ({
         // below is the same call either way.
         const prepared = await proxies.prepare(project, job.ratio, controller.signal);
 
+        setProxyNotes(proxies.notes());
         current = updateJob(current, job.id, {status: 'rendering'});
         setJobs(current);
 
@@ -332,6 +338,7 @@ export const useRenderQueue = ({
     running,
     notice,
     preflight,
+    proxyNotes,
     start,
     cancel,
     retryFailed,

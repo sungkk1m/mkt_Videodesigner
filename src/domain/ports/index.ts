@@ -199,6 +199,8 @@ export interface SourceProxy {
    */
   sourceTimeOffsetSeconds: number;
   sizeBytes: number;
+  /** How long the transcode took, which is what the saving is measured against. */
+  elapsedMs: number;
 }
 
 export interface SourceProxyBuilder {

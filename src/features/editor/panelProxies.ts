@@ -5,7 +5,11 @@
 // never touched, so nothing here can reach persistence, relink, or the framing
 // controls. A proxy is derived data, keyed by the crop it was built for, and it
 // dies with the queue run that built it.
-import {planPanelProxy} from '../../domain/day1/sourceProxy';
+import {
+  MIN_PROXY_SAVINGS,
+  panelVisibleRect,
+  planPanelProxy,
+} from '../../domain/day1/sourceProxy';
 import {splitLayout} from '../../domain/day1/layout';
 import {activeTransform, day1Of, type Day1PanelKey} from '../../domain/editor/project';
 import type {
@@ -32,6 +36,15 @@ export interface PanelProxies {
     ratio: AspectRatio,
     signal: AbortSignal,
   ) => Promise<PreparedRender>;
+  /**
+   * One line per panel prepared, for the ?debug report header.
+   *
+   * The header rather than the log: at trace level the render writes past the
+   * log's 2000-line ring buffer within the first second, so anything recorded
+   * while preparing is gone by the time the report is copied. Learned the hard
+   * way — the first deployment of this could not be diagnosed at all.
+   */
+  notes: () => readonly string[];
   /** Revokes every proxy URL built so far. Call once a queue run is done. */
   release: () => void;
 }
@@ -56,6 +69,7 @@ export const createPanelProxies = ({
   // Keyed by source id and crop, so the four locale jobs of one batch share a
   // single transcode while two panels cut from the same file do not collide.
   const built = new Map<string, Prepared>();
+  const notes: string[] = [];
 
   const preparePanel = async (
     project: EditorProject,
@@ -67,13 +81,19 @@ export const createPanelProxies = ({
     const panel = settings?.[key];
     const source = panel?.source;
 
-    if (!settings || !panel || !source?.width || !source.height) {
+    if (!settings || !panel) {
+      return null;
+    }
+
+    if (!source?.width || !source.height) {
+      notes.push(`${key}: skipped, source dimensions unknown`);
       return null;
     }
 
     const url = resolveUrl(source);
 
     if (!url) {
+      notes.push(`${key}: skipped, source not resolved in this session`);
       return null;
     }
 
@@ -85,6 +105,21 @@ export const createPanelProxies = ({
     );
 
     if (!plan) {
+      const size = {width: source.width, height: source.height};
+      const box = key === 'panelA' ? layout.a : layout.b;
+      const visible = panelVisibleRect(box, size, activeTransform(panel, ratio));
+      const outside =
+        visible.left < 0 ||
+        visible.top < 0 ||
+        visible.left + visible.width > size.width ||
+        visible.top + visible.height > size.height;
+
+      notes.push(
+        outside
+          ? `${key}: skipped, framing reaches outside the ${size.width}x${size.height} source`
+          : `${key}: skipped, crop would save under ${Math.round(MIN_PROXY_SAVINGS * 100)}%`,
+      );
+
       return null;
     }
 
@@ -120,10 +155,22 @@ export const createPanelProxies = ({
     });
 
     // An optimisation that failed is not a failed render: fall back to the
-    // original source and let the job run at the original speed.
+    // original source and let the job run at the original speed. The reason is
+    // still reported, because a silent fallback is indistinguishable from a
+    // stale deployment.
     if (!result.ok) {
+      notes.push(
+        `${key}: failed, ${String((result.error.cause as Error)?.message ?? result.error.code)}`,
+      );
+
       return null;
     }
+
+    notes.push(
+      `${key}: ${plan.crop.width}x${plan.crop.height} at ${plan.crop.left},${plan.crop.top}` +
+        ` (-${Math.round(plan.savings * 100)}% pixels)` +
+        ` ${(result.value.sizeBytes / 1e6).toFixed(1)}MB in ${result.value.elapsedMs}ms`,
+    );
 
     const {sourceTimeOffsetSeconds} = result.value;
     const prepared: Prepared = {
@@ -192,6 +239,8 @@ export const createPanelProxies = ({
           resolveUrl(reference),
       };
     },
+
+    notes: () => notes,
 
     release: () => {
       for (const prepared of built.values()) {
