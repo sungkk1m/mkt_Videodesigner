@@ -3,8 +3,12 @@
 //
 // This is the "render-time preparation" half of the plan: the project itself is
 // never touched, so nothing here can reach persistence, relink, or the framing
-// controls. A proxy is derived data, keyed by the crop it was built for, and it
-// dies with the queue run that built it.
+// controls. A proxy is derived data, keyed by the crop it was built for.
+//
+// Proxies outlive the render that built them. Measured, a single render was
+// break-even — 4.67s to build against a 4.72s saving — so the gain only appears
+// where the transcode is reused. Keeping them costs little: 4.3MB per panel, and
+// the store holds at most one per panel per ratio.
 import {
   MIN_PROXY_SAVINGS,
   panelVisibleRect,
@@ -55,7 +59,12 @@ export interface PanelProxies {
    * way — the first deployment of this could not be diagnosed at all.
    */
   notes: () => readonly string[];
-  /** Revokes every proxy URL built so far. Call once a queue run is done. */
+  /** Forgets the notes of the previous run. */
+  clearNotes: () => void;
+  /**
+   * Revokes every proxy held. This is session teardown, not per-render cleanup —
+   * releasing after each render is what made a single render break even.
+   */
   release: () => void;
 }
 
@@ -63,6 +72,17 @@ interface Prepared {
   source: MediaReference;
   panel: Day1Panel;
   url: string;
+}
+
+/**
+ * A slot holds the newest proxy for one panel in one ratio, tagged with the crop
+ * it was built for. Bounding it per slot rather than per crop is what stops a
+ * multi-ratio batch from evicting the proxy it is about to need again, while a
+ * framing edit still frees the proxy it just invalidated.
+ */
+interface Slot {
+  key: string;
+  prepared: Prepared;
 }
 
 const PANEL_KEYS = ['panelA', 'panelB'] as const;
@@ -76,10 +96,11 @@ export const createPanelProxies = ({
   resolveUrl: ResolveUrl;
   release: (url: string) => void;
 }): PanelProxies => {
-  // Keyed by source id and crop, so the four locale jobs of one batch share a
-  // single transcode while two panels cut from the same file do not collide.
-  const built = new Map<string, Prepared>();
-  const notes: string[] = [];
+  // Both keyed by panel and ratio: at most two panels times three ratios, so the
+  // store is bounded at six proxies and one note per panel per ratio, however
+  // many locale jobs a batch runs.
+  const slots = new Map<string, Slot>();
+  const notes = new Map<string, string>();
 
   const preparePanel = async (
     {project, ratio, fps, signal}: PrepareRequest,
@@ -93,15 +114,17 @@ export const createPanelProxies = ({
       return null;
     }
 
+    const slot = `${key}:${ratio}`;
+
     if (!source?.width || !source.height) {
-      notes.push(`${key}: skipped, source dimensions unknown`);
+      notes.set(slot, `${key}: skipped, source dimensions unknown`);
       return null;
     }
 
     const url = resolveUrl(source);
 
     if (!url) {
-      notes.push(`${key}: skipped, source not resolved in this session`);
+      notes.set(slot, `${key}: skipped, source not resolved in this session`);
       return null;
     }
 
@@ -122,7 +145,8 @@ export const createPanelProxies = ({
         visible.left + visible.width > size.width ||
         visible.top + visible.height > size.height;
 
-      notes.push(
+      notes.set(
+        slot,
         outside
           ? `${key}: skipped, framing reaches outside the ${size.width}x${size.height} source`
           : `${key}: skipped, crop would save under ${Math.round(MIN_PROXY_SAVINGS * 100)}%`,
@@ -147,10 +171,21 @@ export const createPanelProxies = ({
       fromFrame,
       toFrame,
     ].join(':');
-    const cached = built.get(cacheKey);
+    const held = slots.get(slot);
+    const crop = `${plan.crop.width}x${plan.crop.height} at ${plan.crop.left},${plan.crop.top}`;
 
-    if (cached) {
-      return cached;
+    if (held?.key === cacheKey) {
+      notes.set(slot, `${key}: reused ${crop}`);
+
+      return held.prepared;
+    }
+
+    // Whatever is held was built for a framing, trim or source that no longer
+    // applies, so it can never be reused. Freeing it before the transcode keeps
+    // the slot's memory flat instead of doubling it mid-build.
+    if (held) {
+      slots.delete(slot);
+      releaseUrl(held.prepared.url);
     }
 
     const result = await builder.build({
@@ -166,16 +201,17 @@ export const createPanelProxies = ({
     // still reported, because a silent fallback is indistinguishable from a
     // stale deployment.
     if (!result.ok) {
-      notes.push(
+      notes.set(
+        slot,
         `${key}: failed, ${String((result.error.cause as Error)?.message ?? result.error.code)}`,
       );
 
       return null;
     }
 
-    notes.push(
-      `${key}: ${plan.crop.width}x${plan.crop.height} at ${plan.crop.left},${plan.crop.top}` +
-        ` (-${Math.round(plan.savings * 100)}% pixels)` +
+    notes.set(
+      slot,
+      `${key}: ${crop} (-${Math.round(plan.savings * 100)}% pixels)` +
         ` ${(result.value.sizeBytes / 1e6).toFixed(1)}MB in ${result.value.elapsedMs}ms`,
     );
 
@@ -203,7 +239,7 @@ export const createPanelProxies = ({
       url: result.value.url,
     };
 
-    built.set(cacheKey, prepared);
+    slots.set(slot, {key: cacheKey, prepared});
 
     return prepared;
   };
@@ -248,14 +284,16 @@ export const createPanelProxies = ({
       };
     },
 
-    notes: () => notes,
+    notes: () => [...notes.values()],
+
+    clearNotes: () => notes.clear(),
 
     release: () => {
-      for (const prepared of built.values()) {
-        releaseUrl(prepared.url);
+      for (const held of slots.values()) {
+        releaseUrl(held.prepared.url);
       }
 
-      built.clear();
+      slots.clear();
     },
   };
 };

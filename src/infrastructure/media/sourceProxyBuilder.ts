@@ -41,12 +41,13 @@ import {
  * PSNR-Y, and even a deliberately crippled encoder at 0.064 bits/px only cost
  * 0.09dB — two orders of magnitude below the 0.5dB just-noticeable threshold.
  *
- * So this is set for margin over the source rather than for headroom this
- * measurement asked for. The lower rate also asks less of the hardware encoder,
- * which on this user's machine has already refused one config outright
- * (day1-render-hwaccel.analysis.md §1.1).
+ * This is a target, not a promise: asked for 0.1, the hardware encoder delivered
+ * 0.069 in the live render (4.3MB for a 6s 1242x1100 crop), landing at the bottom
+ * of that measured range instead of the middle. 0.15 is the same margin restated
+ * for an encoder that undershoots by a third, and still asks less than the config
+ * this machine once refused outright (day1-render-hwaccel.analysis.md §1.1).
  */
-const PROXY_BITS_PER_PIXEL = 0.1;
+const PROXY_BITS_PER_PIXEL = 0.15;
 const ASSUMED_FPS = 60;
 
 const buildFailed = (cause: unknown) =>

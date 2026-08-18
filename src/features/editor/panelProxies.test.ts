@@ -254,6 +254,96 @@ describe('createPanelProxies', () => {
     ]);
   });
 
+  it('reuses a proxy on the next render instead of transcoding again', async () => {
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => undefined,
+    });
+    const project = projectWithPanels();
+
+    await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
+    proxies.clearNotes();
+    const second = await proxies.prepare({
+      project,
+      ratio: '9:16',
+      fps: 60,
+      signal: signal(),
+    });
+
+    expect(builder.build).toHaveBeenCalledTimes(2);
+    expect(proxies.notes()).toEqual([
+      'panelA: reused 1242x1100 at 0,554',
+      'panelB: reused 1242x1100 at 0,554',
+    ]);
+    // Still the same proxies, so the render is identical to the first one's.
+    expect(
+      buildDay1Props({...second.project, fps: 60, selectedRatio: '9:16'}, second.resolveUrl)
+        ?.panelA.url,
+    ).toBe('blob:proxy-1');
+  });
+
+  it('frees the proxy a framing change invalidated, and builds the new one', async () => {
+    const released: string[] = [];
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: (url) => released.push(url),
+    });
+
+    await proxies.prepare({
+      project: projectWithPanels(),
+      ratio: '9:16',
+      fps: 60,
+      signal: signal(),
+    });
+
+    const reframed = projectWithPanels();
+    const day1 = day1Of(reframed) as Day1Settings;
+
+    await proxies.prepare({
+      project: {
+        ...reframed,
+        templateSettings: {
+          ...day1,
+          panelA: {
+            ...day1.panelA,
+            transforms: {
+              base: {fit: 'cover', scale: 1, x: 0, y: 10},
+              overrides: {},
+            },
+          },
+        },
+      },
+      ratio: '9:16',
+      fps: 60,
+      signal: signal(),
+    });
+
+    // Panel A's crop moved, so its proxy went; panel B's did not, so its stayed.
+    expect(released).toEqual(['blob:proxy-1']);
+    expect(builder.build).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps one proxy per ratio, so a multi-ratio batch does not thrash', async () => {
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => undefined,
+    });
+    const project = projectWithPanels();
+
+    await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
+    await proxies.prepare({project, ratio: '16:9', fps: 60, signal: signal()});
+    // The second locale of the batch comes back to 9:16 and finds it still there.
+    await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
+
+    expect(builder.build).toHaveBeenCalledTimes(4);
+  });
+
   it('releases every proxy it built', async () => {
     const released: string[] = [];
     const proxies = createPanelProxies({
