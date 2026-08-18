@@ -241,3 +241,57 @@ GitHub Status: "Partial System Outage" (indicator: major)
 | 사용자 환경 실렌더 확증 | ⏳ 대기 |
 
 **4/5 완료 · 1건 사용자 확인 대기**
+
+---
+
+## 8. 2026-08-18 추가 — 렌더 4프레임째 delayRender 타임아웃 (디코더 프레임 풀 고갈)
+
+§6-1의 배포 재실행은 완료됐고(run #10·#11 success), §6-2의 실렌더 확인에서 새 실패가 나왔다:
+`A delayRender() "Extracting frame at time 0.1 from blob:..." was called but not cleared after 28000ms`.
+
+### 8.1 계측
+
+콘솔 수동 복사가 두 번 실패한 뒤(Chrome이 verbose를 숨김), `?debug=1`에서 앱이 직접
+로그를 수집해 버튼으로 복사하게 했다(`debugLog.ts`). trace 레벨 로그가 실패 지점을
+프레임 단위로 남겼다:
+
+| 출력 프레임 | 소스 시각 | 소요 |
+|---|---|---:|
+| 0 | 0 | 39ms(A) / 75ms(B) |
+| 1 | 0.0333 | 2ms |
+| 2 | 0.0667 | 1ms |
+| 3 | 0.1 | **28,008ms — 사망** |
+
+마지막 영상 이벤트는 `Added frame at 0.0833sec to bank` — 0.1초 프레임을 기다리는
+`sampleIterator.next()`가 영영 돌아오지 않았다. 오디오가 아니라 **영상 디코더 무응답**이다.
+
+### 8.2 기각된 가설
+
+- **딥 트림**: 트림 0초 재현에서도 동일 사망. 별도 실측(1080×1920·300s·GOP 10s)에서도
+  168.69초 딥 시크는 737ms — 28초와 세 자릿수 차이.
+- **fps**: 30fps에서도 동일. 뱅크 보존 창이 `0.2 × 30 / fps`라 프레임 수 기준으로는
+  fps 불변(항상 6프레임) — 관측과 정확히 일치.
+- **fMP4 duration 스캔**: 4.7ms + 메모이즈. 기각.
+
+### 8.3 확정 기제
+
+사망 시점에 열린 VideoFrame 7장(60fps 소스 패널 A 6장 + 정지 패널 B 1장) + 싱크
+선행 디코딩 분. 하드웨어 VideoDecoder는 고정 크기 출력 풀에서 프레임을 내주므로,
+소비자가 프레임을 닫지 않고 쌓아두면 디코딩 출력이 설계상 멈춘다(WebCodecs의
+"프레임을 닫아라" 규칙). `@remotion/media`의 키프레임 뱅크는 `현재시각 − 0.2s` 이전만
+회수하므로 60fps 소스에서 정상적으로 12장까지 쌓인다 — 이 머신의 풀보다 크다.
+프리뷰는 그린 직후 프레임을 닫아서 같은 파일이 멀쩡히 재생된다. §1의 인코더 건과
+대칭인 디코더 축이다.
+
+### 8.4 수정
+
+라이브러리는 디코더 옵션을 노출하지 않는다(4.0.499·4.0.512 모두 decode 쪽
+`decoderOptions`/`hardwareAcceleration` 참조 0건). 렌더 동안만
+`VideoDecoder.configure`를 감싸 avc1/avc3/vp8/vp09/av01 config를
+`prefer-software`로 돌린다 — 소프트웨어 디코더는 메모리에서 할당하므로 풀이 없다.
+HEVC는 소프트웨어 지원이 보편적이지 않아 제외(하드웨어 유지, 풀 고갈 리스크 잔존).
+프로브(`avc1 prefer-software` 지원 확인)가 거짓이면 무패치로 기존 동작.
+
+- 구현: `softwareVideoDecode.ts`, 적용: `renderEditor.ts`(단일·Batch 공통 경로)
+- 실검증 대기: 해당 Windows Chrome 데스크탑에서 Day1 렌더 1회. 재발 시 `?debug=1`
+  로그의 마지막 줄이 다시 갈라준다.

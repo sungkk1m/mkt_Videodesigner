@@ -12,6 +12,7 @@ import type {
 } from '../../domain/editor/types';
 import {DEFAULT_PROFILE, PROFILE_SPECS} from '../../domain/render/profile';
 import {renderLogLevel} from './logLevel';
+import {withSoftwareVideoDecoding} from './softwareVideoDecode';
 import type {
   EditorRenderConfig,
   EditorRenderMetrics,
@@ -105,10 +106,15 @@ export const runEditorRender = async ({
   now?: () => number;
 }): Promise<{blob: Blob; metrics: EditorRenderMetrics}> => {
   const startedAt = now();
-  const result = await renderMedia(
-    createEditorRenderRequest(snapshot, config, signal, onProgress),
-  );
-  const blob = await result.getBlob();
+  // The whole render runs under software video decoding — see
+  // softwareVideoDecode.ts for the measured hardware-pool wedge this avoids.
+  const blob = await withSoftwareVideoDecoding(async () => {
+    const result = await renderMedia(
+      createEditorRenderRequest(snapshot, config, signal, onProgress),
+    );
+
+    return result.getBlob();
+  });
   const {width, height} = outputDimensions(config.ratio);
 
   return {
