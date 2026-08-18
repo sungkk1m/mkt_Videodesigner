@@ -61,7 +61,7 @@ export const App = () => {
 
   return (
     <EditorWorkspace
-      debugReport={renderLogLevel() === 'verbose' ? capturedReport : null}
+      debugReport={renderLogLevel() === 'trace' ? capturedReport : null}
       frameSampler={frameSampler}
       hookAnalyzer={hookAnalyzer}
       loadInitialProject={loadInitialProject}

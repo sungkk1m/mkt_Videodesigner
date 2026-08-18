@@ -8,10 +8,10 @@ describe('renderLogLevelFor', () => {
     expect(renderLogLevelFor('?locale=ko')).toBe('info');
   });
 
-  it('turns on verbose decoding logs for ?debug', () => {
-    expect(renderLogLevelFor('?debug=1')).toBe('verbose');
+  it('turns on trace decoding logs for ?debug', () => {
+    expect(renderLogLevelFor('?debug=1')).toBe('trace');
     // Bare `?debug` counts too — nobody types the =1 from memory.
-    expect(renderLogLevelFor('?debug')).toBe('verbose');
-    expect(renderLogLevelFor('?locale=ko&debug=1')).toBe('verbose');
+    expect(renderLogLevelFor('?debug')).toBe('trace');
+    expect(renderLogLevelFor('?locale=ko&debug=1')).toBe('trace');
   });
 });

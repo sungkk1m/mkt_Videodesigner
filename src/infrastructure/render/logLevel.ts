@@ -5,11 +5,17 @@
 // but only at 'verbose', which is far too noisy to ship on by default.
 //
 // `?debug=1` on the deployed URL turns it on for one session.
+//
+// 'trace', not 'verbose': the two ways a frame extraction can stall - the video
+// decoder never answering, and the audio fetch never answering - produce the
+// same silence at 'verbose', because Promise.all in extractFrameAndAudio makes
+// either one hold the same delayRender. Only 'trace' logs "Added frame at Xsec
+// to bank", so only 'trace' says whether the video side got that far.
 
-export type RenderLogLevel = 'info' | 'verbose';
+export type RenderLogLevel = 'info' | 'trace';
 
 export const renderLogLevelFor = (search: string): RenderLogLevel =>
-  new URLSearchParams(search).has('debug') ? 'verbose' : 'info';
+  new URLSearchParams(search).has('debug') ? 'trace' : 'info';
 
 export const renderLogLevel = (): RenderLogLevel =>
   typeof window === 'undefined'

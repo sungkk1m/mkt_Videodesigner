@@ -58,7 +58,7 @@ export const capturedReport = (header: Record<string, unknown>): string =>
  */
 export const installDebugLogCapture = (
   target: Console = console,
-  enabled = renderLogLevel() === 'verbose',
+  enabled = renderLogLevel() === 'trace',
 ): void => {
   if (!enabled || installed) {
     return;
