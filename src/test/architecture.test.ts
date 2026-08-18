@@ -146,4 +146,35 @@ describe('import boundaries', () => {
 
     expect(violations).toEqual([]);
   });
+
+  /**
+   * Day1 render speed — every render path has to go through the panel proxies.
+   *
+   * This exists because one of them did not. The proxies were wired into the
+   * batch queue, the single render button built its own snapshot straight from
+   * the project, and the optimisation deployed and did nothing with no error to
+   * show for it. A third render path would have made the same mistake, so the
+   * rule is checked here instead of trusted: a snapshot built for a render is
+   * built from a prepared project, never from the raw one.
+   */
+  it('builds every render snapshot from a prepared project', async () => {
+    const pattern = /buildEditorSnapshot\(\s*\{?\s*(?:\.\.\.)?([A-Za-z.]+)/g;
+    const violations: string[] = [];
+
+    for (const file of await listSourceFiles()) {
+      if (layerOf(file) !== 'features') {
+        continue;
+      }
+
+      const contents = await readFile(join(SRC_ROOT, file), 'utf8');
+
+      for (const match of contents.matchAll(pattern)) {
+        if (match[1] !== 'prepared.project') {
+          violations.push(`${file} -> buildEditorSnapshot(${match[1]})`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });

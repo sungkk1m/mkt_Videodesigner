@@ -15,11 +15,7 @@ import type {
   EditorProject,
   MediaReference,
 } from '../../domain/editor/types';
-import type {
-  OutputWriter,
-  SourceProxyBuilder,
-  VideoRenderer,
-} from '../../domain/ports';
+import type {OutputWriter, VideoRenderer} from '../../domain/ports';
 import {
   cancelPendingJobs,
   expandRenderJobs,
@@ -35,7 +31,7 @@ import {
   isAppError,
   type AppError,
 } from '../../shared/errors/appError';
-import {createPanelProxies} from './panelProxies';
+import type {PanelProxySession} from './usePanelProxies';
 
 export interface PreflightContext {
   sourceResolved: boolean;
@@ -47,8 +43,6 @@ export interface RenderQueueApi {
   running: boolean;
   notice: AppError | null;
   preflight: string[];
-  /** What the panel proxies did on the last run, for the ?debug report. */
-  proxyNotes: readonly string[];
   start: (
     project: EditorProject,
     context: PreflightContext,
@@ -148,21 +142,18 @@ export const useRenderQueue = ({
   renderer,
   writer,
   resolveUrl,
-  proxyBuilder,
-  releaseUrl,
+  proxies,
 }: {
   renderer: VideoRenderer;
   writer: OutputWriter;
   resolveUrl: (reference: MediaReference | null | undefined) => string | null;
-  /** Day1 render speed — builds the cropped panel sources a job renders from. */
-  proxyBuilder: SourceProxyBuilder;
-  releaseUrl: (url: string) => void;
+  /** Day1 render speed — crops each panel to its visible area before a job runs. */
+  proxies: PanelProxySession;
 }): RenderQueueApi => {
   const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [running, setRunning] = useState(false);
   const [notice, setNotice] = useState<AppError | null>(null);
   const [preflight, setPreflight] = useState<string[]>([]);
-  const [proxyNotes, setProxyNotes] = useState<readonly string[]>([]);
   const controllerRef = useRef<AbortController | null>(null);
   const cancelledRef = useRef(false);
 
@@ -177,14 +168,7 @@ export const useRenderQueue = ({
       // Day1 render speed — one set of panel proxies per queue run, so the four
       // locale jobs of a batch share a transcode and every buffer is released
       // together at the end.
-      const proxies = createPanelProxies({
-        builder: proxyBuilder,
-        resolveUrl,
-        release: releaseUrl,
-      });
-
-      setProxyNotes([]);
-
+      await proxies.run(async (panelProxies) => {
       // Design Ref: §2.2 — strictly sequential; the MVP never renders in parallel.
       for (;;) {
         const job = nextQueuedJob(current);
@@ -207,9 +191,13 @@ export const useRenderQueue = ({
         // actually shows before a frame is rendered. `prepare` returns the input
         // untouched when cropping would not help or could not run, so the render
         // below is the same call either way.
-        const prepared = await proxies.prepare(project, job.ratio, controller.signal);
+        const prepared = await panelProxies.prepare({
+          project,
+          ratio: job.ratio,
+          fps: project.render.fps,
+          signal: controller.signal,
+        });
 
-        setProxyNotes(proxies.notes());
         current = updateJob(current, job.id, {status: 'rendering'});
         setJobs(current);
 
@@ -287,11 +275,11 @@ export const useRenderQueue = ({
 
         setJobs(current);
       }
+      });
 
-      proxies.release();
       setRunning(false);
     },
-    [proxyBuilder, releaseUrl, renderer, resolveUrl, writer],
+    [proxies, renderer, resolveUrl, writer],
   );
 
   const start = useCallback(
@@ -338,7 +326,6 @@ export const useRenderQueue = ({
     running,
     notice,
     preflight,
-    proxyNotes,
     start,
     cancel,
     retryFailed,

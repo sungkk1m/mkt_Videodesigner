@@ -19,6 +19,7 @@ import type {
   MediaReference,
 } from '../../domain/editor/types';
 import type {SourceProxyBuilder} from '../../domain/ports';
+import type {FrameRate} from '../../domain/render/profile';
 import {msToFrames} from '../../domain/timeline/timeline';
 
 type ResolveUrl = (reference: MediaReference | null | undefined) => string | null;
@@ -30,12 +31,21 @@ export interface PreparedRender {
   resolveUrl: ResolveUrl;
 }
 
+export interface PrepareRequest {
+  project: EditorProject;
+  ratio: AspectRatio;
+  /**
+   * The fps the snapshot will be built at. Passed in rather than read off the
+   * project because the two render paths disagree: the batch queue renders at
+   * `render.fps` and the single render at the editor's own `fps`. A proxy trimmed
+   * at the wrong one starts on the wrong frame.
+   */
+  fps: FrameRate;
+  signal: AbortSignal;
+}
+
 export interface PanelProxies {
-  prepare: (
-    project: EditorProject,
-    ratio: AspectRatio,
-    signal: AbortSignal,
-  ) => Promise<PreparedRender>;
+  prepare: (request: PrepareRequest) => Promise<PreparedRender>;
   /**
    * One line per panel prepared, for the ?debug report header.
    *
@@ -72,10 +82,8 @@ export const createPanelProxies = ({
   const notes: string[] = [];
 
   const preparePanel = async (
-    project: EditorProject,
-    ratio: AspectRatio,
+    {project, ratio, fps, signal}: PrepareRequest,
     key: Day1PanelKey,
-    signal: AbortSignal,
   ): Promise<Prepared | null> => {
     const settings = day1Of(project);
     const panel = settings?.[key];
@@ -126,7 +134,6 @@ export const createPanelProxies = ({
     // Frame-aligned to the render's own fps so the proxy starts on the frame the
     // render would have asked for, not on whichever sample sits nearest the
     // millisecond.
-    const {fps} = project.render;
     const fromFrame = msToFrames(panel.trim.inMs, fps);
     const toFrame = Math.max(fromFrame + 1, msToFrames(panel.trim.outMs, fps));
     const fromSeconds = fromFrame / fps;
@@ -202,7 +209,8 @@ export const createPanelProxies = ({
   };
 
   return {
-    prepare: async (project, ratio, signal) => {
+    prepare: async (request) => {
+      const {project} = request;
       const settings = day1Of(project);
 
       if (!settings) {
@@ -210,7 +218,7 @@ export const createPanelProxies = ({
       }
 
       const panels = await Promise.all(
-        PANEL_KEYS.map((key) => preparePanel(project, ratio, key, signal)),
+        PANEL_KEYS.map((key) => preparePanel(request, key)),
       );
 
       if (panels.every((panel) => panel === null)) {

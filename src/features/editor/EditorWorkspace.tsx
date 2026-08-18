@@ -78,6 +78,7 @@ import {
   type TtsCacheGateway,
 } from './useEditorAudio';
 import {useEditorSource, type EditorSourceCommands} from './useEditorSource';
+import {usePanelProxies} from './usePanelProxies';
 import {useRenderQueue} from './useRenderQueue';
 import {useMediaSession} from './useMediaSession';
 import {useProjectPersistence} from './useProjectPersistence';
@@ -191,6 +192,13 @@ export const EditorWorkspace = ({
   const store = useProjectStore.getState;
 
   const session = useMediaSession(mediaResolver);
+
+  const resolveUrl = useCallback(
+    (reference: MediaReference | null | undefined) =>
+      session.urlFor(reference?.id),
+    [session],
+  );
+
   const sourceCommands = useMemo<EditorSourceCommands>(
     () => ({
       applySource: (reference) => store().applySource(reference),
@@ -266,12 +274,19 @@ export const EditorWorkspace = ({
     commands: audioCommands,
   });
 
+  // Day1 render speed — shared by the single render and the batch queue, so the
+  // panels are cropped to their visible area whichever button started the job.
+  const panelProxies = usePanelProxies({
+    builder: sourceProxyBuilder,
+    resolveUrl,
+    releaseUrl: mediaResolver.release,
+  });
+
   const queue = useRenderQueue({
     renderer: videoRenderer,
     writer: outputWriter,
-    resolveUrl: (reference) => session.urlFor(reference?.id),
-    proxyBuilder: sourceProxyBuilder,
-    releaseUrl: mediaResolver.release,
+    resolveUrl,
+    proxies: panelProxies,
   });
 
   const persistence = useProjectPersistence({
@@ -309,12 +324,6 @@ export const EditorWorkspace = ({
   }, [referencedIds, session]);
 
   const narrationTooLong = narrationBlockers(project);
-
-  const resolveUrl = useCallback(
-    (reference: MediaReference | null | undefined) =>
-      session.urlFor(reference?.id),
-    [session],
-  );
 
   const compositionProps = useMemo(
     () => buildCompositionProps(project, resolveUrl),
@@ -442,10 +451,6 @@ export const EditorWorkspace = ({
       return;
     }
 
-    // Design Ref: §4.3 — freeze the edit state so later UI changes cannot mutate
-    // the active job. Day1 Design Ref: §2.1 — the snapshot carries its template,
-    // so the adapter renders the matching composition.
-    const snapshot = buildEditorSnapshot(project, resolveUrl);
     const config: EditorRenderConfig = {
       durationPreset: project.durationPreset,
       fps: project.fps,
@@ -464,17 +469,32 @@ export const EditorWorkspace = ({
     setRenderState({status: 'rendering', progress: 0, etaMs: 0});
 
     try {
-      const result = await videoRenderer.render({
-        snapshot,
-        config,
-        signal: controller.signal,
-        onProgress: ({progress, renderEstimatedTime}) => {
-          setRenderState({
-            status: 'rendering',
-            progress,
-            etaMs: renderEstimatedTime,
-          });
-        },
+      const result = await panelProxies.run(async (proxies) => {
+        // Day1 render speed — the panels are cropped to what this ratio actually
+        // shows before a frame is rendered. `prepare` hands back the project
+        // untouched when cropping would not help or could not run.
+        const prepared = await proxies.prepare({
+          project,
+          ratio: project.selectedRatio,
+          fps: project.fps,
+          signal: controller.signal,
+        });
+
+        // Design Ref: §4.3 — freeze the edit state so later UI changes cannot
+        // mutate the active job. Day1 Design Ref: §2.1 — the snapshot carries its
+        // template, so the adapter renders the matching composition.
+        return videoRenderer.render({
+          snapshot: buildEditorSnapshot(prepared.project, prepared.resolveUrl),
+          config,
+          signal: controller.signal,
+          onProgress: ({progress, renderEstimatedTime}) => {
+            setRenderState({
+              status: 'rendering',
+              progress,
+              etaMs: renderEstimatedTime,
+            });
+          },
+        });
       });
 
       setRenderState({status: 'completed', fileName, ...result});
@@ -529,7 +549,7 @@ export const EditorWorkspace = ({
       renderStatus: renderState.status,
       // Day1 render speed — whether each panel was cropped, and why not if not.
       sourceProxy:
-        queue.proxyNotes.length > 0 ? queue.proxyNotes.join(' | ') : 'none',
+        panelProxies.notes.length > 0 ? panelProxies.notes.join(' | ') : 'none',
     });
 
     await navigator.clipboard.writeText(report);

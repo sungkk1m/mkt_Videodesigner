@@ -71,7 +71,7 @@ describe('createPanelProxies', () => {
     });
     const project = projectWithPanels();
 
-    const prepared = await proxies.prepare(project, '9:16', signal());
+    const prepared = await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
 
     // Panel A's trim starts 2s in, so its proxy covers 2s-8s of the source and
     // the crop is the band a 9:16 panel shows.
@@ -105,7 +105,7 @@ describe('createPanelProxies', () => {
       release: () => undefined,
     });
 
-    const prepared = await proxies.prepare(projectWithPanels(), '9:16', signal());
+    const prepared = await proxies.prepare({project: projectWithPanels(), ratio: '9:16', fps: 60, signal: signal()});
     const props = buildDay1Props(
       {...prepared.project, fps: 60, selectedRatio: '9:16'},
       prepared.resolveUrl,
@@ -124,12 +124,12 @@ describe('createPanelProxies', () => {
     });
     const project = projectWithPanels();
 
-    await proxies.prepare(project, '9:16', signal());
-    await proxies.prepare(project, '9:16', signal());
+    await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
+    await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
     expect(builder.build).toHaveBeenCalledTimes(2);
 
     // A different ratio shows a different band, so it needs its own crop.
-    await proxies.prepare(project, '16:9', signal());
+    await proxies.prepare({project, ratio: '16:9', fps: 60, signal: signal()});
     expect(builder.build).toHaveBeenCalledTimes(4);
   });
 
@@ -146,7 +146,7 @@ describe('createPanelProxies', () => {
     });
     const project = projectWithPanels();
 
-    const prepared = await proxies.prepare(project, '9:16', signal());
+    const prepared = await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
 
     expect(prepared.project).toBe(project);
 
@@ -183,7 +183,7 @@ describe('createPanelProxies', () => {
       },
     });
 
-    const prepared = await proxies.prepare(project, '9:16', signal());
+    const prepared = await proxies.prepare({project, ratio: '9:16', fps: 60, signal: signal()});
 
     expect(builder.build).not.toHaveBeenCalled();
     expect(prepared.project).toBe(project);
@@ -196,7 +196,7 @@ describe('createPanelProxies', () => {
       release: () => undefined,
     });
 
-    await proxies.prepare(projectWithPanels(), '9:16', signal());
+    await proxies.prepare({project: projectWithPanels(), ratio: '9:16', fps: 60, signal: signal()});
 
     expect(proxies.notes()).toEqual([
       'panelA: 1242x1100 at 0,554 (-50% pixels) 0.0MB in 1200ms',
@@ -219,11 +219,12 @@ describe('createPanelProxies', () => {
       },
     };
 
-    await landscape.prepare(
-      day1ProjectFixture({panelA: panned, panelB: panned}),
-      '9:16',
-      signal(),
-    );
+    await landscape.prepare({
+      project: day1ProjectFixture({panelA: panned, panelB: panned}),
+      ratio: '9:16',
+      fps: 60,
+      signal: signal(),
+    });
 
     expect(landscape.notes()).toEqual([
       'panelA: skipped, framing reaches outside the 1920x1080 source',
@@ -245,7 +246,7 @@ describe('createPanelProxies', () => {
       release: () => undefined,
     });
 
-    await broken.prepare(projectWithPanels(), '9:16', signal());
+    await broken.prepare({project: projectWithPanels(), ratio: '9:16', fps: 60, signal: signal()});
 
     expect(broken.notes()).toEqual([
       'panelA: failed, audio track: no encoder',
@@ -261,7 +262,7 @@ describe('createPanelProxies', () => {
       release: (url) => released.push(url),
     });
 
-    await proxies.prepare(projectWithPanels(), '9:16', signal());
+    await proxies.prepare({project: projectWithPanels(), ratio: '9:16', fps: 60, signal: signal()});
     proxies.release();
 
     expect(released).toEqual(['blob:proxy-1', 'blob:proxy-2']);
