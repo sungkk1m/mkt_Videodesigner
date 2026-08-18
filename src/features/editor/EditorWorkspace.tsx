@@ -47,6 +47,7 @@ import type {
   OutputWriter,
   ProjectRepository,
   RenderCapabilities,
+  SourceProxyBuilder,
   VideoRenderer,
 } from '../../domain/ports';
 import {buildOutputFileName} from '../../domain/render/fileName';
@@ -127,6 +128,8 @@ const getErrorMessage = (error: unknown) => {
 export interface EditorWorkspaceProps {
   mediaResolver: MediaResolver;
   videoRenderer: VideoRenderer;
+  /** Day1 render speed — crops panel sources to the visible area before a render. */
+  sourceProxyBuilder: SourceProxyBuilder;
   hookAnalyzer: HookAnalyzer;
   /** Day1 Trim UX Design Ref: §3.1 — feeds the trim strip's thumbnails. */
   frameSampler: FrameSampler;
@@ -152,6 +155,7 @@ export interface EditorWorkspaceProps {
 export const EditorWorkspace = ({
   mediaResolver,
   videoRenderer,
+  sourceProxyBuilder,
   hookAnalyzer,
   frameSampler,
   ttsProvider,
@@ -266,6 +270,8 @@ export const EditorWorkspace = ({
     renderer: videoRenderer,
     writer: outputWriter,
     resolveUrl: (reference) => session.urlFor(reference?.id),
+    proxyBuilder: sourceProxyBuilder,
+    releaseUrl: mediaResolver.release,
   });
 
   const persistence = useProjectPersistence({

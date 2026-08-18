@@ -15,7 +15,11 @@ import type {
   EditorProject,
   MediaReference,
 } from '../../domain/editor/types';
-import type {OutputWriter, VideoRenderer} from '../../domain/ports';
+import type {
+  OutputWriter,
+  SourceProxyBuilder,
+  VideoRenderer,
+} from '../../domain/ports';
 import {
   cancelPendingJobs,
   expandRenderJobs,
@@ -31,6 +35,7 @@ import {
   isAppError,
   type AppError,
 } from '../../shared/errors/appError';
+import {createPanelProxies} from './panelProxies';
 
 export interface PreflightContext {
   sourceResolved: boolean;
@@ -141,10 +146,15 @@ export const useRenderQueue = ({
   renderer,
   writer,
   resolveUrl,
+  proxyBuilder,
+  releaseUrl,
 }: {
   renderer: VideoRenderer;
   writer: OutputWriter;
   resolveUrl: (reference: MediaReference | null | undefined) => string | null;
+  /** Day1 render speed — builds the cropped panel sources a job renders from. */
+  proxyBuilder: SourceProxyBuilder;
+  releaseUrl: (url: string) => void;
 }): RenderQueueApi => {
   const [jobs, setJobs] = useState<RenderJob[]>([]);
   const [running, setRunning] = useState(false);
@@ -161,6 +171,15 @@ export const useRenderQueue = ({
       setRunning(true);
       cancelledRef.current = false;
 
+      // Day1 render speed — one set of panel proxies per queue run, so the four
+      // locale jobs of a batch share a transcode and every buffer is released
+      // together at the end.
+      const proxies = createPanelProxies({
+        builder: proxyBuilder,
+        resolveUrl,
+        release: releaseUrl,
+      });
+
       // Design Ref: §2.2 — strictly sequential; the MVP never renders in parallel.
       for (;;) {
         const job = nextQueuedJob(current);
@@ -174,9 +193,18 @@ export const useRenderQueue = ({
         controllerRef.current = controller;
 
         current = updateJob(current, job.id, {
-          status: 'rendering',
+          status: 'preparing',
           progress: 0,
         });
+        setJobs(current);
+
+        // Day1 render speed — the panels are cropped to what this job's ratio
+        // actually shows before a frame is rendered. `prepare` returns the input
+        // untouched when cropping would not help or could not run, so the render
+        // below is the same call either way.
+        const prepared = await proxies.prepare(project, job.ratio, controller.signal);
+
+        current = updateJob(current, job.id, {status: 'rendering'});
         setJobs(current);
 
         // Design Ref: §4.3 — one frozen snapshot per job. Day1 Design Ref: §2.1 —
@@ -184,12 +212,12 @@ export const useRenderQueue = ({
         // geometry for its own output size.
         const snapshot = buildEditorSnapshot(
           {
-            ...project,
+            ...prepared.project,
             selectedLocale: job.locale,
             selectedRatio: job.ratio,
             fps: project.render.fps,
           },
-          resolveUrl,
+          prepared.resolveUrl,
         );
         const config: EditorRenderConfig = {
           durationPreset: project.durationPreset,
@@ -254,9 +282,10 @@ export const useRenderQueue = ({
         setJobs(current);
       }
 
+      proxies.release();
       setRunning(false);
     },
-    [renderer, resolveUrl, writer],
+    [proxyBuilder, releaseUrl, renderer, resolveUrl, writer],
   );
 
   const start = useCallback(

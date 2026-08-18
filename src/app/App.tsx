@@ -6,6 +6,7 @@ import {EditorWorkspace} from '../features/editor/EditorWorkspace';
 import {createHeuristicHookAnalyzer} from '../infrastructure/hook-analysis/heuristicHookAnalyzer';
 import {browserMediaResolver} from '../infrastructure/media/browserMediaResolver';
 import {createFrameSampler} from '../infrastructure/media/frameSampler';
+import {createSourceProxyBuilder} from '../infrastructure/media/sourceProxyBuilder';
 import {
   createMediaHandleStore,
   supportsFileHandles,
@@ -37,6 +38,9 @@ const hookAnalyzer = createHeuristicHookAnalyzer(frameSampler);
 const ttsProvider = createSupertonicProvider();
 const ttsCache = createTtsCache();
 const outputWriter = createBrowserOutputWriter();
+// Day1 render speed — panel sources are cropped to their visible area before a
+// render, which cut measured decode time by a fifth.
+const sourceProxyBuilder = createSourceProxyBuilder();
 
 const loadInitialProject = async () => {
   const result = await loadLatestProject(projectRepository);
@@ -69,6 +73,7 @@ export const App = () => {
       mediaResolver={browserMediaResolver}
       outputWriter={outputWriter}
       projectRepository={projectRepository}
+      sourceProxyBuilder={sourceProxyBuilder}
       supportsOutputDirectory={supportsDirectoryPicker()}
       ttsCache={ttsCache}
       ttsProvider={ttsProvider}

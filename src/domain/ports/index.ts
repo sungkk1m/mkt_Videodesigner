@@ -11,6 +11,7 @@ import type {
   MediaReference,
   ResolvedMedia,
 } from '../editor/types';
+import type {CropRect} from '../day1/sourceProxy';
 import type {HookCandidate} from '../hook/scoring';
 import type {
   EditorRenderConfig,
@@ -168,4 +169,38 @@ export interface VideoRenderer {
   render(
     request: RenderRequest,
   ): Promise<{blob: Blob; metrics: EditorRenderMetrics}>;
+}
+
+/**
+ * Day1 render speed — re-encodes a panel source down to the rectangle the panel
+ * actually shows, so the render stops decoding pixels that `objectFit: cover`
+ * throws away. `planPanelProxy` decides the rectangle; this only carries it out.
+ *
+ * Building a proxy is an optimisation, never a requirement: a failure leaves the
+ * caller rendering the original source at the original speed.
+ */
+export interface SourceProxyRequest {
+  /** Session object URL of the original source. */
+  url: string;
+  crop: CropRect;
+  /** Source time window to convert, in seconds. */
+  fromSeconds: number;
+  toSeconds: number;
+  signal: AbortSignal;
+}
+
+export interface SourceProxy {
+  /** Object URL of the proxy. The caller owns releasing it. */
+  url: string;
+  /**
+   * Seconds to add to a proxy timestamp to get back the source timestamp. Read
+   * from the finished file rather than assumed, so the caller's trim rebasing
+   * holds whether or not the transcoder rebased the timeline to zero.
+   */
+  sourceTimeOffsetSeconds: number;
+  sizeBytes: number;
+}
+
+export interface SourceProxyBuilder {
+  build(request: SourceProxyRequest): Promise<Result<SourceProxy>>;
 }
