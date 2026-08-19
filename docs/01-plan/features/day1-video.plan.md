@@ -187,3 +187,16 @@ document.querySelector('.editor').style.setProperty('--inspector-width', '440px'
 기존 Scale 슬라이더가 그대로 연속 다이얼이 된다: `contain` 100%는 손실 0, 200%는 `cover`와 동일, 그 사이는 비례. 즉 "얼마나 남길지"를 사용자가 고를 수 있다.
 
 실측·검증은 `docs/03-analysis/day1-video.analysis.md` §"Fit 선택 + 블러 배경" 참조.
+
+## 부록 3 — 2026-08-19 기본값 전환: 업로드는 무손실로 시작한다
+
+사용자 결정: "원본 영상 업로드 시 손실이 있으면 안 되는 형태로 가려 합니다."
+
+Fit을 옵트인으로 두면 세로 소재는 여전히 기본값(`cover`)에서 절반이 잘린다. 업로드가 조작자가 선택하지 않은 크롭을 조용히 적용하는 것은 소재 제작 도구로서 잘못된 기본값이므로, **Day1 패널의 기본 프레이밍을 `contain`으로 전환**한다.
+
+- `DEFAULT_DAY1_PANEL_TRANSFORM`(신설, `fit: 'contain'`)을 Day1 패널 초기값·`resetDay1Transform`이 쓴다.
+- `DEFAULT_TRANSFORM`은 `cover`로 유지 — 3장면은 `SceneVideo`가 무조건 cover로 그리므로 스키마가 거짓말하지 않아야 한다.
+- `setDay1PanelSource`(새 소스 업로드)가 트림뿐 아니라 **프레이밍까지 초기화**한다. 이전 클립에서 남은 `cover`나 줌이 새 업로드를 즉시 잘라버리는 것을 막아야 무손실 보장이 성립한다. 편집을 보존하는 경로는 기존 `relinkDay1PanelSource`가 담당한다.
+- 저장된 기존 프로젝트는 `fit: 'cover'`를 그대로 들고 있어 렌더 결과가 바뀌지 않는다. 마이그레이션 없음.
+
+크롭은 이제 조작자가 켜는 것이다(꽉 채우기 선택 또는 Scale 상향).

@@ -84,6 +84,26 @@ export const DEFAULT_TRANSFORM: MediaTransform = {
   y: 0,
 };
 
+/**
+ * day1-video — a Day1 panel starts lossless, unlike a scene.
+ *
+ * A scene fills the whole output frame, so `cover` costs a portrait source only
+ * its edges. A panel is half of one, which is landscape, and `cover` there
+ * throws away half a portrait capture's height before the operator has seen it.
+ * Uploading footage must never silently discard it, so a panel opens on
+ * `contain` — the whole source, over the blurred backdrop `SplitFrame` draws —
+ * and cropping is something the operator turns on.
+ *
+ * `DEFAULT_TRANSFORM` stays `cover` for scenes: `SceneVideo` draws with `cover`
+ * unconditionally, so a scene storing anything else would be a lie.
+ */
+export const DEFAULT_DAY1_PANEL_TRANSFORM: MediaTransform = {
+  fit: 'contain',
+  scale: 1,
+  x: 0,
+  y: 0,
+};
+
 export const DEFAULT_SUBTITLE: SubtitleStyle = {
   position: 'bottom',
   align: 'center',

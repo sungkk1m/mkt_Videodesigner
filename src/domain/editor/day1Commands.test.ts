@@ -274,7 +274,7 @@ describe('Day1 panel framing', () => {
     });
 
     expect(day1(project).panelA.transforms.base).toEqual({
-      fit: 'cover',
+      fit: 'contain',
       scale: 1.4,
       x: 10,
       y: 0,
@@ -289,7 +289,7 @@ describe('Day1 panel framing', () => {
 
     expect(hasRatioOverride(day1(written).panelB, '1:1')).toBe(true);
     expect(day1(written).panelB.transforms.overrides['1:1']).toEqual({
-      fit: 'cover',
+      fit: 'contain',
       scale: 1.2,
       x: 0,
       y: -8,
@@ -318,7 +318,48 @@ describe('Day1 panel framing', () => {
     expect(day1(clamped).panelA.transforms.base.x).toBe(-50);
     expect(
       day1(resetDay1Transform(clamped, 'panelA', '9:16')).panelA.transforms.base,
-    ).toEqual({fit: 'cover', scale: 1, x: 0, y: 0});
+    ).toEqual({fit: 'contain', scale: 1, x: 0, y: 0});
+  });
+
+  // day1-video — footage must never be cropped by something the operator did
+  // not choose, so a panel opens lossless and an upload puts it back there.
+  it('opens a panel on the lossless framing', () => {
+    expect(day1(withPanels()).panelA.transforms.base).toEqual({
+      fit: 'contain',
+      scale: 1,
+      x: 0,
+      y: 0,
+    });
+  });
+
+  it('resets the framing when a new source is uploaded', () => {
+    const cropped = updateDay1Transform(withPanels(), 'panelA', '9:16', {
+      fit: 'cover',
+      scale: 2,
+      y: 20,
+    });
+    const replaced = setDay1PanelSource(
+      cropped,
+      'panelA',
+      testMediaReference({id: 'media_a2', durationMs: 9_000}),
+    );
+
+    expect(day1(replaced).panelA.transforms.base).toEqual({
+      fit: 'contain',
+      scale: 1,
+      x: 0,
+      y: 0,
+    });
+    // A relink is the path that keeps the edit.
+    expect(
+      day1(
+        relinkDay1PanelSource(
+          cropped,
+          'panelA',
+          testMediaReference({id: 'media_a', durationMs: 12_000}),
+        ),
+      ).panelA.transforms.base.fit,
+    ).toBe('cover');
   });
 
   it('leaves the other panel alone', () => {

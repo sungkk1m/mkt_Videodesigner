@@ -30,6 +30,7 @@ import {
 import {
   DAY1_SECTION_LABELS,
   DAY1_SECTION_ORDER,
+  DEFAULT_DAY1_PANEL_TRANSFORM,
   DEFAULT_LOCALE,
   DEFAULT_RATIO,
   DEFAULT_SUBTITLE,
@@ -133,12 +134,12 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
   panelA: {
     source: null,
     trim: {inMs: 0, outMs: 0},
-    transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
   },
   panelB: {
     source: null,
     trim: {inMs: 0, outMs: 0},
-    transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
   },
   split: {lineColor: '#9ca3af', lineWidthPx: 6},
   labelStyle: {
@@ -852,6 +853,12 @@ export const switchTemplate = (
 };
 
 /** A new panel video restarts that panel's trim; the other panel is untouched. */
+/**
+ * day1-video — resets the framing along with the trim, so an upload always lands
+ * on the lossless default. Carrying the previous clip's `cover` or zoom over
+ * would crop the new footage before it was ever looked at. `relinkDay1PanelSource`
+ * below is the path that keeps an edit.
+ */
 export const setDay1PanelSource = (
   project: EditorProject,
   key: Day1PanelKey,
@@ -862,6 +869,7 @@ export const setDay1PanelSource = (
       ...panel,
       source,
       trim: {inMs: 0, outMs: 0},
+      transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
     })),
   );
 
@@ -946,7 +954,7 @@ export const resetDay1Transform = (
   key: Day1PanelKey,
   ratio: AspectRatio,
 ): EditorProject =>
-  updateDay1Transform(project, key, ratio, DEFAULT_TRANSFORM);
+  updateDay1Transform(project, key, ratio, DEFAULT_DAY1_PANEL_TRANSFORM);
 
 export const setDay1RatioOverride = (
   project: EditorProject,
