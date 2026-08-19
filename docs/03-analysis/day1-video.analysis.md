@@ -81,20 +81,36 @@
 
 `.editor--panel-collapsed`(좌측 패널 접힘, `--panel-width: 0`)일 때는 스테이지에 296px이 더 생기므로 clamp가 보수적으로 동작한다 — 더 넓힐 수 있는데 안 넓힌다. 안전한 방향이라 그대로 둔다.
 
-## e2e — 이 컨테이너에서 실행 불가
+## e2e — 실행 시도 결과: 브라우저가 막힌다
 
-두 가지 환경 제약이며, 코드 문제가 아니다.
+요청에 따라 `npx playwright test tests/e2e/day1-trim-ux.spec.ts tests/e2e/day1-trim-preview.spec.ts tests/e2e/day1-template.spec.ts`를 실행하려 세 경로를 시도했다.
 
-1. `playwright.config.ts`의 `channel: 'chrome'` — 실제 Google Chrome을 요구한다.
-   `browserType.launch: Chromium distribution 'chrome' is not found at /opt/google/chrome/chrome`
-2. Day1 스펙이 쓰는 `tests/fixtures/*.mp4`는 gitignore 대상이고, `scripts/generate-editor-fixture.mjs`는 H.264 인코더가 있는 ffmpeg를 요구한다. 이 컨테이너의 ffmpeg는 VP8 인코더만 있고 PNG 디코더도 없어 픽스처를 만들 수 없다.
+**픽스처 문제는 해결됐다.** `apt-get install ffmpeg`로 libx264/aac가 있는 ffmpeg 6.1.1을 확보해 `npm run generate:editor-fixture`가 정상 동작했고, `gameplay-sample.mp4`·`day1-panel-b.mp4`·`endcard-2s.mp4`·배너/아이콘 png·코덱 픽스처 전부 생성됐다.
 
-대신 e2e가 잡아낼 위험을 실브라우저에서 직접 확인했다. 캔버스를 `MediaRecorder`로 녹화한 1920×1080 / 7.96s VP8 클립을 패널 A·B에 업로드하니 앱이 정상 인식했고(`길이 7.96초 · 해상도 1920×1080 · 디코딩 확인됨`), 440px에서:
+**남은 블로커는 브라우저 하나뿐이고, 이건 뚫리지 않는다.**
 
-- `.trim__track` 407×44, `-trim-window` **305×52** — `MIN_WINDOW_PX(34px)`와 무관한 영역이다. 트랙이 넓어지면 최소 폭 경로는 오히려 덜 발동한다.
-- trim e2e의 단언은 전부 상대값(윈도우 폭 자기비교, 트랙 비율 드래그)이라 절대 픽셀 의존이 없음을 코드에서 확인했다.
+| 경로 | 결과 |
+|---|---|
+| `npx playwright install chrome` | 프록시가 `dl.google.com` 차단 — `curl: (56) CONNECT tunnel failed, response 403` |
+| `npx playwright install chromium` (설정이 요구하는 v1234) | Chrome for Testing 151.0.7922.34 다운로드 실패 (CDN 차단) |
+| 컨테이너에 있는 브라우저로 대체 실행 | Chromium **141.0.7390.37** — 오픈소스 빌드로 H.264가 없다 |
 
-**남은 검증**: Chrome이 있는 환경에서 `npx playwright test tests/e2e/day1-trim-ux.spec.ts tests/e2e/day1-trim-preview.spec.ts tests/e2e/day1-template.spec.ts` 1회 실행.
+localhost(보안 컨텍스트)에서 측정한 코덱 지원:
+
+```
+canPlayType('video/mp4; codecs="avc1.42E01E"')   → "" (미지원)
+MediaSource.isTypeSupported(avc1.42E01E)          → false
+VideoDecoder.isConfigSupported(avc1.42E01E)       → false
+VideoEncoder.isConfigSupported(avc1.42E01E)       → false
+```
+
+Day1 스펙은 H.264 mp4를 업로드해 디코드하고 mp4로 렌더하므로 이 브라우저에서는 통과할 수 없다. 실제로 돌려보면 업로드 직후 소스 메타데이터가 뜨지 않아 `uploadPanels`에서 죽는다(3 failed / 7 did not run, 전부 `day1-panel-a-metadata` 대기 타임아웃).
+
+**이 실패가 이번 변경과 무관함은 대조 실행으로 확인했다.** 같은 브라우저에서 `editor.css`만 변경 전(`--inspector-width: 320px`)으로 되돌려 동일 테스트를 돌리면 **같은 지점에서 같은 이유로 실패한다**. 즉 환경 제약이며 회귀가 아니다.
+
+`playwright.config.ts`의 `channel: 'chrome'`은 그대로 두는 것이 맞다 — 이 프로젝트 요구사항이 `chrome-only`이고, 오픈소스 Chromium은 애초에 지원 대상이 아니다. 컨테이너에 맞춰 설정을 고치는 것은 문제를 옮기는 것이다.
+
+**남은 검증**: Chrome이 설치된 환경에서 위 명령 1회 실행. 픽스처는 `npm run generate:editor-fixture`로 만들면 되고(ffmpeg 필요), 그 외 사전 준비는 없다.
 
 ## 재현 방법
 

@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-19T07:45:00.000Z",
+  "lastUpdated": "2026-08-19T08:05:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video"
@@ -270,9 +270,9 @@
       },
       "timestamps": {
         "started": "2026-08-19T07:00:00.000Z",
-        "lastUpdated": "2026-08-19T07:45:00.000Z"
+        "lastUpdated": "2026-08-19T08:05:00.000Z"
       },
-      "notes": "옵션 A 확정: --inspector-width를 clamp(320px, 100vw - 950px, 440px)로. 1390px 이상에서 패널 프리뷰 287x161 -> 407x229(면적 2.02배), 9:16/1:1 중앙 프리뷰는 4개 뷰포트 전부 변경 전과 동일. 1차 평문 440px은 1340px 미만에서 스테이지 툴바가 인스펙터를 침범해 clamp로 교체 - 침범/툴바압축 0, 1366 9:16 -3px 회귀도 해소. 유닛 410/410, tsc 통과. 남은 검증: Chrome 있는 환경에서 Day1 e2e 3종 1회."
+      "notes": "옵션 A 확정: --inspector-width를 clamp(320px, 100vw - 950px, 440px)로. 1390px 이상에서 패널 프리뷰 287x161 -> 407x229(면적 2.02배), 9:16/1:1 중앙 프리뷰는 4개 뷰포트 전부 변경 전과 동일. 1차 평문 440px은 1340px 미만에서 스테이지 툴바가 인스펙터를 침범해 clamp로 교체 - 침범/툴바압축 0, 1366 9:16 -3px 회귀도 해소. 유닛 410/410, tsc 통과. e2e 실행 시도: 픽스처는 ffmpeg 설치로 해결됐으나 브라우저가 막힘 - Chrome/Chromium 다운로드는 프록시 403, 온박스 Chromium 141은 H.264 미지원(decode/encode 모두 false). 변경 전 CSS로도 동일 실패하는 것을 대조 확인해 회귀 아님을 확정. 남은 검증: Chrome 설치된 환경에서 Day1 e2e 3종 1회."
     }
   },
   "pipeline": {
@@ -418,7 +418,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-19T07:45:00.000Z"
+    "lastActivity": "2026-08-19T08:05:00.000Z"
   },
   "history": [
     {
@@ -661,6 +661,12 @@
       "feature": "day1-video",
       "phase": "act",
       "action": "iterated"
+    },
+    {
+      "timestamp": "2026-08-19T08:05:00.000Z",
+      "feature": "day1-video",
+      "phase": "check",
+      "action": "analyzed"
     }
   ],
   "stateMachine": {
