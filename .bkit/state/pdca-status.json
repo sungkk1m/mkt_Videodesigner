@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-19T07:00:00.000Z",
+  "lastUpdated": "2026-08-19T07:25:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video"
@@ -257,21 +257,22 @@
       "archivedTo": "docs/archive/2026-08/day1-endcard-audio/"
     },
     "day1-video": {
-      "phase": "plan",
-      "phaseNumber": 1,
+      "phase": "check",
+      "phaseNumber": 4,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
         "inspector-width-default"
       ],
       "documents": {
-        "plan": "docs/01-plan/features/day1-video.plan.md"
+        "plan": "docs/01-plan/features/day1-video.plan.md",
+        "analysis": "docs/03-analysis/day1-video.analysis.md"
       },
       "timestamps": {
         "started": "2026-08-19T07:00:00.000Z",
-        "lastUpdated": "2026-08-19T07:00:00.000Z"
+        "lastUpdated": "2026-08-19T07:25:00.000Z"
       },
-      "notes": "우측 인스펙터 폭 320px 고정으로 패널 A/B 프리뷰가 287x161. 코드 수정 없이는 항구적 해결 불가(브라우저 확대만 임시 우회). 옵션 A(--inspector-width 440px) 권고, 사용자 실행 지시 대기."
+      "notes": "옵션 A 적용: --inspector-width 320 -> 440px. 패널 프리뷰 287x161 -> 407x229(면적 2.02배), 9:16/1:1 중앙 프리뷰 불변 실측 확인. 유닛 410/410, tsc 통과. 미해결 2건: (1) 1280~1365px 폭에서 스테이지 툴바가 인스펙터를 60px 침범 - 대응안 판단 대기, (2) Day1 e2e는 Chrome 채널/H.264 픽스처 부재로 이 컨테이너에서 실행 불가."
     }
   },
   "pipeline": {
@@ -399,13 +400,25 @@
         "from": null,
         "to": "plan",
         "at": "2026-08-19T07:00:00.000Z"
+      },
+      {
+        "feature": "day1-video",
+        "from": "plan",
+        "to": "do",
+        "at": "2026-08-19T07:25:00.000Z"
+      },
+      {
+        "feature": "day1-video",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-19T07:25:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-19T07:00:00.000Z"
+    "lastActivity": "2026-08-19T07:25:00.000Z"
   },
   "history": [
     {
@@ -630,6 +643,18 @@
       "feature": "day1-video",
       "phase": "plan",
       "action": "created"
+    },
+    {
+      "timestamp": "2026-08-19T07:25:00.000Z",
+      "feature": "day1-video",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-19T07:25:00.000Z",
+      "feature": "day1-video",
+      "phase": "check",
+      "action": "analyzed"
     }
   ],
   "stateMachine": {

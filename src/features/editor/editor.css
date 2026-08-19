@@ -6,7 +6,10 @@
 .editor {
   --panel-width: 296px;
   --rail-width: 60px;
-  --inspector-width: 320px;
+  /* day1-video Plan §5 — 440 puts the Day1 panel preview at 407x229 instead of
+     287x161. The 9:16 and 1:1 stage frames are height-constrained, so they do
+     not shrink for it; only a 16:9 output trades width. */
+  --inspector-width: 440px;
 
   display: grid;
   grid-template-areas:
