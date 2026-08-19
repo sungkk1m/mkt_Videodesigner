@@ -15,6 +15,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
 } from 'react';
@@ -26,6 +27,7 @@ import {
   trimWindowMs,
   windowBoundsRatio,
 } from '../../domain/timeline/trimWindow';
+import type {MediaTransform} from '../../domain/editor/types';
 import type {FrameSampler} from '../../domain/ports';
 import {formatSeconds} from './inspectorFields';
 import {STRIP_CELL_COUNT, useTrimThumbnails} from './useTrimThumbnails';
@@ -60,6 +62,15 @@ export interface TrimStripProps {
   /** FR-07 — playback runs this long, looping the window to fill it. Defaults
       to the window itself (play once, no loop). */
   playbackSlotMs?: number;
+  /** day1-video — the shape and framing the source will actually be rendered
+      into. Given it, the stage takes that shape and the media is cropped the way
+      the composition crops it, so the preview answers "what will this look
+      like". Absent, the whole source is letterboxed at 16:9. */
+  framing?: {
+    /** width / height of the slot the source lands in. */
+    aspectRatio: number;
+    transform: MediaTransform;
+  };
 }
 
 type PlaybackState = 'idle' | 'playing' | 'paused';
@@ -193,6 +204,7 @@ export const TrimStrip = ({
   minLengthMs = KEY_STEP_LARGE_MS / 2,
   maxLengthMs,
   playbackSlotMs,
+  framing,
 }: TrimStripProps) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -458,6 +470,17 @@ export const TrimStrip = ({
 
   const restingFrame = dragInMs === null ? preview : approximate;
   const videoActive = state !== 'idle';
+  // day1-video — the same declaration `SplitFrame`'s `Panel` builds (Day1 Design
+  // Ref §5.2), so the preview and the render crop identically. `cover` overrides
+  // the stylesheet's `contain`, which is what letterboxed the whole source.
+  const mediaStyle: CSSProperties | undefined = framing
+    ? {
+        objectFit: 'cover',
+        transform:
+          `translate(${framing.transform.x}%, ${framing.transform.y}%)` +
+          ` scale(${framing.transform.scale})`,
+      }
+    : undefined;
   // CSS min()/max() keep the window inside the track when the minimum width
   // engages near the right edge (FR-01).
   const windowWidthCss = `max(${widthRatio * 100}%, ${MIN_WINDOW_PX}px)`;
@@ -471,6 +494,7 @@ export const TrimStrip = ({
         data-testid={`${testIdPrefix}-trim-playtoggle`}
         disabled={disabled}
         onClick={() => toggle(inMs, windowMs, Math.max(slotMs, windowMs))}
+        style={framing ? {aspectRatio: framing.aspectRatio} : undefined}
         type="button"
       >
         {/* Muted by design — the project audio track owns the mix. */}
@@ -482,6 +506,7 @@ export const TrimStrip = ({
           preload="metadata"
           ref={videoRef}
           src={url}
+          style={mediaStyle}
         />
         {restingFrame ? (
           <img
@@ -489,6 +514,7 @@ export const TrimStrip = ({
             className={`trim__preview${videoActive ? ' trim__preview--under' : ''}`}
             data-testid={`${testIdPrefix}-trim-preview`}
             src={restingFrame}
+            style={mediaStyle}
           />
         ) : null}
       </button>

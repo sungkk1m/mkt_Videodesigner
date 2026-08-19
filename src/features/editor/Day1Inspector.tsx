@@ -35,6 +35,7 @@ import {
   DAY1_END_CARD_MS,
   MIN_END_CARD_TRIM_MS,
 } from '../../domain/day1/playback';
+import {splitLayout} from '../../domain/day1/layout';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
@@ -54,7 +55,8 @@ const PANEL_TITLES: Record<Day1PanelKey, string> = {
   panelB: '패널 B',
 };
 
-const PANEL_TEST_KEY: Record<Day1PanelKey, string> = {
+/** Narrowed to the `SplitLayout` keys so a panel can look its own rect up. */
+const PANEL_TEST_KEY: Record<Day1PanelKey, 'a' | 'b'> = {
   panelA: 'a',
   panelB: 'b',
 };
@@ -161,6 +163,11 @@ const PanelSection = ({
 }) => {
   const key = PANEL_TEST_KEY[panel];
   const {source, trim} = settings[panel];
+  // day1-video — the panel's own slot in the output, so the strip's preview can
+  // show the crop the render will make instead of the whole source. Half of a
+  // 9:16 frame is landscape, which is why letterboxing a portrait source into a
+  // 16:9 box left most of the box black.
+  const rect = splitLayout(ratio, settings.split.lineWidthPx)[key];
   const sourceMs = source?.durationMs ?? 0;
   const controlsDisabled = disabled || sourceMs <= 0;
   // FR-S02. Mirrors `day1PanelsShorterThanSection`, which the render gate uses.
@@ -182,6 +189,7 @@ const PanelSection = ({
       {/* Day1 Trim UX FR-T01, FR-T02 — pick the interval by looking at it. */}
       <TrimStrip
         disabled={controlsDisabled}
+        framing={{aspectRatio: rect.width / rect.height, transform}}
         inMs={trim.inMs}
         onCommit={onTrimIn}
         sampler={frameSampler}
