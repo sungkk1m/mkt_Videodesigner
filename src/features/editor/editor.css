@@ -6,10 +6,17 @@
 .editor {
   --panel-width: 296px;
   --rail-width: 60px;
-  /* day1-video Plan §5 — 440 puts the Day1 panel preview at 407x229 instead of
-     287x161. The 9:16 and 1:1 stage frames are height-constrained, so they do
-     not shrink for it; only a 16:9 output trades width. */
-  --inspector-width: 440px;
+  /* day1-video — 440 puts the Day1 panel preview at 407x229 instead of 287x161.
+     The 9:16 and 1:1 stage frames are height-constrained, so they do not shrink
+     for it; only a 16:9 output trades width.
+
+     The ceiling is not free at every window size: the floating stage toolbar
+     needs 566px of stage content, and once it cannot get it it stops shrinking
+     and rides over the inspector. 950px is what everything left of the stage
+     costs at that point (rail 60 + panel 296 + stage padding 28 + toolbar 566),
+     so the width below the ceiling is whatever the viewport has beyond it. Move
+     this constant if the toolbar ever gains a control. */
+  --inspector-width: clamp(320px, 100vw - 950px, 440px);
 
   display: grid;
   grid-template-areas:
