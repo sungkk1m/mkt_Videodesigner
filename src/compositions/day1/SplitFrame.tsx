@@ -61,6 +61,17 @@ const PanelLabel = ({
   </AbsoluteFill>
 );
 
+/**
+ * day1-video — the blurred backdrop `contain` draws behind the source, so the
+ * space `contain` leaves reads as part of the shot instead of dead canvas.
+ *
+ * Sized as a fraction of the panel so it looks the same at every output ratio.
+ * The blur fades an element out at its own edges, so the backdrop is overscanned
+ * far enough that the faded rim lands outside the panel's clip.
+ */
+const BACKDROP_BLUR_RATIO = 0.05;
+const BACKDROP_OVERSCAN = 1.2;
+
 const Panel = ({
   labelStyle,
   live,
@@ -92,9 +103,39 @@ const Panel = ({
         width: rect.width,
       }}
     >
+      {/* One frame, held for the section — the same Freeze trick the idle panel
+          below uses, so the backdrop costs a single decode rather than a second
+          video stream. Deliberately ignores the panel's own framing: it exists to
+          fill the panel edge to edge whatever the foreground does. */}
+      {panel.fit === 'contain' && panel.url !== null ? (
+        // AbsoluteFill takes the backdrop out of flow. In normal flow its 100%
+        // height would consume the panel and push the source below the clip.
+        <AbsoluteFill>
+          <Freeze frame={0}>
+            <Video
+              muted
+              objectFit="cover"
+              src={panel.url}
+              style={{
+                // Plan SC2 — the idle panel is greyscale, so its backdrop has to
+                // be too, or a colour halo gives the desaturation away.
+                filter:
+                  `blur(${BACKDROP_BLUR_RATIO * rect.width}px)` +
+                  (live ? '' : ' grayscale(1)'),
+                height: '100%',
+                transform: `scale(${BACKDROP_OVERSCAN})`,
+                width: '100%',
+              }}
+              trimAfter={panel.trimBeforeFrames + 1}
+              trimBefore={panel.trimBeforeFrames}
+            />
+          </Freeze>
+        </AbsoluteFill>
+      ) : null}
+
       {panel.url === null ? null : live ? (
         <Video
-          objectFit="cover"
+          objectFit={panel.fit}
           src={panel.url}
           style={framing}
           trimAfter={panel.trimAfterFrames}
@@ -109,7 +150,7 @@ const Panel = ({
         <Freeze frame={0}>
           <Video
             muted
-            objectFit="cover"
+            objectFit={panel.fit}
             src={panel.url}
             style={{...framing, filter: 'grayscale(1)'}}
             trimAfter={panel.trimBeforeFrames + 1}

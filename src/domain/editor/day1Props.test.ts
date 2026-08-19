@@ -9,6 +9,7 @@ import {
   buildDay1Props,
   createProject,
   parseProject,
+  updateDay1Transform,
 } from './project';
 import {
   TEST_SOURCE_URL,
@@ -146,6 +147,23 @@ describe('buildDay1Props', () => {
     expect(square?.panelA).toMatchObject({scale: 1.4, x: 10, y: -5});
     expect(square?.panelB).toMatchObject({scale: 1, x: 0, y: 0});
     expect(portrait?.panelA).toMatchObject({scale: 1, x: 0, y: 0});
+  });
+
+  // day1-video — the composition branches on this, so it has to survive the
+  // prop builder rather than being re-derived there.
+  it('carries each panel fit into the render props', () => {
+    const loaded = loadedDay1();
+
+    expect(buildDay1Props(loaded, testUrlResolver())?.panelA.fit).toBe('cover');
+
+    const contained = updateDay1Transform(loaded, 'panelA', '9:16', {
+      fit: 'contain',
+    });
+    const props = buildDay1Props(contained, testUrlResolver());
+
+    expect(props?.panelA.fit).toBe('contain');
+    // The other panel is untouched — fit is per panel, not per project.
+    expect(props?.panelB.fit).toBe('cover');
   });
 
   it('takes each panel label from the selected locale', () => {

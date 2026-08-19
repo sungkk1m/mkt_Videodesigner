@@ -15,6 +15,7 @@ import {
   MAX_SCALE,
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
+  MEDIA_FITS,
   MIN_ICON_SCALE,
   MIN_SCALE,
   MIN_SUBTITLE_FONT_SIZE,
@@ -27,6 +28,7 @@ import {
   type Day1Settings,
   type Locale,
   type LocalizedCopy,
+  type MediaFit,
   type MediaReference,
   type MediaTransform,
   type SubtitleStyle,
@@ -93,6 +95,12 @@ const END_CARD_LABELS: Record<Day1EndCardSlot, string> = {
   video: '엔드카드 영상',
 };
 
+/** day1-video — what each fit does to a source that is not the panel's shape. */
+const FIT_LABELS: Record<MediaFit, string> = {
+  cover: '꽉 채우기',
+  contain: '전체 보기',
+};
+
 const END_CARD_MODE_LABELS: Record<Day1EndCardMode, string> = {
   banner: '배너+아이콘',
   video: '영상',
@@ -113,10 +121,7 @@ export interface Day1InspectorProps {
   /** Session URL of a panel's video, or null while it is unresolved. */
   resolvePanelUrl: (panel: Day1PanelKey) => string | null;
   onTrimIn: (panel: Day1PanelKey, ms: number) => void;
-  onTransform: (
-    panel: Day1PanelKey,
-    patch: Partial<Omit<MediaTransform, 'fit'>>,
-  ) => void;
+  onTransform: (panel: Day1PanelKey, patch: Partial<MediaTransform>) => void;
   onResetTransform: (panel: Day1PanelKey) => void;
   onToggleRatioOverride: (panel: Day1PanelKey, enabled: boolean) => void;
   onSplit: (patch: Partial<Day1Settings['split']>) => void;
@@ -158,7 +163,7 @@ const PanelSection = ({
   url: string | null;
   onResetTransform: () => void;
   onToggleRatioOverride: (enabled: boolean) => void;
-  onTransform: (patch: Partial<Omit<MediaTransform, 'fit'>>) => void;
+  onTransform: (patch: Partial<MediaTransform>) => void;
   onTrimIn: (ms: number) => void;
 }) => {
   const key = PANEL_TEST_KEY[panel];
@@ -188,6 +193,7 @@ const PanelSection = ({
 
       {/* Day1 Trim UX FR-T01, FR-T02 — pick the interval by looking at it. */}
       <TrimStrip
+        backdrop={transform.fit === 'contain'}
         disabled={controlsDisabled}
         framing={{aspectRatio: rect.width / rect.height, transform}}
         inMs={trim.inMs}
@@ -238,7 +244,34 @@ const PanelSection = ({
         </p>
       ) : null}
 
-      <p className="panel__hint">Fit · Cover 고정</p>
+      {/* day1-video — half of a 9:16 frame is landscape, so a portrait capture
+          either loses half its height or keeps all of it against the blurred
+          backdrop. That is a per-panel call, not a fixed one. */}
+      <p className="field field--readout">
+        <span>Fit</span>
+      </p>
+      <div className="segmented">
+        {MEDIA_FITS.map((fit) => (
+          <button
+            aria-pressed={transform.fit === fit}
+            className={`segmented__item${
+              transform.fit === fit ? ' segmented__item--on' : ''
+            }`}
+            data-testid={`day1-${key}-fit-${fit}`}
+            disabled={controlsDisabled}
+            key={fit}
+            onClick={() => onTransform({fit})}
+            type="button"
+          >
+            {FIT_LABELS[fit]}
+          </button>
+        ))}
+      </div>
+      <p className="panel__hint">
+        {transform.fit === 'cover'
+          ? '패널을 꽉 채우고 넘치는 부분은 잘립니다. Y로 어느 부분을 살릴지 고르세요.'
+          : '원본을 모두 남기고, 남는 자리는 원본을 흐리게 깐 배경으로 채웁니다. Scale을 올리면 점점 잘립니다.'}
+      </p>
       <label className="field field--toggle">
         <input
           checked={hasOverride}

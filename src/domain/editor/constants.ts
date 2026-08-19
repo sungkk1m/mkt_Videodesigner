@@ -29,6 +29,14 @@ export const LOCALES = ['ko', 'en', 'ja', 'zh-TW'] as const;
 export const ASPECT_RATIOS = ['9:16', '1:1', '16:9'] as const;
 
 export const TRANSITION_KINDS = ['cut', 'fade', 'zoom'] as const;
+
+/**
+ * How a source fills the box it is drawn into. `cover` fills and crops, which is
+ * what every template did originally. `contain` keeps the whole source and lets
+ * the panel fill the leftover with a blurred copy of it — a portrait capture in
+ * a Day1 panel loses half its height under `cover`, and that is the way out.
+ */
+export const MEDIA_FITS = ['cover', 'contain'] as const;
 export const HOOK_MOTION_PRESETS = ['impact', 'caption', 'focus'] as const;
 export const SUBTITLE_POSITIONS = ['top', 'center', 'bottom'] as const;
 export const SUBTITLE_ALIGNMENTS = ['left', 'center', 'right'] as const;

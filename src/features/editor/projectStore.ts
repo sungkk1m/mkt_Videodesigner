@@ -136,9 +136,10 @@ export interface ProjectStore {
   relinkDay1Panel: (panel: Day1PanelKey, source: MediaReference) => void;
   setDay1PanelStatus: (panel: Day1PanelKey, status: MediaStatus) => void;
   setDay1TrimIn: (panel: Day1PanelKey, ms: number) => void;
+  /** day1-video — a panel also chooses its `fit`, unlike a scene. */
   setDay1Transform: (
     panel: Day1PanelKey,
-    patch: Partial<Omit<MediaTransform, 'fit'>>,
+    patch: Partial<MediaTransform>,
   ) => void;
   resetDay1Transform: (panel: Day1PanelKey) => void;
   toggleDay1RatioOverride: (panel: Day1PanelKey, enabled: boolean) => void;

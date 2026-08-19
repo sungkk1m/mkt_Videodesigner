@@ -573,9 +573,9 @@ export const hasRatioOverride = (
 
 const clampTransform = (
   current: MediaTransform,
-  patch: Partial<Omit<MediaTransform, 'fit'>>,
+  patch: Partial<MediaTransform>,
 ): MediaTransform => ({
-  fit: 'cover',
+  fit: patch.fit ?? current.fit,
   scale: clamp(patch.scale ?? current.scale, MIN_SCALE, MAX_SCALE),
   x: clamp(patch.x ?? current.x, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT),
   y: clamp(patch.y ?? current.y, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT),
@@ -589,7 +589,7 @@ const clampTransform = (
 const writeTransform = <T extends {transforms: RatioTransforms}>(
   target: T,
   ratio: AspectRatio,
-  patch: Partial<Omit<MediaTransform, 'fit'>>,
+  patch: Partial<MediaTransform>,
 ): T => {
   const next = clampTransform(activeTransform(target, ratio), patch);
 
@@ -926,12 +926,18 @@ export const setDay1TrimOutMs = (
   return setDay1TrimInMs(project, key, outMs - windowMs);
 };
 
-/** FR-D07 — per-panel Cover reframing with the same override rules as a scene. */
+/**
+ * FR-D07 — per-panel reframing with the same override rules as a scene.
+ *
+ * day1-video — unlike a scene, a panel also chooses its `fit`: half of a 9:16
+ * frame is landscape, so a portrait capture has to either lose half its height
+ * (`cover`) or keep all of it against a blurred backdrop (`contain`).
+ */
 export const updateDay1Transform = (
   project: EditorProject,
   key: Day1PanelKey,
   ratio: AspectRatio,
-  patch: Partial<Omit<MediaTransform, 'fit'>>,
+  patch: Partial<MediaTransform>,
 ): EditorProject =>
   mapDay1Panel(project, key, (panel) => writeTransform(panel, ratio, patch));
 
@@ -1453,6 +1459,7 @@ export const buildDay1Props = (
         trimBeforeFrames + 1,
         msToFrames(panel.trim.outMs, project.fps),
       ),
+      fit: transform.fit,
       scale: transform.scale,
       x: transform.x,
       y: transform.y,

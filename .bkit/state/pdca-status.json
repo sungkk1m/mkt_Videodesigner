@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-19T08:25:00.000Z",
+  "lastUpdated": "2026-08-19T09:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video"
@@ -260,10 +260,11 @@
       "phase": "check",
       "phaseNumber": 4,
       "matchRate": null,
-      "iterationCount": 2,
+      "iterationCount": 3,
       "requirements": [
         "inspector-width-default",
-        "preview-matches-render"
+        "preview-matches-render",
+        "panel-fit-choice"
       ],
       "documents": {
         "plan": "docs/01-plan/features/day1-video.plan.md",
@@ -271,9 +272,9 @@
       },
       "timestamps": {
         "started": "2026-08-19T07:00:00.000Z",
-        "lastUpdated": "2026-08-19T08:25:00.000Z"
+        "lastUpdated": "2026-08-19T09:20:00.000Z"
       },
-      "notes": "2단계 완료. (1) --inspector-width를 clamp(320px, 100vw - 950px, 440px)로 - 1390px 이상에서 440, 좁은 창에서는 스테이지 툴바 침범을 피해 되돌림. (2) 사용자 실측으로 계획 전제 2개가 깨짐 - Windows 스크롤바 15px, 실제 소재가 1242x2208 세로 영상. 16:9 contain 박스가 폭 68%를 검은 여백으로 쓰고 렌더의 50% 크롭을 볼 수 없어, TrimStrip에 옵트인 framing prop을 추가해 프리뷰를 패널 슬롯 비율 + cover + 패널 transform으로 렌더와 일치시킴. 실제 보이는 영상 면적 29,541 -> 146,781 px2(약 5배), 크롭 일치를 색 밴드 클립으로 증명. 엔드카드/3장면 무변경. 유닛 410/410, tsc 통과. 자동 테스트 없음(CSS 레이아웃, e2e 실행 불가). 남은 검증: Chrome 환경에서 Day1 e2e 3종 1회."
+      "notes": "3단계 완료. (1) --inspector-width clamp(320px, 100vw - 950px, 440px). (2) 프리뷰를 렌더와 일치(패널 슬롯 비율 + cover + 패널 transform), 보이는 영상 면적 약 5배. (3) 사용자 선택으로 패널 Fit 옵션 추가 - MediaTransform.fit을 literal에서 enum으로 열고, contain일 때 SplitFrame이 트림 시작 프레임을 cover+블러로 깐 배경을 뒤에 둠(프레임 1장 디코드). 세로 소재 손실 0, 블러가 여백을 채움. Scale 100~200%가 손실0~cover 연속 다이얼. 3장면은 cover 고정 유지, 프록시는 contain에서 건너뜀. 렌더 레이어링 버그 1건을 스크린샷 대조로 발견해 AbsoluteFill로 수정. 유닛 413/413, tsc 통과. 남은 검증: Chrome 환경에서 Day1 e2e 3종 1회."
     }
   },
   "pipeline": {
@@ -419,7 +420,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-19T08:25:00.000Z"
+    "lastActivity": "2026-08-19T09:20:00.000Z"
   },
   "history": [
     {
@@ -671,6 +672,12 @@
     },
     {
       "timestamp": "2026-08-19T08:25:00.000Z",
+      "feature": "day1-video",
+      "phase": "act",
+      "action": "iterated"
+    },
+    {
+      "timestamp": "2026-08-19T09:20:00.000Z",
       "feature": "day1-video",
       "phase": "act",
       "action": "iterated"

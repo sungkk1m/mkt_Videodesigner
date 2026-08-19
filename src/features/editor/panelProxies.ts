@@ -138,6 +138,16 @@ export const createPanelProxies = ({
     if (!plan) {
       const size = {width: source.width, height: source.height};
       const box = key === 'panelA' ? layout.a : layout.b;
+
+      // day1-video — `panelVisibleRect` below is cover geometry, so under
+      // `contain` it would describe a rectangle nobody asked for. Say the real
+      // reason instead: the whole source is on screen, so no crop exists.
+      if (activeTransform(panel, ratio).fit !== 'cover') {
+        notes.set(slot, `${key}: skipped, contain shows the whole source`);
+
+        return null;
+      }
+
       const visible = panelVisibleRect(box, size, activeTransform(panel, ratio));
       const outside =
         visible.left < 0 ||

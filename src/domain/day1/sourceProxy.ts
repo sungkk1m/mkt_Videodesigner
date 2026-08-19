@@ -108,6 +108,13 @@ export const planPanelProxy = (
   source: SourceSize,
   transform: MediaTransform,
 ): PanelProxyPlan | null => {
+  // day1-video — every rectangle below is inverted out of `cover`. Under
+  // `contain` the panel shows the whole source anyway, so there is nothing to
+  // crop away and no reason to reason about it: keep the original source.
+  if (transform.fit !== 'cover') {
+    return null;
+  }
+
   const visible = panelVisibleRect(box, source, transform);
 
   // A framing that reaches past the source edge shows the panel's background

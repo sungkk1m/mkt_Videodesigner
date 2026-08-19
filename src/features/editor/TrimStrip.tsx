@@ -71,6 +71,9 @@ export interface TrimStripProps {
     aspectRatio: number;
     transform: MediaTransform;
   };
+  /** day1-video — mirrors the composition's blurred backdrop, so a `contain`
+      framing previews against the same fill it will render against. */
+  backdrop?: boolean;
 }
 
 type PlaybackState = 'idle' | 'playing' | 'paused';
@@ -205,6 +208,7 @@ export const TrimStrip = ({
   maxLengthMs,
   playbackSlotMs,
   framing,
+  backdrop = false,
 }: TrimStripProps) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
@@ -475,7 +479,7 @@ export const TrimStrip = ({
   // the stylesheet's `contain`, which is what letterboxed the whole source.
   const mediaStyle: CSSProperties | undefined = framing
     ? {
-        objectFit: 'cover',
+        objectFit: framing.transform.fit,
         transform:
           `translate(${framing.transform.x}%, ${framing.transform.y}%)` +
           ` scale(${framing.transform.scale})`,
@@ -497,6 +501,17 @@ export const TrimStrip = ({
         style={framing ? {aspectRatio: framing.aspectRatio} : undefined}
         type="button"
       >
+        {/* The composition holds one frame behind the source, so the backdrop
+            here is the resting frame — the same frame, blurred (SplitFrame). */}
+        {backdrop && restingFrame ? (
+          <img
+            alt=""
+            className="trim__backdrop"
+            data-testid={`${testIdPrefix}-trim-backdrop`}
+            src={restingFrame}
+          />
+        ) : null}
+
         {/* Muted by design — the project audio track owns the mix. */}
         <video
           className={`trim__video${videoActive ? '' : ' trim__video--hidden'}`}

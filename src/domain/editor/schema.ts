@@ -30,6 +30,7 @@ import {
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
+  MEDIA_FITS,
   MIN_SCALE,
   MIN_SCENE_MS,
   MAX_TTS_SPEED,
@@ -73,7 +74,8 @@ export const mediaTrimSchema = z
   });
 
 export const mediaTransformSchema = z.object({
-  fit: z.literal('cover'),
+  /** day1-video — `cover` crops to fill, `contain` keeps the whole source. */
+  fit: z.enum(MEDIA_FITS),
   scale: z.number().min(MIN_SCALE).max(MAX_SCALE),
   /** Horizontal offset as a percentage of the output frame width. */
   x: z.number().min(-MAX_OFFSET_PERCENT).max(MAX_OFFSET_PERCENT),
@@ -502,6 +504,7 @@ export type HookMotionPreset = z.infer<typeof hookMotionPresetSchema>;
 export type DurationPreset = z.infer<typeof durationPresetSchema>;
 export type MediaTrim = z.infer<typeof mediaTrimSchema>;
 export type MediaTransform = z.infer<typeof mediaTransformSchema>;
+export type MediaFit = MediaTransform['fit'];
 export type RatioTransforms = z.infer<typeof ratioTransformsSchema>;
 export type SubtitleStyle = z.infer<typeof subtitleStyleSchema>;
 export type SceneTransition = z.infer<typeof sceneTransitionSchema>;

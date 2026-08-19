@@ -97,6 +97,20 @@ describe('panelVisibleRect', () => {
 });
 
 describe('planPanelProxy', () => {
+  // day1-video — every rectangle here is inverted out of `cover`. Under
+  // `contain` the panel shows the whole source, so there is no crop to plan and
+  // the cover arithmetic must not be applied to it anyway.
+  it('plans no crop for a contain framing', () => {
+    expect(planPanelProxy(PANEL_9X16, SOURCE, transform({fit: 'contain'})))
+      .toBeNull();
+  });
+
+  it('still crops the same contain source under cover', () => {
+    const plan = planPanelProxy(PANEL_9X16, SOURCE, transform({fit: 'cover'}));
+
+    expect(plan?.savings).toBeCloseTo(0.5018, 3);
+  });
+
   it('crops a 9:16 panel to the visible band and keeps the full width', () => {
     const plan = planPanelProxy(PANEL_9X16, SOURCE, transform());
 

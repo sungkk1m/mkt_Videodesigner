@@ -48,6 +48,7 @@ export type {
   HookSceneSettings,
   Locale,
   LocalizedCopy,
+  MediaFit,
   MediaTransform,
   MediaTrim,
   NarrationTrack,
@@ -184,6 +185,8 @@ export interface Day1PanelRenderProps {
   url: string | null;
   trimBeforeFrames: number;
   trimAfterFrames: number;
+  /** day1-video — `contain` keeps the whole source over a blurred backdrop. */
+  fit: MediaTransform['fit'];
   scale: number;
   x: number;
   y: number;

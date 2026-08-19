@@ -1312,6 +1312,8 @@
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
+  /* Makes `cqw` inside resolve against this box, for the backdrop blur below. */
+  container-type: inline-size;
   padding: 0;
   overflow: hidden;
   background: #000;
@@ -1322,6 +1324,20 @@
 
 .trim__stage:disabled {
   cursor: default;
+}
+
+/* day1-video — the composition's blurred backdrop (`SplitFrame`), previewed. The
+   blur is a fraction of the stage width via `cqw`, the way the render scales it
+   against the panel width, so the preview does not drift from the output as the
+   inspector resizes. Overscanned past the blur's own faded edge. */
+.trim__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.2);
+  filter: blur(5cqw);
 }
 
 .trim__video {
