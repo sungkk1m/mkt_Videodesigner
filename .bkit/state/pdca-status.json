@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-22T15:10:00.000Z",
+  "lastUpdated": "2026-08-22T15:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -307,7 +307,7 @@
       },
       "timestamps": {
         "started": "2026-08-21T08:30:00.000Z",
-        "lastUpdated": "2026-08-22T15:10:00.000Z"
+        "lastUpdated": "2026-08-22T15:30:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -365,7 +365,7 @@
           "module-2": "kv-loop schema + domain - COMPLETED",
           "module-3": "compositions + render branch - CODE COMPLETE, D-07 performance gate and the manual MP4 still open",
           "module-4": "UI - CODE COMPLETE, manual editor pass still open",
-          "module-5": "E2E - WRITTEN, NEVER EXECUTED (no system Chrome, no ffmpeg in this container)"
+          "module-5": "E2E - 6/6 DOM tests pass on real runs; render-based tests blocked by the browser, not by the code"
         },
         "baseline": {
           "measuredAt": "2026-08-21T09:30:00.000Z",
@@ -448,7 +448,7 @@
         "module5": {
           "specFile": "tests/e2e/kv-loop.spec.ts",
           "tests": 8,
-          "verified": "tsc -b passes and playwright --list discovers all 8; the spec has never run",
+          "verified": "6 control tests pass (2 assertion fixes); render tests blocked: bundled Chromium supports neither H.264 nor AAC encode/decode",
           "fixturesAdded": [
             "kv-1..kv-4 portrait stills",
             "kv-landscape still"
@@ -464,7 +464,15 @@
           "notCovered": [
             "SC8 - the existing 54 e2e are that verdict",
             "uneven holds from design 8.2 scenario 2"
-          ]
+          ],
+          "runResults2026_08_22": {
+            "fixtures": "pass after installing ffmpeg 6.1.1",
+            "controlTests": "6/6 pass",
+            "renderTest": "blocked - capabilities.ready false; H.264 and AAC unsupported in the bundled Chromium",
+            "existingE2E": "not measurable here - every existing spec uploads an mp4 and H.264 decode is unsupported; day1-trim-ux trim strip failed that way",
+            "benchmark": "blocked - chromium.launch({channel:'chrome'}) finds no /opt/google/chrome/chrome; playwright install chrome blocked by proxy 403",
+            "note": "the looping control tests run here only because key visuals are PNGs"
+          }
         },
         "remainingForCycleClose": [
           "run and fix the 8 looping e2e tests",
