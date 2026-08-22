@@ -145,7 +145,7 @@ test.describe('looping editor — controls', () => {
       ).toBeDisabled();
     }
 
-    await expect(page.getByTestId('timeline-duration-kv-0')).toHaveText('1.88');
+    await expect(page.getByTestId('timeline-duration-kv-0')).toHaveText('1.9초');
 
     // Only the three inner boundaries of the cycle get handles.
     await expect(page.getByTestId('timeline-boundary-0')).toBeVisible();
@@ -162,20 +162,20 @@ test.describe('looping editor — controls', () => {
     // 15s over eight key visuals twice is 0.94s each.
     await expect(
       page.getByTestId('kv-count').locator('option[value="8"]'),
-    ).toBeDisabled();
+    ).toHaveJSProperty('disabled', true);
     await expect(
       page.getByTestId('kv-loop-count').locator('option[value="4"]'),
-    ).toBeDisabled();
+    ).toHaveJSProperty('disabled', true);
 
     await page.getByTestId('kv-count').selectOption('6');
     await expect(page.getByTestId('timeline-clip-kv-5')).toBeVisible();
-    await expect(page.getByTestId('timeline-duration-kv-0')).toHaveText('1.25');
+    await expect(page.getByTestId('timeline-duration-kv-0')).toHaveText('1.3초');
 
     // 30s reopens the combinations 15s could not hold.
     await page.getByRole('button', {name: '30초'}).click();
     await expect(
       page.getByTestId('kv-count').locator('option[value="8"]'),
-    ).toBeEnabled();
+    ).toHaveJSProperty('disabled', false);
   });
 
   test('warns about a landscape key visual and offers to keep it whole (FR-L19)', async ({
