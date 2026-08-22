@@ -352,4 +352,5 @@ export type KvLoopProps = {
  */
 export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
-  | {template: 'day1'; props: Day1Props};
+  | {template: 'day1'; props: Day1Props}
+  | {template: 'kv-loop'; props: KvLoopProps};

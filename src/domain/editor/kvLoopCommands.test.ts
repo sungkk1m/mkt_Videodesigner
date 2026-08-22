@@ -6,6 +6,7 @@ import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
 import {kvLoopProjectFixture, kvLoopSettingsOf} from '../../test/fixtures/project';
 import {
   applyDurationPreset,
+  buildEditorSnapshot,
   buildKvLoopProps,
   createProject,
   kvLoopOf,
@@ -268,6 +269,12 @@ describe('buildKvLoopProps', () => {
     expect(props?.disclaimer.text).toBe('');
   });
 
+  it('opens a title overlay on contain, so a logo is never cropped', () => {
+    expect(buildKvLoopProps(filled(), testUrlResolver())?.title.fit).toBe(
+      'contain',
+    );
+  });
+
   it('carries the locale disclaimer when one is written — FR-L11', () => {
     const project = filled();
     const copy = project.copy.ko as LocalizedCopy;
@@ -301,5 +308,20 @@ describe('buildKvLoopProps', () => {
 
   it('returns null for another template', () => {
     expect(buildKvLoopProps(createProject(15), testUrlResolver())).toBeNull();
+  });
+
+  it('is what buildEditorSnapshot tags a looping project with — SC1', () => {
+    const snapshot = buildEditorSnapshot(filled(), testUrlResolver());
+
+    expect(snapshot.template).toBe('kv-loop');
+
+    if (snapshot.template !== 'kv-loop') {
+      return;
+    }
+
+    expect(snapshot.props.segments).toHaveLength(8);
+    expect(buildEditorSnapshot(createProject(15), testUrlResolver()).template).toBe(
+      'three-scene',
+    );
   });
 });

@@ -191,7 +191,9 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
   loopCount: DEFAULT_KV_LOOPS,
   kenBurnsIntensity: 0.5,
   transitionMs: DEFAULT_KV_TRANSITION_MS,
-  title: {images: {}, transform: {...DEFAULT_TRANSFORM}},
+  // An overlay is artwork with its own margins, so it opens on `contain`:
+  // cropping a game logo is never what was meant. §5.3.
+  title: {images: {}, transform: {...DEFAULT_TRANSFORM, fit: 'contain'}},
   disclaimer: {fontSize: 32, textColor: '#ffffff'},
   fadeOutMs: DEFAULT_KV_TRANSITION_MS,
 };
@@ -1665,19 +1667,26 @@ export const buildKvLoopProps = (
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
  *
- * Plan SC1: a Day1 job must reach `Day1Composition`, never a three-scene snapshot.
+ * Plan SC1: a Day1 job must reach `Day1Composition`, never a three-scene snapshot,
+ * and key-visual-looping SC1 asks the same of a looping job.
  */
 export const buildEditorSnapshot = (
   project: EditorProject,
   resolveUrl: (reference: MediaReference | null | undefined) => string | null,
 ): EditorSnapshot => {
-  // `buildDay1Props` returns non-null exactly for a Day1 payload, and
+  // Each builder returns non-null exactly for its own payload, and
   // `buildCompositionProps` already degrades a foreign template to an empty
   // three-scene snapshot. So this stays total without a cast.
   const day1Props = buildDay1Props(project, resolveUrl);
 
-  return day1Props
-    ? {template: 'day1', props: day1Props}
+  if (day1Props) {
+    return {template: 'day1', props: day1Props};
+  }
+
+  const kvLoopProps = buildKvLoopProps(project, resolveUrl);
+
+  return kvLoopProps
+    ? {template: 'kv-loop', props: kvLoopProps}
     : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
 };
 
