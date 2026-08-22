@@ -16,6 +16,9 @@ import {
   DAY1_SECTION_ORDER,
   DURATION_PRESETS,
   HOOK_MOTION_PRESETS,
+  KV_LOOP_MAX_LOOPS,
+  KV_LOOP_MIN_LOOPS,
+  KV_LOOP_RATIO,
   LOCALES,
   MAX_BATCH_JOBS,
   MAX_COPY_LENGTH,
@@ -45,6 +48,7 @@ import {
   SUBTITLE_POSITIONS,
   TEMPLATE_KINDS,
   TRANSITION_KINDS,
+  kvSectionId,
 } from './constants';
 
 export const sceneKindSchema = z.enum(SCENE_ORDER);
@@ -188,6 +192,12 @@ export const localizedCopySchema = z.object({
   day1Labels: z
     .object({a: copyTextSchema, b: copyTextSchema})
     .optional(),
+  /**
+   * key-visual-looping Design Ref: §3.3 — the looping template's bottom
+   * disclaimer. Optional for the same reason `day1Labels` is: a copy block saved
+   * by either existing template parses untouched.
+   */
+  kvLoopDisclaimer: copyTextSchema.optional(),
 });
 
 /**
@@ -294,10 +304,68 @@ export const day1SettingsSchema = z.object({
   }),
 });
 
+/**
+ * key-visual-looping Design Ref: §3.2 D-04 — per-KV framing and motion, held
+ * apart from the per-locale pixels. Locale sets are the same illustration with a
+ * different title baked in, so the framing is shared and switching the locale tab
+ * must not reset Scale/X/Y.
+ *
+ * `transform` inherits `fit` from `mediaTransformSchema`, which day1-video
+ * widened to `['cover', 'contain']` — that is what makes FR-L19 (a non-portrait
+ * key visual kept whole over a blurred backdrop) a real option rather than a
+ * warning.
+ */
+export const kvSlotSchema = z.object({
+  transform: mediaTransformSchema,
+  kenBurns: z.boolean(),
+});
+
+export const kvLoopSettingsSchema = z.object({
+  template: z.literal('kv-loop'),
+  /** Length === `sections.length`. Design D-02 — the KV count has one source. */
+  slots: z.array(kvSlotSchema).min(MIN_SECTION_COUNT).max(MAX_SECTION_COUNT),
+  /**
+   * Per-locale key visual pixels. Sparse on purpose: a half-filled set is a
+   * project mid-upload, not an invalid one, which is the same policy Day1 panels
+   * follow. Resolution and the `en` fallback live in `domain/kvloop/assets.ts`.
+   */
+  images: z.partialRecord(
+    localeSchema,
+    z.array(mediaReferenceSchema.nullable()).max(MAX_SECTION_COUNT),
+  ),
+  /** Plan L1 — the cycle is what the timeline edits; this is how often it plays. */
+  loopCount: z.number().int().min(KV_LOOP_MIN_LOOPS).max(KV_LOOP_MAX_LOOPS),
+  /** 0-1, where 1 means `KV_LOOP_MAX_KEN_BURNS_SCALE`. */
+  kenBurnsIntensity: z.number().min(0).max(1),
+  transitionMs: z.number().min(MIN_TRANSITION_MS).max(MAX_TRANSITION_MS),
+  /** Plan L5 — every field here may be empty and the render still runs. */
+  title: z.object({
+    images: z.partialRecord(localeSchema, mediaReferenceSchema),
+    transform: mediaTransformSchema,
+  }),
+  /** Wording lives in `copy.kvLoopDisclaimer`; only the styling is here. */
+  disclaimer: z.object({
+    fontSize: z.number().min(MIN_SUBTITLE_FONT_SIZE).max(MAX_SUBTITLE_FONT_SIZE),
+    textColor: hexColorSchema,
+  }),
+  /** FR-L17 — closing fade to black. Zero is off. */
+  fadeOutMs: z.number().min(0).max(MAX_TRANSITION_MS),
+});
+
 export const templateSettingsSchema = z.discriminatedUnion('template', [
   threeSceneSettingsSchema,
   day1SettingsSchema,
+  kvLoopSettingsSchema,
 ]);
+
+/**
+ * How many times the section axis plays. key-visual-looping Design Ref: §3.4
+ * D-01 — the looping template stores one cycle, so the total duration invariant
+ * multiplies by this. Every other template returns 1, which leaves their
+ * invariant character for character the same.
+ */
+export const cyclesOf = (settings: TemplateSettings): number =>
+  settings.template === 'kv-loop' ? settings.loopCount : 1;
 
 /**
  * The section ids a template expects, in order. Day1 Design Ref: §3.5. A
@@ -306,9 +374,14 @@ export const templateSettingsSchema = z.discriminatedUnion('template', [
  * Design Ref: §3.1.
  */
 export const expectedSectionIds = (
-  template: TemplateKind,
+  settings: TemplateSettings,
+  sectionCount: number,
 ): readonly string[] =>
-  template === 'three-scene' ? SCENE_ORDER : DAY1_SECTION_ORDER;
+  settings.template === 'three-scene'
+    ? SCENE_ORDER
+    : settings.template === 'day1'
+      ? DAY1_SECTION_ORDER
+      : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -433,6 +506,53 @@ const refineDay1 = (
   );
 };
 
+/**
+ * key-visual-looping Design Ref: §3.4. Missing key visuals are *not* a schema
+ * error, for the same reason a missing Day1 panel is not: saving mid-upload has
+ * to work. FR-L13 is a render preflight gate instead (`kvLoopMissingImages`),
+ * and FR-L07 (an impossible count/repeat combination) is a domain guard that the
+ * UI consults before offering the choice, because it has to name the way out.
+ */
+const refineKvLoop = (
+  project: SectionedProject & {
+    render: {selectedRatios: readonly AspectRatio[]};
+    selectedRatio: AspectRatio;
+  },
+  settings: z.infer<typeof kvLoopSettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  // Design D-02 — two arrays indexed by the same KV would drift silently, and
+  // the render would quietly frame the wrong image.
+  if (settings.slots.length !== project.sections.length) {
+    context.addIssue({
+      code: 'custom',
+      path: ['templateSettings', 'slots'],
+      message: `A looping project needs one slot per section: ${project.sections.length} sections, received ${settings.slots.length} slots.`,
+    });
+  }
+
+  // FR-L14 / D-06 — narrowed here rather than in `renderSettingsSchema`, so the
+  // other templates keep their full choice of ratios.
+  if (
+    project.render.selectedRatios.length !== 1 ||
+    project.render.selectedRatios[0] !== KV_LOOP_RATIO
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['render', 'selectedRatios'],
+      message: `A looping project renders ${KV_LOOP_RATIO} only.`,
+    });
+  }
+
+  if (project.selectedRatio !== KV_LOOP_RATIO) {
+    context.addIssue({
+      code: 'custom',
+      path: ['selectedRatio'],
+      message: `A looping project previews ${KV_LOOP_RATIO} only.`,
+    });
+  }
+};
+
 export const editorProjectSchema = z
   .object({
     schemaVersion: z.literal(PROJECT_SCHEMA_VERSION),
@@ -459,15 +579,23 @@ export const editorProjectSchema = z
       0,
     );
 
-    if (totalMs !== project.durationPreset * 1000) {
+    // key-visual-looping Design Ref: §3.4 D-01 — `sections` holds one cycle, so
+    // the axis times the cycle count is what must match the preset. `cyclesOf`
+    // is 1 for every other template, leaving their check unchanged.
+    const cycles = cyclesOf(settings);
+
+    if (totalMs * cycles !== project.durationPreset * 1000) {
       context.addIssue({
         code: 'custom',
         path: ['sections'],
-        message: `Section durations must total ${project.durationPreset} seconds, received ${totalMs / 1000}.`,
+        message:
+          cycles === 1
+            ? `Section durations must total ${project.durationPreset} seconds, received ${totalMs / 1000}.`
+            : `A cycle of ${totalMs / 1000} seconds repeated ${cycles} times is ${(totalMs * cycles) / 1000} seconds, which must equal the ${project.durationPreset} second preset.`,
       });
     }
 
-    const expectedIds = expectedSectionIds(settings.template);
+    const expectedIds = expectedSectionIds(settings, project.sections.length);
 
     // The axis is a variable length array now, so the count is checked here
     // rather than by the schema shape. key-visual-looping Design Ref: §3.1.
@@ -491,8 +619,10 @@ export const editorProjectSchema = z
 
     if (settings.template === 'three-scene') {
       refineThreeScene(project, settings, context);
-    } else {
+    } else if (settings.template === 'day1') {
       refineDay1(project, settings, context);
+    } else {
+      refineKvLoop(project, settings, context);
     }
 
     const jobCount =
@@ -545,4 +675,6 @@ export type TemplateSettings = z.infer<typeof templateSettingsSchema>;
 export type ThreeSceneSettings = z.infer<typeof threeSceneSettingsSchema>;
 export type Day1Settings = z.infer<typeof day1SettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
+export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
+export type KvSlot = z.infer<typeof kvSlotSchema>;
 export type EditorScenes = ThreeSceneSettings['scenes'];

@@ -9,7 +9,7 @@ import {
 } from '../../shared/errors/appError';
 import {PROJECT_SCHEMA_VERSION} from './constants';
 import {migrateProject} from './migrate';
-import type {EditorProject} from './types';
+import type {EditorProject, KvLoopSettings} from './types';
 
 export const PROJECT_FILE_KIND = 'mkt-videodesigner/project';
 
@@ -77,6 +77,24 @@ const markSourceUnresolved = (project: EditorProject): EditorProject => {
       : project;
   }
 
+  // key-visual-looping — the key visuals are this template's playback-critical
+  // sources, so they follow the panel rule. The title overlay goes with them:
+  // an imported PNG cannot resolve either, and leaving it marked available
+  // would only move the discovery to render time.
+  if (settings.template === 'kv-loop') {
+    return {
+      ...project,
+      templateSettings: {
+        ...settings,
+        images: withMissingReferences(settings.images),
+        title: {
+          ...settings.title,
+          images: withMissingReferences(settings.title.images),
+        },
+      },
+    };
+  }
+
   return {
     ...project,
     templateSettings: {
@@ -95,6 +113,30 @@ const markSourceUnresolved = (project: EditorProject): EditorProject => {
     },
   };
 };
+
+/**
+ * Marks every reference in a locale-keyed map missing, keeping the map's shape.
+ * Handles both the per-locale key visual arrays and the single title per locale.
+ */
+const withMissingReferences = <
+  TImages extends
+    | KvLoopSettings['images']
+    | KvLoopSettings['title']['images'],
+>(
+  images: TImages,
+): TImages =>
+  Object.fromEntries(
+    Object.entries(images).map(([locale, value]) => [
+      locale,
+      Array.isArray(value)
+        ? value.map((reference) =>
+            reference ? {...reference, status: 'missing' as const} : null,
+          )
+        : value
+          ? {...value, status: 'missing' as const}
+          : value,
+    ]),
+  ) as TImages;
 
 const withMissingSource = <TPanel extends {source: {status: string} | null}>(
   panel: TPanel,

@@ -12,11 +12,13 @@ import {
 const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   'three-scene': '3장면',
   day1: 'Day1 비교',
+  'kv-loop': '키비주얼 루핑',
 };
 
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   'three-scene': '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
   day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
+  'kv-loop': '키비주얼 이미지와 반복·모션·오버레이 설정',
 };
 
 export interface TemplateSelectorProps {

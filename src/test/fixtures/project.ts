@@ -6,6 +6,7 @@ import {
   type Day1Settings,
   type DurationPreset,
   type EditorProject,
+  type KvLoopSettings,
   type ThreeSceneSettings,
 } from '../../domain/editor/types';
 
@@ -35,5 +36,24 @@ export const day1ProjectFixture = (
   return {
     ...base,
     templateSettings: {...day1SettingsOf(base), ...settings},
+  };
+};
+
+export const kvLoopSettingsOf = (project: EditorProject): KvLoopSettings =>
+  project.templateSettings as KvLoopSettings;
+
+/**
+ * A valid looping project, built the way the editor builds one so the fixture
+ * cannot drift from `switchTemplate`. key-visual-looping Design Ref: §6.1.
+ */
+export const kvLoopProjectFixture = (
+  settings: Partial<KvLoopSettings> = {},
+  preset: DurationPreset = 15,
+): EditorProject => {
+  const base = switchTemplate(createProject(preset), 'kv-loop');
+
+  return {
+    ...base,
+    templateSettings: {...kvLoopSettingsOf(base), ...settings},
   };
 };

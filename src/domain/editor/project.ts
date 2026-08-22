@@ -8,6 +8,8 @@ import {
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
+import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
+import {kvLoopCycleDurations, kvLoopSegments} from '../kvloop/cycle';
 import {DEFAULT_PROFILE, fpsForProfile, type FrameRate, type RenderProfile} from '../render/profile';
 import type {MediaReference} from '../media/reference';
 import {
@@ -31,11 +33,15 @@ import {
   DAY1_SECTION_LABELS,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
+  DEFAULT_KV_COUNT,
+  DEFAULT_KV_LOOPS,
+  DEFAULT_KV_TRANSITION_MS,
   DEFAULT_LOCALE,
   DEFAULT_RATIO,
   DEFAULT_SUBTITLE,
   DEFAULT_TRANSFORM,
   EDITOR_FPS,
+  KV_LOOP_RATIO,
   LOCALES,
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
@@ -54,6 +60,8 @@ import {
   RATIO_DIMENSIONS,
   SCENE_LABELS,
   SCENE_ORDER,
+  kvSectionId,
+  kvSectionLabel,
   type ActivePanel,
   type AspectRatio,
   type AudioRenderProps,
@@ -72,6 +80,10 @@ import {
   type EditorSnapshot,
   type HookSceneSettings,
   type IconAdjust,
+  type KvLoopProps,
+  type KvLoopSettings,
+  type KvSegment,
+  type KvSlotRenderProps,
   type Locale,
   type LocalizedCopy,
   type MediaStatus,
@@ -164,6 +176,27 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
 };
 
 /**
+ * key-visual-looping Design Ref: §3.2 — the documented starting values for a
+ * looping payload. Four key visuals repeated twice is the reference format
+ * (Plan §1.2), and the closing fade is on because both reference videos end on
+ * one (FR-L17).
+ */
+export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
+  template: 'kv-loop',
+  slots: Array.from({length: DEFAULT_KV_COUNT}, () => ({
+    transform: {...DEFAULT_TRANSFORM},
+    kenBurns: true,
+  })),
+  images: {},
+  loopCount: DEFAULT_KV_LOOPS,
+  kenBurnsIntensity: 0.5,
+  transitionMs: DEFAULT_KV_TRANSITION_MS,
+  title: {images: {}, transform: {...DEFAULT_TRANSFORM}},
+  disclaimer: {fontSize: 32, textColor: '#ffffff'},
+  fadeOutMs: DEFAULT_KV_TRANSITION_MS,
+};
+
+/**
  * Narrows a project to its three-scene payload, or null for any other template.
  *
  * Day1 Design Ref: §3.2 — this is the single place the `templateSettings`
@@ -181,6 +214,12 @@ export const threeSceneOf = (
 /** The Day1 counterpart of `threeSceneOf`. Day1 Design Ref: §3.2. */
 export const day1Of = (project: EditorProject): Day1Settings | null =>
   project.templateSettings.template === 'day1' ? project.templateSettings : null;
+
+/** The looping counterpart of `threeSceneOf`. */
+export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
+  project.templateSettings.template === 'kv-loop'
+    ? project.templateSettings
+    : null;
 
 /** Day1 Design Ref: §3.1 — the three-scene view of the shared time axis. */
 const buildSections = (preset: DurationPreset): Sections => {
@@ -419,11 +458,22 @@ export const applyDurationPreset = (
   project: EditorProject,
   preset: DurationPreset,
 ): EditorProject => {
+  const settingsBefore = project.templateSettings;
   const resized = withSectionDurations(
     {...project, durationPreset: preset},
-    project.templateSettings.template === 'day1'
+    settingsBefore.template === 'day1'
       ? day1SectionDurations(preset)
-      : createSceneDurations(preset),
+      : settingsBefore.template === 'kv-loop'
+        ? // The cycle is redivided evenly; the caller is expected to have
+          // cleared `kvLoopCombination` first, exactly as the template switch
+          // is expected to have been confirmed. Plan L8 forbids quietly
+          // correcting a combination that does not fit.
+          kvLoopCycleDurations(
+            preset,
+            settingsBefore.loopCount,
+            settingsBefore.slots.length,
+          )
+        : createSceneDurations(preset),
   );
   const settings = threeSceneOf(resized);
 
@@ -820,6 +870,22 @@ const buildDay1Sections = (preset: DurationPreset): Sections => {
 };
 
 /**
+ * key-visual-looping Design Ref: §3.1 — one section per key visual, holding an
+ * even share of a single cycle. Design D-02: the count comes from `slots`, so
+ * these two are built from the same number and cannot drift.
+ */
+const buildKvLoopSections = (
+  preset: DurationPreset,
+  loopCount: number,
+  kvCount: number,
+): Sections =>
+  kvLoopCycleDurations(preset, loopCount, kvCount).map((durationMs, index) => ({
+    id: kvSectionId(index),
+    label: kvSectionLabel(index),
+    durationMs,
+  }));
+
+/**
  * Day1 Design Ref: §6.1 — switching is destructive because per-scene settings and
  * panel settings cannot be carried across. The common fields (name, copy, audio,
  * render settings, selected locale and ratio) survive; the payload and the section
@@ -835,21 +901,40 @@ export const switchTemplate = (
     return project;
   }
 
-  return template === 'day1'
-    ? {
-        ...project,
-        sections: buildDay1Sections(project.durationPreset),
-        templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
-      }
-    : {
-        ...project,
-        sections: buildSections(project.durationPreset),
-        templateSettings: {
-          template: 'three-scene',
-          source: null,
-          scenes: buildScenes(),
-        },
-      };
+  if (template === 'day1') {
+    return {
+      ...project,
+      sections: buildDay1Sections(project.durationPreset),
+      templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
+    };
+  }
+
+  // key-visual-looping FR-L14 / Design D-06 — the looping template renders 9:16
+  // only, so entering it forces the ratio rather than letting the schema reject
+  // a project the user cannot see is wrong. §6.1 has the dialog say so.
+  if (template === 'kv-loop') {
+    return {
+      ...project,
+      sections: buildKvLoopSections(
+        project.durationPreset,
+        DEFAULT_KV_LOOPS,
+        DEFAULT_KV_COUNT,
+      ),
+      templateSettings: structuredClone(DEFAULT_KV_LOOP_SETTINGS),
+      render: {...project.render, selectedRatios: [KV_LOOP_RATIO]},
+      selectedRatio: KV_LOOP_RATIO,
+    };
+  }
+
+  return {
+    ...project,
+    sections: buildSections(project.durationPreset),
+    templateSettings: {
+      template: 'three-scene',
+      source: null,
+      scenes: buildScenes(),
+    },
+  };
 };
 
 /** A new panel video restarts that panel's trim; the other panel is untouched. */
@@ -1489,6 +1574,88 @@ export const buildDay1Props = (
     sections: Object.freeze(sections) as Day1SectionRenderProps[],
     // Plan §2.2 keeps narration and TTS out of Day1, so passing no scenes yields
     // an empty narration list: only BGM and the live panel's own audio play.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
+ * key-visual-looping Design Ref: §5.1 — the looping render contract. Returns
+ * null for any other template, matching `buildDay1Props`.
+ *
+ * Everything the composition needs is resolved here: the flattened cycle, the
+ * locale's key visuals (or the set it inherits), the crossfade in frames, and
+ * the two overlays whose absence is a normal state (Plan L5).
+ */
+export const buildKvLoopProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): KvLoopProps | null => {
+  const settings = kvLoopOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const totalFrames = projectTotalFrames(project);
+  const segments = kvLoopSegments(
+    sectionDurationsOf(project.sections),
+    settings.loopCount,
+    totalFrames,
+  );
+  const {references} = resolveKvSet(
+    settings.images,
+    project.selectedLocale,
+    settings.slots.length,
+  );
+  const title = resolveKvTitle(settings.title.images, project.selectedLocale);
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+
+  // A crossfade lives inside the segment it fades into, so half of the shortest
+  // segment is the ceiling — the same "never longer than half its own section"
+  // rule the three-scene transitions follow.
+  const shortestFrames = segments.reduce(
+    (shortest, segment) => Math.min(shortest, segment.durationInFrames),
+    Number.POSITIVE_INFINITY,
+  );
+  const transitionInFrames = Number.isFinite(shortestFrames)
+    ? Math.min(
+        msToFrames(settings.transitionMs, project.fps),
+        Math.floor(shortestFrames / 2),
+      )
+    : 0;
+
+  const slots = settings.slots.map((slot, index) =>
+    Object.freeze({
+      url: resolveUrl(references[index]),
+      fit: slot.transform.fit,
+      scale: slot.transform.scale,
+      x: slot.transform.x,
+      y: slot.transform.y,
+      kenBurns: slot.kenBurns,
+    }),
+  );
+
+  return Object.freeze({
+    segments: Object.freeze(segments) as KvSegment[],
+    slots: Object.freeze(slots) as KvSlotRenderProps[],
+    kenBurnsIntensity: settings.kenBurnsIntensity,
+    transitionInFrames,
+    fadeOutFrames: msToFrames(settings.fadeOutMs, project.fps),
+    totalFrames,
+    title: Object.freeze({
+      url: resolveUrl(title.reference),
+      fit: settings.title.transform.fit,
+      scale: settings.title.transform.scale,
+      x: settings.title.transform.x,
+      y: settings.title.transform.y,
+    }),
+    disclaimer: Object.freeze({
+      text: copy.kvLoopDisclaimer ?? '',
+      fontSize: settings.disclaimer.fontSize,
+      textColor: settings.disclaimer.textColor,
+    }),
+    // Plan L9 — BGM only, so no scenes go in and the narration list comes back
+    // empty, the same call Day1 makes.
     audio: buildAudioRenderProps(project, [], resolveUrl),
   });
 };

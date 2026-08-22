@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-22T14:20:00.000Z",
+  "lastUpdated": "2026-08-22T14:40:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -299,11 +299,12 @@
         "plan": "docs/01-plan/features/key-visual-looping.plan.md",
         "design": "docs/02-design/features/key-visual-looping.design.md",
         "handoff": "docs/00-history/2026-08-21-key-visual-looping-plan-design-handoff.md",
-        "module1Evidence": "docs/03-analysis/key-visual-looping.module-1-time-axis.md"
+        "module1Evidence": "docs/03-analysis/key-visual-looping.module-1-time-axis.md",
+        "module2Evidence": "docs/03-analysis/key-visual-looping.module-2-schema-domain.md"
       },
       "timestamps": {
         "started": "2026-08-21T08:30:00.000Z",
-        "lastUpdated": "2026-08-22T14:20:00.000Z"
+        "lastUpdated": "2026-08-22T14:40:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -358,7 +359,7 @@
         },
         "modules": {
           "module-1": "variable-length sections (regression-only gate) - COMPLETED",
-          "module-2": "kv-loop schema + domain",
+          "module-2": "kv-loop schema + domain - COMPLETED",
           "module-3": "compositions + perf gate",
           "module-4": "UI",
           "module-5": "E2E + integration"
@@ -382,9 +383,10 @@
           "mediaTransformFit": "z.literal('cover') widened to z.enum(MEDIA_FITS)=['cover','contain'] by day1-video work; kvSlotSchema inherits it, promoting FR-L19 from warning to a real contain toggle"
         },
         "doCheckpoint": "Checkpoint 4 deferred by user 2026-08-21 - docs pushed to GitHub for pickup on another device",
-        "currentScope": "module-2",
+        "currentScope": "module-3",
         "completedModules": [
-          "module-1"
+          "module-1",
+          "module-2"
         ],
         "doStartedAt": "2026-08-22T14:05:00.000Z",
         "module1": {
@@ -397,6 +399,18 @@
             "expectedSectionIds(template) instead of (settings, sectionCount) - widen in module-2 when the kv id arm lands",
             "moveBoundary guards a boundary index past the last pair, reachable now that BoundaryIndex is number"
           ]
+        },
+        "module2": {
+          "unitTests": 470,
+          "unitTestsAdded": 46,
+          "build": "pass",
+          "deviations": [
+            "buildEditorSnapshot kv-loop arm moved to module-3: the arm cannot compile without KvLoopComposition for renderEditor to point at",
+            "projectFile.ts kv-loop arm added (not in the design): markSourceUnresolved must handle all three arms; KV images and the title PNG both come back missing on import",
+            "crossfade clamped in buildKvLoopProps against the shortest segment (design put it in the composition) so the clamp is unit-testable"
+          ],
+          "openEdge": "duration/loop commands do not call kvLoopCombination themselves - Plan L8 forbids silent correction, so module-4 UI blocks the invalid combination",
+          "uiWarning": "the template selector already offers 키비주얼 루핑 because TEMPLATE_LABELS is a total Record; no composition or panels until module-3/4, so do not ship this branch mid-sequence"
         }
       }
     }
