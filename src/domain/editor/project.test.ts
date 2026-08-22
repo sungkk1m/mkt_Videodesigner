@@ -109,7 +109,7 @@ describe('moveTimelineBoundary', () => {
 
     const widened = moveTimelineBoundary(project, 1, 14_000);
 
-    expect(widened.sections[1].durationMs).toBe(12_000);
+    expect(widened.sections[1]?.durationMs).toBe(12_000);
     expect(scenesOf(widened)[1].trim).toEqual({inMs: 18_000, outMs: 30_000});
   });
 });

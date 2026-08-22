@@ -28,7 +28,7 @@ describe('day1SectionDurations', () => {
   it('totals the preset exactly for every preset', () => {
     for (const preset of DURATION_PRESETS) {
       const durations = day1SectionDurations(preset);
-      const total = durations[0] + durations[1] + durations[2];
+      const total = durations.reduce((sum, durationMs) => sum + durationMs, 0);
 
       expect({preset, total}).toEqual({preset, total: preset * 1000});
     }
@@ -38,7 +38,9 @@ describe('day1SectionDurations', () => {
     for (const preset of DURATION_PRESETS) {
       const [panelA, panelB] = day1SectionDurations(preset);
 
-      expect(Math.abs(panelA - panelB)).toBeLessThanOrEqual(1);
+      expect(Math.abs((panelA as number) - (panelB as number))).toBeLessThanOrEqual(
+        1,
+      );
     }
   });
 

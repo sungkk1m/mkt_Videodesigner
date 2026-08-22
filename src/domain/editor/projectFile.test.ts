@@ -16,6 +16,7 @@ import {
   serializeProjectFile,
 } from './projectFile';
 import {scenesOf, sourceOf} from '../../test/fixtures/project';
+import type {Section} from './types';
 
 const projectWithSource = () =>
   applySourceToAllScenes(createProject(30), testMediaReference());
@@ -119,7 +120,7 @@ describe('parseProjectFile', () => {
 
   it('rejects a project whose scenes break the timeline invariant', () => {
     const project = createProject(15);
-    project.sections[0].durationMs = 9000;
+    (project.sections[0] as Section).durationMs = 9000;
 
     const result = parseProjectFile(
       serializeProjectFile(project),

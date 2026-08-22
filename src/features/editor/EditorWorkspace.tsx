@@ -1089,8 +1089,8 @@ export const EditorWorkspace = ({
           onTransform={(panel, patch) => store().setDay1Transform(panel, patch)}
           onTrimIn={(panel, ms) => store().setDay1TrimIn(panel, ms)}
           panelDurationsMs={{
-            panelA: project.sections[0].durationMs,
-            panelB: project.sections[1].durationMs,
+            panelA: project.sections[0]?.durationMs ?? 0,
+            panelB: project.sections[1]?.durationMs ?? 0,
           }}
           ratio={project.selectedRatio}
           resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}

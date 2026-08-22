@@ -13,6 +13,9 @@ import {
   type SceneDurationsMs,
 } from './timeline';
 
+const sumFrames = (frames: readonly number[]) =>
+  frames.reduce((sum, count) => sum + count, 0);
+
 describe('createSceneDurations', () => {
   it('initializes the approved 15/30/60 second defaults', () => {
     expect(createSceneDurations(15)).toEqual([2000, 10000, 3000]);
@@ -76,14 +79,121 @@ describe('allocateSceneFrames', () => {
   it('absorbs rounding remainders so the total frame count never drifts', () => {
     const frames = allocateSceneFrames([2333, 9334, 3333], 15, EDITOR_FPS);
 
-    expect(frames[0] + frames[1] + frames[2]).toBe(15 * EDITOR_FPS);
+    expect(sumFrames(frames)).toBe(15 * EDITOR_FPS);
   });
 
   it('keeps every scene at or above one second of frames', () => {
     const frames = allocateSceneFrames([13500, 1000, 500], 15, EDITOR_FPS);
 
     expect(Math.min(...frames)).toBeGreaterThanOrEqual(EDITOR_FPS);
-    expect(frames[0] + frames[1] + frames[2]).toBe(15 * EDITOR_FPS);
+    expect(sumFrames(frames)).toBe(15 * EDITOR_FPS);
+  });
+});
+
+describe('a variable length section axis', () => {
+  // key-visual-looping Design Ref: §4.4 — the axis widened from a three-tuple to
+  // an array, and module-1 ships no new behaviour. These pin the three-section
+  // results the tuple implementation produced, so a regression here is visible
+  // as a changed number rather than as a broken render.
+  it('moves a boundary to the same millisecond the three-tuple did', () => {
+    const durations: SceneDurationsMs = [2000, 10000, 3000];
+
+    expect(moveBoundary(durations, 0, 5000)).toEqual([5000, 7000, 3000]);
+    expect(moveBoundary(durations, 0, -5000)).toEqual([1000, 11000, 3000]);
+    expect(moveBoundary(durations, 0, 20000)).toEqual([11000, 1000, 3000]);
+    expect(moveBoundary(durations, 0, 2500.7)).toEqual([2501, 9499, 3000]);
+    expect(moveBoundary(durations, 1, 7000)).toEqual([2000, 5000, 8000]);
+    expect(moveBoundary(durations, 1, 0)).toEqual([2000, 1000, 12000]);
+    expect(moveBoundary(durations, 1, 20000)).toEqual([2000, 12000, 1000]);
+    expect(moveBoundary([3000, 54000, 3000], 1, 59000)).toEqual([
+      3000, 56000, 1000,
+    ]);
+  });
+
+  it('allocates the same frames the three-tuple did', () => {
+    expect(allocateSceneFrames([2000, 10000, 3000], 15, 30)).toEqual([
+      60, 300, 90,
+    ]);
+    expect(allocateSceneFrames([2000, 10000, 3000], 15, 60)).toEqual([
+      120, 600, 180,
+    ]);
+    expect(allocateSceneFrames([2333, 9334, 3333], 15, 30)).toEqual([
+      70, 280, 100,
+    ]);
+    expect(allocateSceneFrames([1000, 1000, 13000], 15, 30)).toEqual([
+      30, 30, 390,
+    ]);
+    expect(allocateSceneFrames([13000, 1000, 1000], 15, 30)).toEqual([
+      390, 30, 30,
+    ]);
+    expect(allocateSceneFrames([6000, 21000, 3000], 30, 60)).toEqual([
+      360, 1260, 180,
+    ]);
+  });
+
+  it('reads starts and boundaries as it did for three sections', () => {
+    expect(sceneStartsMs([2000, 10000, 3000])).toEqual([0, 2000, 12000]);
+    expect(boundaryPositionsMs([2000, 10000, 3000])).toEqual([2000, 12000]);
+  });
+
+  it('reports one boundary fewer than it has sections', () => {
+    expect(boundaryPositionsMs([7000, 8000])).toEqual([7000]);
+    expect(boundaryPositionsMs([3000, 4000, 5000, 3000])).toEqual([
+      3000, 7000, 12000,
+    ]);
+    expect(sceneStartsMs([7000, 8000])).toEqual([0, 7000]);
+  });
+
+  it('keeps the total invariant when a boundary moves, at any length', () => {
+    const cases: SceneDurationsMs[] = [
+      [7000, 8000],
+      [3000, 4000, 5000, 3000],
+      [2000, 2000, 2000, 2000, 2000, 2000, 2000, 1000],
+    ];
+
+    for (const durations of cases) {
+      const total = sumDurationsMs(durations);
+
+      for (let boundary = 0; boundary < durations.length - 1; boundary += 1) {
+        for (const positionMs of [-1000, 1500, 6000, 14_500, 99_000]) {
+          const moved = moveBoundary(durations, boundary, positionMs);
+
+          expect(sumDurationsMs(moved)).toBe(total);
+          expect(moved).toHaveLength(durations.length);
+          expect(Math.min(...moved)).toBeGreaterThanOrEqual(MIN_SCENE_MS);
+        }
+      }
+    }
+  });
+
+  it('moves only the two sections a boundary sits between', () => {
+    const moved = moveBoundary([3000, 4000, 5000, 3000], 1, 5000);
+
+    expect(moved).toEqual([3000, 2000, 7000, 3000]);
+  });
+
+  it('leaves the axis alone for a boundary past the last pair', () => {
+    const durations: SceneDurationsMs = [2000, 10000, 3000];
+
+    expect(moveBoundary(durations, 2, 5000)).toEqual(durations);
+  });
+
+  it('allocates frames that total the preset, at any length', () => {
+    const cases: SceneDurationsMs[] = [
+      [7000, 8000],
+      [3000, 4000, 5000, 3000],
+      [1875, 1875, 1875, 1875, 1875, 1875, 1875, 1875],
+    ];
+
+    for (const durations of cases) {
+      for (const fps of [30, 60]) {
+        const frames = allocateSceneFrames(durations, 15, fps);
+
+        expect(frames).toHaveLength(durations.length);
+        expect(sumFrames(frames)).toBe(15 * fps);
+        expect(Math.min(...frames)).toBeGreaterThanOrEqual(fps);
+      }
+    }
   });
 });
 

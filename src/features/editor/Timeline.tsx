@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import type {Sections} from '../../domain/editor/types';
+import type {Section, Sections} from '../../domain/editor/types';
 import {
   boundaryPositionsMs,
   sectionDurationsOf,
@@ -360,12 +360,10 @@ export const Timeline = ({
               </button>
             ))}
 
-            {boundaries.map((positionMs, index) => {
-              const boundary = index as BoundaryIndex;
-
+            {boundaries.map((positionMs, boundary) => {
               return (
                 <button
-                  aria-label={`${sections[boundary].label} 경계`}
+                  aria-label={`${(sections[boundary] as Section).label} 경계`}
                   aria-valuemax={totalMs}
                   aria-valuemin={0}
                   aria-valuenow={Math.round(positionMs)}

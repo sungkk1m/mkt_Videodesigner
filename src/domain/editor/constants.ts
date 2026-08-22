@@ -5,11 +5,13 @@ export const SCENE_ORDER = ['hook', 'gameplay', 'cta'] as const;
 export const DURATION_PRESETS = [15, 30, 60] as const;
 
 /**
- * Day1 Design Ref: §3.1 — every template shares a three-section time axis, so
- * the timeline commands stay template-agnostic. Day1 Design Ref: §1.3 D10 keeps
- * this fixed at three until a template actually needs a different count.
+ * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
+ * list now. The bounds are the schema's, not a template's: the existing two
+ * templates still pin themselves to three section ids, and the looping template
+ * takes one section per key visual (Plan L8).
  */
-export const SECTION_COUNT = 3;
+export const MIN_SECTION_COUNT = 2;
+export const MAX_SECTION_COUNT = 8;
 
 export const TEMPLATE_KINDS = ['three-scene', 'day1'] as const;
 export const DEFAULT_TEMPLATE = 'three-scene';

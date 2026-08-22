@@ -139,7 +139,7 @@ describe('transitions', () => {
     // Shrinking the scene must shrink the transition with it.
     const shortened = moveTimelineBoundary(project, 0, 1200);
 
-    expect(shortened.sections[0].durationMs).toBe(1200);
+    expect(shortened.sections[0]?.durationMs).toBe(1200);
     expect(scenesOf(shortened)[0].transitionOut.durationMs).toBe(600);
   });
 

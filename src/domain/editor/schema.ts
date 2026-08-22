@@ -26,6 +26,7 @@ import {
   MAX_OFFSET_PERCENT,
   MAX_PROJECT_NAME_LENGTH,
   MAX_SCALE,
+  MAX_SECTION_COUNT,
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
@@ -33,6 +34,7 @@ import {
   MEDIA_FITS,
   MIN_SCALE,
   MIN_SCENE_MS,
+  MIN_SECTION_COUNT,
   MAX_TTS_SPEED,
   MIN_SUBTITLE_FONT_SIZE,
   MIN_TRANSITION_MS,
@@ -211,11 +213,16 @@ export const sectionSchema = z.object({
   durationMs: z.number().min(MIN_SCENE_MS),
 });
 
-export const sectionsSchema = z.tuple([
-  sectionSchema,
-  sectionSchema,
-  sectionSchema,
-]);
+/**
+ * key-visual-looping Design Ref: §3.1 — a variable length axis. Stored v2
+ * documents hold exactly three sections, so they parse unchanged and there is no
+ * migration; `PROJECT_SCHEMA_VERSION` stays 2. The per-template count is pinned
+ * below in `superRefine`, which is what keeps the existing two at three.
+ */
+export const sectionsSchema = z
+  .array(sectionSchema)
+  .min(MIN_SECTION_COUNT)
+  .max(MAX_SECTION_COUNT);
 
 export const threeSceneSettingsSchema = z.object({
   template: z.literal('three-scene'),
@@ -292,11 +299,16 @@ export const templateSettingsSchema = z.discriminatedUnion('template', [
   day1SettingsSchema,
 ]);
 
-/** The section ids each template expects, in order. Day1 Design Ref: §3.5. */
-export const SECTION_IDS_BY_TEMPLATE = {
-  'three-scene': SCENE_ORDER,
-  day1: DAY1_SECTION_ORDER,
-} as const;
+/**
+ * The section ids a template expects, in order. Day1 Design Ref: §3.5. A
+ * function rather than the constant map it used to be, because a template whose
+ * section count varies derives its ids from that count — key-visual-looping
+ * Design Ref: §3.1.
+ */
+export const expectedSectionIds = (
+  template: TemplateKind,
+): readonly string[] =>
+  template === 'three-scene' ? SCENE_ORDER : DAY1_SECTION_ORDER;
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -455,17 +467,27 @@ export const editorProjectSchema = z
       });
     }
 
-    const expectedIds = SECTION_IDS_BY_TEMPLATE[settings.template];
+    const expectedIds = expectedSectionIds(settings.template);
 
-    project.sections.forEach((section, index) => {
-      if (section.id !== expectedIds[index]) {
-        context.addIssue({
-          code: 'custom',
-          path: ['sections', index, 'id'],
-          message: `Section ${index} of a ${settings.template} project must be ${expectedIds[index]}.`,
-        });
-      }
-    });
+    // The axis is a variable length array now, so the count is checked here
+    // rather than by the schema shape. key-visual-looping Design Ref: §3.1.
+    if (project.sections.length !== expectedIds.length) {
+      context.addIssue({
+        code: 'custom',
+        path: ['sections'],
+        message: `A ${settings.template} project must have exactly ${expectedIds.length} sections, received ${project.sections.length}.`,
+      });
+    } else {
+      project.sections.forEach((section, index) => {
+        if (section.id !== expectedIds[index]) {
+          context.addIssue({
+            code: 'custom',
+            path: ['sections', index, 'id'],
+            message: `Section ${index} of a ${settings.template} project must be ${expectedIds[index]}.`,
+          });
+        }
+      });
+    }
 
     if (settings.template === 'three-scene') {
       refineThreeScene(project, settings, context);

@@ -190,7 +190,7 @@ const buildSections = (preset: DurationPreset): Sections => {
     id: kind,
     label: SCENE_LABELS[kind],
     durationMs: durations[index] as number,
-  })) as Sections;
+  }));
 };
 
 const buildScenes = (): EditorScenes =>
@@ -329,7 +329,7 @@ const withSectionDurations = (
   sections: project.sections.map((section, index) => ({
     ...section,
     durationMs: durations[index] as number,
-  })) as Sections,
+  })),
 });
 
 const mapScene = (
@@ -816,7 +816,7 @@ const buildDay1Sections = (preset: DurationPreset): Sections => {
     id,
     label: DAY1_SECTION_LABELS[id],
     durationMs: durations[index] as number,
-  })) as Sections;
+  }));
 };
 
 /**

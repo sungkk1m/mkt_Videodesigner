@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-21T09:35:00.000Z",
+  "lastUpdated": "2026-08-22T14:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -279,8 +279,8 @@
       "notes": "4단계 완료. (1) --inspector-width clamp(320px, 100vw - 950px, 440px). (2) 프리뷰를 렌더와 일치(패널 슬롯 비율 + cover + 패널 transform). (3) 패널 Fit 옵션(cover/contain) + contain일 때 블러 배경(프레임 1장 디코드). (4) 사용자 결정으로 Day1 패널 기본 프레이밍을 contain으로 전환 - 업로드가 조용히 크롭하지 않게. 신설 DEFAULT_DAY1_PANEL_TRANSFORM을 패널 초기값/resetDay1Transform이 사용하고, setDay1PanelSource가 트림과 함께 프레이밍도 초기화(relink는 유지). 3장면은 cover 고정. 저장된 기존 프로젝트는 fit cover를 들고 있어 렌더 결과 불변, 마이그레이션 없음. 유닛 415/415, tsc 통과. 남은 검증: Chrome 환경에서 Day1 e2e 3종 1회."
     },
     "key-visual-looping": {
-      "phase": "design",
-      "phaseNumber": 2,
+      "phase": "do",
+      "phaseNumber": 3,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -298,11 +298,12 @@
       "documents": {
         "plan": "docs/01-plan/features/key-visual-looping.plan.md",
         "design": "docs/02-design/features/key-visual-looping.design.md",
-        "handoff": "docs/00-history/2026-08-21-key-visual-looping-plan-design-handoff.md"
+        "handoff": "docs/00-history/2026-08-21-key-visual-looping-plan-design-handoff.md",
+        "module1Evidence": "docs/03-analysis/key-visual-looping.module-1-time-axis.md"
       },
       "timestamps": {
         "started": "2026-08-21T08:30:00.000Z",
-        "lastUpdated": "2026-08-21T09:35:00.000Z"
+        "lastUpdated": "2026-08-22T14:20:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -356,7 +357,7 @@
           "D-07": "performance spike moved from pre-Design to module-3 exit gate (Plan 4.3 deviation)"
         },
         "modules": {
-          "module-1": "variable-length sections (regression-only gate) - NOT STARTED",
+          "module-1": "variable-length sections (regression-only gate) - COMPLETED",
           "module-2": "kv-loop schema + domain",
           "module-3": "compositions + perf gate",
           "module-4": "UI",
@@ -380,7 +381,23 @@
         "mainFindings": {
           "mediaTransformFit": "z.literal('cover') widened to z.enum(MEDIA_FITS)=['cover','contain'] by day1-video work; kvSlotSchema inherits it, promoting FR-L19 from warning to a real contain toggle"
         },
-        "doCheckpoint": "Checkpoint 4 deferred by user 2026-08-21 - docs pushed to GitHub for pickup on another device"
+        "doCheckpoint": "Checkpoint 4 deferred by user 2026-08-21 - docs pushed to GitHub for pickup on another device",
+        "currentScope": "module-2",
+        "completedModules": [
+          "module-1"
+        ],
+        "doStartedAt": "2026-08-22T14:05:00.000Z",
+        "module1": {
+          "unitTests": 424,
+          "unitTestsAdded": 9,
+          "build": "pass",
+          "goldenParity": "368 moveBoundary + 16 allocateSceneFrames + 8 derived cases identical to the pre-change three-tuple implementation",
+          "e2e": "not run - no system Chrome (playwright channel:chrome) and no H.264-capable ffmpeg for fixtures in the remote container; SC8 e2e half deferred to module-5",
+          "deviations": [
+            "expectedSectionIds(template) instead of (settings, sectionCount) - widen in module-2 when the kv id arm lands",
+            "moveBoundary guards a boundary index past the last pair, reachable now that BoundaryIndex is number"
+          ]
+        }
       }
     }
   },
