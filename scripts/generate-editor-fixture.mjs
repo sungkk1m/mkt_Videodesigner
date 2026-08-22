@@ -132,6 +132,18 @@ for (const {name, colors, size, tone} of FIXTURES) {
 const STILLS = [
   {name: 'day1-endcard-banner', color: '#101820', size: '1080x1920'},
   {name: 'day1-app-icon', color: '#ff00ff', size: '512x512'},
+  /**
+   * key-visual-looping E2E — one flat colour per key visual, so a sampled output
+   * frame says *which* key visual is on screen and therefore whether the hold
+   * timing and the cycle repeat came out as the timeline promised (SC2/SC3).
+   * Portrait, because the looping template is 9:16 only (Plan L3).
+   */
+  {name: 'kv-1', color: '#e6194b', size: '1080x1920'},
+  {name: 'kv-2', color: '#3cb44b', size: '1080x1920'},
+  {name: 'kv-3', color: '#4363d8', size: '1080x1920'},
+  {name: 'kv-4', color: '#ffe119', size: '1080x1920'},
+  /** Landscape, for the FR-L19 warning and its `contain` way out. */
+  {name: 'kv-landscape', color: '#911eb4', size: '1920x1080'},
 ];
 
 for (const {name, color, size} of STILLS) {
