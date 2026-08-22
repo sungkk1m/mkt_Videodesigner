@@ -661,6 +661,19 @@
   border-color: var(--accent);
 }
 
+/* key-visual-looping §6.2 — a key visual row's name and its reorder buttons. */
+.kv-slot__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kv-slot__actions {
+  display: flex;
+  gap: 4px;
+}
+
 .field--asset {
   display: grid;
   gap: 4px;
@@ -987,6 +1000,20 @@
 .timeline__clip--active {
   background: linear-gradient(180deg, #3b3f8f, #2f3372);
   border-color: var(--accent);
+}
+
+/* key-visual-looping §6.4 — a repeat of the editable cycle, shown but not
+   touchable, so the ruler tells the truth about output length while editing
+   still happens in one place. */
+.timeline__clip--ghost {
+  background: #1b1f28;
+  border-style: dashed;
+  opacity: 0.55;
+  cursor: default;
+}
+
+.timeline__clip--ghost:hover {
+  background: #1b1f28;
 }
 
 .timeline__clip-name {

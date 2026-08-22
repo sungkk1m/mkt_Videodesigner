@@ -74,6 +74,14 @@ export const TemplateSelector = ({
               시작합니다. 프로젝트 이름·카피·오디오·렌더 설정은 그대로
               유지됩니다.
             </p>
+            {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way
+                in, so the dialog says so before it happens. */}
+            {pending === 'kv-loop' ? (
+              <p className="panel__hint" data-testid="template-switch-ratio-note">
+                루핑 템플릿은 세로 전용입니다. 출력 규격이 9:16으로 고정되고,
+                선택해 둔 다른 규격은 해제됩니다.
+              </p>
+            ) : null}
             <div className="dialog__actions">
               <button
                 className="button button--secondary"

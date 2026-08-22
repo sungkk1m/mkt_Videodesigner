@@ -9,7 +9,10 @@ import {
   setDay1PanelSource,
 } from '../../domain/editor/project';
 import type {EditorProject} from '../../domain/editor/types';
-import {day1ProjectFixture} from '../../test/fixtures/project';
+import {
+  day1ProjectFixture,
+  kvLoopProjectFixture,
+} from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {preflightIssues} from './useRenderQueue';
 
@@ -128,5 +131,49 @@ describe('preflightIssues — Day1 (FR-D03)', () => {
     expect(issues).not.toContain('영상 소재가 없습니다.');
     expect(issues).toContain('이 브라우저에서는 렌더를 실행할 수 없습니다.');
     expect(issues.some((issue) => issue.includes('나레이션'))).toBe(false);
+  });
+});
+
+describe('preflightIssues — kv-loop (FR-L13)', () => {
+  const kvImage = (name: string) =>
+    testMediaReference({
+      id: `media_${name}`,
+      kind: 'image' as const,
+      mimeType: 'image/png',
+      durationMs: undefined,
+    });
+
+  it('says how many key visuals are still missing', () => {
+    expect(preflightIssues(kvLoopProjectFixture(), true, true)).toContain(
+      '키비주얼 이미지를 2장 더 올려야 렌더할 수 있습니다.',
+    );
+  });
+
+  it('passes with two key visuals and no overlays at all — SC5', () => {
+    const project = kvLoopProjectFixture({
+      images: {ko: [kvImage('a'), kvImage('b'), null, null]},
+    });
+
+    expect(preflightIssues(project, true, true)).toEqual([]);
+  });
+
+  it('asks for the images again when they cannot be decoded', () => {
+    const project = kvLoopProjectFixture({
+      images: {ko: [kvImage('a'), kvImage('b'), null, null]},
+    });
+
+    expect(preflightIssues(project, false, true)).toContain(
+      '키비주얼 이미지가 연결되지 않았습니다. 파일을 다시 올려주세요.',
+    );
+  });
+
+  it('counts the inherited set, so an untranslated locale still renders — SC6', () => {
+    const project = kvLoopProjectFixture({
+      images: {en: [kvImage('a'), kvImage('b'), null, null]},
+    });
+
+    expect(
+      preflightIssues({...project, selectedLocale: 'ja'}, true, true),
+    ).toEqual([]);
   });
 });
