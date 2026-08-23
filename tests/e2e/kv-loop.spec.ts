@@ -130,6 +130,82 @@ test.describe('looping editor — controls', () => {
     await expect(page.getByTestId('kv-render-blocker')).toHaveCount(0);
   });
 
+  // Regression — uploaded key visuals used to vanish from the preview the moment
+  // they were adopted. `referencedIds` in EditorWorkspace never listed the
+  // kv-loop image ids, and `session.retain` releases every blob URL whose id is
+  // absent from the list it is handed, so buildKvLoopProps resolved each slot to
+  // null: the composition drew its under-two placeholder and the MP4 렌더 button
+  // stayed disabled on `unresolvedKvImages`.
+  //
+  // The `kv-images-blocker` assertions above could not catch that. That counter
+  // reads the project's *references*, which were always correct — only the
+  // resolved session URLs were gone. So this test asserts on what the Player
+  // actually mounted, which is the same signal the render button gates on.
+  test('previews the key visuals it was given, not the placeholder', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await selectKvLoop(page);
+
+    const placeholder = page.getByText('키비주얼 이미지를 2장 이상 올려주세요');
+
+    await expect(placeholder).toBeVisible();
+
+    await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
+    await page.getByTestId('kv-slot-1-input').setInputFiles(KV_FILES[1] as string);
+
+    // A segment only mounts while the playhead is inside it, so the opening key
+    // visual is the whole preview at frame 0.
+    await expect(page.getByTestId('kv-scene-image').first()).toBeVisible();
+    await expect(placeholder).toHaveCount(0);
+  });
+
+  // A reload keeps the project and loses the pixels: references come back from
+  // IndexedDB, session object URLs do not, and an image slot stores no file
+  // handle to recover from. `kv-images-blocker` counts references, so it stays
+  // silent through all of that — which is how a restored project came to look
+  // ready, show its file names, and refuse to render without saying why.
+  test('names the key visuals it needs back after a reload', async ({page}) => {
+    await page.goto('/');
+    await selectKvLoop(page);
+
+    await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
+    await page.getByTestId('kv-slot-1-input').setInputFiles(KV_FILES[1] as string);
+    await expect(page.getByTestId('kv-scene-image').first()).toBeVisible();
+
+    // Autosave is debounced, so the reload has to wait for it to land.
+    await expect(page.getByTestId('editor-save-state')).toContainText('저장됨');
+
+    await page.reload();
+    await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');
+
+    // The project survived — and every slot says which file it is missing.
+    await expect(page.getByTestId('kv-slot-0-reupload')).toContainText('kv-1.png');
+    await expect(page.getByTestId('kv-slot-1-reupload')).toContainText('kv-2.png');
+    await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('2장');
+
+    // A dropzone upload leaves no file handle, so the silent restore lands on
+    // `missing` rather than on a permission grant.
+    await expect(page.getByTestId('kv-slot-0-reupload')).toContainText(
+      '이미지를 다시 올려주세요',
+    );
+    await expect(page.getByTestId('kv-slot-0-grant')).toHaveCount(0);
+
+    // The way out of that for next time is on screen for every slot and for the
+    // title. Driving it is not: a stored handle needs the OS file picker, which
+    // Playwright cannot open — the same gap `day1-template.spec.ts` records for
+    // the identical Day1 panel path.
+    await expect(page.getByTestId('kv-slot-0-picker')).toBeVisible();
+    await expect(page.getByTestId('kv-slot-1-picker')).toBeVisible();
+    await expect(page.getByTestId('kv-title-picker')).toBeVisible();
+
+    // Putting one back clears its own notice and leaves the other standing.
+    await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
+    await expect(page.getByTestId('kv-slot-0-reupload')).toHaveCount(0);
+    await expect(page.getByTestId('kv-slot-1-reupload')).toBeVisible();
+    await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('1장');
+  });
+
   test('shows one editable cycle and the repeats as ghosts (FR-L06/§6.4)', async ({
     page,
   }) => {

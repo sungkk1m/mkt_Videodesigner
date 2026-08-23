@@ -74,6 +74,51 @@ export const resolveKvTitle = (
 };
 
 /**
+ * One stored reference the session cannot play yet, and the locale that owns it.
+ *
+ * The owner travels with the target on purpose. A locale showing an inherited
+ * set (D-05) does not own those references, so writing a status back against the
+ * *selected* locale would give it a set of its own and silently end the
+ * inheritance. Every write on the restore path goes to `locale` instead.
+ */
+export interface KvRestoreTarget {
+  locale: Locale;
+  /** The key visual's slot index, or `title` for the overlay. */
+  slot: number | 'title';
+  reference: MediaReference;
+}
+
+/**
+ * What a restored project has to bring back: a reload returns the references
+ * from IndexedDB but never the session object URLs, and the only way back to the
+ * pixels is the file handle stored under each reference's own media id.
+ *
+ * Every locale's set, not just the one on screen, so switching the locale tab
+ * after a reload does not need a second round of recovery. Slots past the
+ * current key visual count are skipped — the write helpers size a locale's array
+ * to `slots.length`, so touching one of those would drop the entries beyond it.
+ */
+export const kvLoopRestoreTargets = (
+  settings: KvLoopSettings,
+  isResolved: (mediaId: string) => boolean,
+): KvRestoreTarget[] => [
+  ...Object.entries(settings.images).flatMap(([locale, references]) =>
+    (references ?? [])
+      .slice(0, settings.slots.length)
+      .flatMap((reference, slot) =>
+        reference && !isResolved(reference.id)
+          ? [{locale: locale as Locale, slot, reference}]
+          : [],
+      ),
+  ),
+  ...Object.entries(settings.title.images).flatMap(([locale, reference]) =>
+    reference && !isResolved(reference.id)
+      ? [{locale: locale as Locale, slot: 'title' as const, reference}]
+      : [],
+  ),
+];
+
+/**
  * FR-L13 — how many key visuals the selected locale is still short of the two a
  * loop needs. Sits where `day1MissingPanels` sits and is read the same way.
  *

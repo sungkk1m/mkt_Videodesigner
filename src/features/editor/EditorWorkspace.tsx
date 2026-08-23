@@ -315,6 +315,7 @@ export const EditorWorkspace = ({
     : null;
   const kvAssets = useKvLoopAssets({
     resolver: mediaResolver,
+    handleStore: mediaHandleStore,
     session,
     project,
     references: kvSet?.references ?? [],
@@ -368,6 +369,16 @@ export const EditorWorkspace = ({
     day1?.endCard.banner?.id,
     day1?.endCard.appIcon?.id,
     day1?.endCard.video?.id,
+    // key-visual-looping Design Ref: §6.2 — every locale's key visuals, not just
+    // the selected set. A locale tab holds its own pixels and an untranslated one
+    // previews from `en` (FR-L04), so retaining only the visible set would revoke
+    // the images behind the tab the moment they were uploaded.
+    ...Object.values(kvLoop?.images ?? {}).flatMap((references) =>
+      (references ?? []).map((reference) => reference?.id),
+    ),
+    ...Object.values(kvLoop?.title.images ?? {}).map(
+      (reference) => reference?.id,
+    ),
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -413,13 +424,19 @@ export const EditorWorkspace = ({
   // key-visual-looping FR-L13 — two key visuals is the floor, and each of them
   // has to have decoded. Overlays are not part of either count (Plan L5).
   const missingKvImages = kvLoopMissingImages(project);
-  const unresolvedKvImages = (kvSet?.references ?? []).filter(
-    (reference, index) => reference !== null && kvAssets.imageUrl(index) === null,
-  ).length;
+  // Which slots hold a reference the session cannot play. A restored project is
+  // exactly that state: the references persist, the object URLs do not, and an
+  // image slot stores no file handle to recover from — so the operator has to
+  // put the same file back. The indexes, not just the count, because the asset
+  // panel names the file each one is still waiting for.
+  const unresolvedKvImages = (kvSet?.references ?? []).flatMap(
+    (reference, index) =>
+      reference !== null && kvAssets.imageUrl(index) === null ? [index] : [],
+  );
   const renderableSource = day1
     ? unresolvedPanels.length === 0
     : kvLoop
-      ? missingKvImages === 0 && unresolvedKvImages === 0
+      ? missingKvImages === 0 && unresolvedKvImages.length === 0
       : source.sourceUrl !== null;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
@@ -741,6 +758,14 @@ export const EditorWorkspace = ({
               키비주얼 {missingKvImages}장이 더 필요합니다
             </span>
           ) : null}
+          {/* `kv-render-blocker` counts references, which a reload keeps. This
+              counts the ones the session can actually play, so a restored
+              project stops refusing to render without saying why. */}
+          {kvLoop && unresolvedKvImages.length > 0 ? (
+            <span className="editor__blocker" data-testid="kv-unresolved-blocker">
+              키비주얼 {unresolvedKvImages.length}장을 다시 올려야 합니다
+            </span>
+          ) : null}
           {shortPanels.length > 0 ? (
             <span className="editor__blocker" data-testid="day1-short-blocker">
               원본이 구간보다 짧은 패널 {shortPanels.length}개
@@ -886,6 +911,7 @@ export const EditorWorkspace = ({
                 : null
             }
             busy={kvAssets.busy}
+            canGrantPermission={kvAssets.canGrantPermission}
             disabled={isRendering}
             imageUrl={kvAssets.imageUrl}
             inheritedFrom={kvSet?.inheritedFrom ?? null}
@@ -893,13 +919,18 @@ export const EditorWorkspace = ({
             missingImages={missingKvImages}
             onCount={(count) => store().setKvCount(count)}
             onFit={(index, fit) => store().setKvTransform(index, {fit})}
+            onGrantPermission={(mediaId) =>
+              void kvAssets.grantPermission(mediaId)
+            }
             onLocale={(locale) => store().setLocale(locale)}
             onLoopCount={(loopCount) => store().setKvLoopCount(loopCount)}
             onMove={(from, to) => store().moveKvImage(from, to)}
+            onPickFile={(index) => void kvAssets.pickAndUploadImage(index)}
             onUpload={(index, file) => void kvAssets.uploadImage(index, file)}
             preset={project.durationPreset}
             references={kvSet?.references ?? []}
             settings={kvLoop}
+            supportsFilePicker={kvAssets.supportsFilePicker}
             uploadError={kvAssets.uploadError}
           />
         ) : activeTab === 'hook' ? (
@@ -1213,11 +1244,19 @@ export const EditorWorkspace = ({
             store().setKvKenBurns(selectedKvIndex, enabled)
           }
           onLoop={(patch) => store().setKvLoop(patch)}
+          onPickTitle={() => void kvAssets.pickAndUploadTitle()}
           onResetTransform={() => store().resetKvTransform(selectedKvIndex)}
+          onTitleGrantPermission={(mediaId) =>
+            void kvAssets.grantPermission(mediaId)
+          }
           onTitleImage={(file) => void kvAssets.uploadTitle(file)}
           onTitleTransform={(patch) => store().setKvTitleTransform(patch)}
           onTransform={(patch) => store().setKvTransform(selectedKvIndex, patch)}
           settings={kvLoop}
+          supportsFilePicker={kvAssets.supportsFilePicker}
+          titleCanGrantPermission={kvAssets.canGrantPermission(
+            kvTitle?.reference ?? null,
+          )}
           titleInheritedFrom={kvTitle?.inheritedFrom ?? null}
           titleReference={kvTitle?.reference ?? null}
           titleUrl={kvAssets.titleUrl()}

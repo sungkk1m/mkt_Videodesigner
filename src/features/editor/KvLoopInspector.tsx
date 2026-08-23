@@ -24,6 +24,8 @@ export interface KvLoopInspectorProps {
   titleReference: MediaReference | null;
   titleInheritedFrom: Locale | null;
   titleUrl: string | null;
+  supportsFilePicker: boolean;
+  titleCanGrantPermission: boolean;
   disabled: boolean;
   onTransform: (patch: Partial<MediaTransform>) => void;
   onResetTransform: () => void;
@@ -36,6 +38,8 @@ export interface KvLoopInspectorProps {
     }>,
   ) => void;
   onTitleImage: (file: File | null) => void;
+  onPickTitle: () => void;
+  onTitleGrantPermission: (mediaId: string) => void;
   onTitleTransform: (patch: Partial<MediaTransform>) => void;
   onDisclaimerStyle: (patch: Partial<KvLoopSettings['disclaimer']>) => void;
 }
@@ -47,12 +51,16 @@ export const KvLoopInspector = ({
   titleReference,
   titleInheritedFrom,
   titleUrl,
+  supportsFilePicker,
+  titleCanGrantPermission,
   disabled,
   onTransform,
   onResetTransform,
   onKenBurns,
   onLoop,
   onTitleImage,
+  onPickTitle,
+  onTitleGrantPermission,
   onTitleTransform,
   onDisclaimerStyle,
 }: KvLoopInspectorProps) => {
@@ -197,6 +205,44 @@ export const KvLoopInspector = ({
           <p className="panel__hint" data-testid="kv-title-inherited">
             {LOCALE_LABELS[titleInheritedFrom]} 타이틀을 상속 중입니다.
           </p>
+        ) : null}
+
+        {supportsFilePicker ? (
+          <button
+            className="button button--secondary"
+            data-testid="kv-title-picker"
+            disabled={disabled}
+            onClick={onPickTitle}
+            type="button"
+          >
+            파일 선택 (다음 실행에서도 복구)
+          </button>
+        ) : null}
+
+        {/* The same restored-project gap the key visual slots have. A warning
+            rather than a blocker: Plan L5 keeps the overlays optional, so a
+            title nobody re-uploads must not stop the render. */}
+        {titleReference && titleUrl === null ? (
+          <div data-testid="kv-title-reupload">
+            <p className="notice notice--warning">
+              {titleCanGrantPermission
+                ? '저장된 파일 접근 권한이 만료되었습니다. 권한을 허용하거나 같은 파일을 다시 올려주세요.'
+                : '타이틀 이미지를 다시 올려주세요.'}{' '}
+              기대 파일: {titleReference.name}
+            </p>
+
+            {titleCanGrantPermission ? (
+              <button
+                className="button button--secondary"
+                data-testid="kv-title-grant"
+                disabled={disabled}
+                onClick={() => onTitleGrantPermission(titleReference.id)}
+                type="button"
+              >
+                저장된 파일 권한 허용
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <PercentField
