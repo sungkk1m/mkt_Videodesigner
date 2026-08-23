@@ -61,10 +61,10 @@ test.describe('?debug report header', () => {
     expect(allMoving).toContain('# template: kv-loop');
     expect(allMoving).toContain('# kvLoop: 3장 · 2회 · 모션 3/3');
 
-    // Turning one off is invisible in the output until the frames are compared,
-    // which is the whole reason the count is in the header.
+    // Holding one still is invisible in the output until the frames are
+    // compared, which is the whole reason the count is in the header.
     await page.getByTestId('kv-slot-1-select').click();
-    await page.getByText('이 KV에 Ken Burns 적용').click();
+    await page.getByTestId('kv-slot-motion').selectOption('still');
 
     expect(await copiedReport(page)).toContain('# kvLoop: 3장 · 2회 · 모션 2/3');
   });

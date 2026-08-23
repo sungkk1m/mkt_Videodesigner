@@ -35,7 +35,8 @@ import {
   setKvCount,
   setKvImage,
   setKvImageStatus,
-  setKvKenBurns,
+  setKvDefaultMotion,
+  setKvMotion,
   setKvLoopCount,
   setKvTitleImage,
   setRatioOverride,
@@ -78,6 +79,7 @@ import type {
   Day1Settings,
   DurationPreset,
   KvLoopSettings,
+  KvMotion,
   EditorProject,
   HookSceneSettings,
   Locale,
@@ -188,7 +190,8 @@ export interface ProjectStore {
   setKvLoopCount: (loopCount: number) => void;
   setKvTransform: (index: number, patch: Partial<MediaTransform>) => void;
   resetKvTransform: (index: number) => void;
-  setKvKenBurns: (index: number, enabled: boolean) => void;
+  setKvMotion: (index: number, motion: KvMotion | null) => void;
+  setKvDefaultMotion: (motion: KvMotion) => void;
   setKvLoop: (patch: KvLoopPatch) => void;
   setKvTitle: (locale: Locale, reference: MediaReference | null) => void;
   setKvTitleTransform: (patch: Partial<MediaTransform>) => void;
@@ -418,8 +421,10 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     })),
   resetKvTransform: (index) =>
     set((state) => ({project: resetKvSlotTransform(state.project, index)})),
-  setKvKenBurns: (index, enabled) =>
-    set((state) => ({project: setKvKenBurns(state.project, index, enabled)})),
+  setKvMotion: (index, motion) =>
+    set((state) => ({project: setKvMotion(state.project, index, motion)})),
+  setKvDefaultMotion: (motion) =>
+    set((state) => ({project: setKvDefaultMotion(state.project, motion)})),
   setKvLoop: (patch) =>
     set((state) => ({project: updateKvLoopSettings(state.project, patch)})),
   setKvTitle: (locale, reference) =>

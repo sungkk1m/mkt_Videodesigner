@@ -95,7 +95,8 @@ describe('projectStore — the looping template', () => {
     store().setKvLoopCount(1);
     store().moveKvImage(0, 2);
     store().setKvTransform(0, {scale: 1.2, fit: 'contain'});
-    store().setKvKenBurns(1, false);
+    store().setKvMotion(1, {kind: 'preset', preset: 'still'});
+    store().setKvDefaultMotion({kind: 'preset', preset: 'panTopToBottom'});
     store().setKvLoop({kenBurnsIntensity: 0.8, transitionMs: 250, fadeOutMs: 0});
     store().setKvTitle('ko', kvImage('title'));
     store().setKvTitleTransform({y: -20});
