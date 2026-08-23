@@ -368,6 +368,16 @@ export const EditorWorkspace = ({
     day1?.endCard.banner?.id,
     day1?.endCard.appIcon?.id,
     day1?.endCard.video?.id,
+    // key-visual-looping Design Ref: §6.2 — every locale's key visuals, not just
+    // the selected set. A locale tab holds its own pixels and an untranslated one
+    // previews from `en` (FR-L04), so retaining only the visible set would revoke
+    // the images behind the tab the moment they were uploaded.
+    ...Object.values(kvLoop?.images ?? {}).flatMap((references) =>
+      (references ?? []).map((reference) => reference?.id),
+    ),
+    ...Object.values(kvLoop?.title.images ?? {}).map(
+      (reference) => reference?.id,
+    ),
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
