@@ -5,16 +5,15 @@
 // `SceneVideo` uses, so moving a still around feels like moving footage around.
 import {
   AbsoluteFill,
+  Easing,
   Img,
   interpolate,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
 
-import {
-  KV_LOOP_MAX_KEN_BURNS_SCALE,
-  type KvSlotRenderProps,
-} from '../../domain/editor/types';
+import type {KvEasing, KvSlotRenderProps} from '../../domain/editor/types';
+import {lerpKvRect, rectToTransform} from '../../domain/kvloop/motion';
 import {CANVAS_COLOR} from '../shared/SceneVideo';
 
 /**
@@ -27,11 +26,19 @@ import {CANVAS_COLOR} from '../shared/SceneVideo';
 const BACKDROP_BLUR_RATIO = 0.05;
 const BACKDROP_OVERSCAN = 1.2;
 
+/**
+ * kv-motion-effects Design Ref: §2.1 — the domain names the curve and this maps
+ * it, because `domain` may not import Remotion.
+ */
+const EASING: Record<KvEasing, (input: number) => number> = {
+  linear: (input) => input,
+  easeOut: Easing.out(Easing.cubic),
+  easeInOut: Easing.inOut(Easing.cubic),
+};
+
 export interface KvSceneProps {
   slot: KvSlotRenderProps;
-  /** 0-1, scaled to `KV_LOOP_MAX_KEN_BURNS_SCALE` at 1. */
-  intensity: number;
-  /** The segment's own length, so the push finishes exactly as it ends. */
+  /** The segment's own length, so the move finishes exactly as it ends. */
   holdInFrames: number;
   /** Zero on the opening segment, which has nothing to fade in from. */
   fadeInFrames: number;
@@ -39,21 +46,27 @@ export interface KvSceneProps {
 
 export const KvScene = ({
   slot,
-  intensity,
   holdInFrames,
   fadeInFrames,
 }: KvSceneProps) => {
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
 
-  const kenBurnsScale = slot.kenBurns
-    ? interpolate(
-        frame,
-        [0, Math.max(1, holdInFrames - 1)],
-        [1, 1 + intensity * (KV_LOOP_MAX_KEN_BURNS_SCALE - 1)],
-        {extrapolateRight: 'clamp'},
-      )
-    : 1;
+  // kv-motion-effects §5 — one interpolation for every motion there is. The
+  // clamp stays: a segment is held open for the crossfade that follows it, and
+  // holding the last camera position through that overlap is what a cut looks
+  // like from the incoming side.
+  const progress = interpolate(
+    frame,
+    [0, Math.max(1, holdInFrames - 1)],
+    [0, 1],
+    {easing: EASING[slot.motion.easing], extrapolateRight: 'clamp'},
+  );
+  const {
+    scale: motionScale,
+    xPercent,
+    yPercent,
+  } = rectToTransform(lerpKvRect(slot.motion.from, slot.motion.to, progress));
   const opacity =
     fadeInFrames > 0
       ? interpolate(frame, [0, fadeInFrames], [0, 1], {
@@ -77,7 +90,7 @@ export const KvScene = ({
                   filter: `blur(${BACKDROP_BLUR_RATIO * width}px)`,
                   height: '100%',
                   objectFit: 'cover',
-                  transform: `scale(${BACKDROP_OVERSCAN * kenBurnsScale})`,
+                  transform: `scale(${BACKDROP_OVERSCAN * motionScale})`,
                   width: '100%',
                 }}
               />
@@ -92,8 +105,8 @@ export const KvScene = ({
                 height: '100%',
                 objectFit: slot.fit,
                 transform:
-                  `translate(${slot.x}%, ${slot.y}%) ` +
-                  `scale(${slot.scale * kenBurnsScale})`,
+                  `translate(${slot.x + xPercent}%, ${slot.y + yPercent}%) ` +
+                  `scale(${slot.scale * motionScale})`,
                 width: '100%',
               }}
             />

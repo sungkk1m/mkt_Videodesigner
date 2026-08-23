@@ -14,6 +14,8 @@ import type {
 } from './constants';
 import type {
   HookMotionPreset,
+  KvMotionPreset,
+  KvRect,
   MediaTransform,
   SceneKind,
   SubtitleStyle,
@@ -50,6 +52,9 @@ export type {
   HookMotionPreset,
   HookSceneSettings,
   KvLoopSettings,
+  KvMotion,
+  KvMotionPreset,
+  KvRect,
   KvSlot,
   Locale,
   LocalizedCopy,
@@ -80,6 +85,17 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
  * because the section ids are generated from the key visual count.
  */
 export const kvSectionLabel = (index: number) => `KV ${index + 1}`;
+
+/** kv-motion-effects §6.1 — direction is spelled out, never implied. */
+export const KV_MOTION_LABELS: Record<KvMotionPreset, string> = {
+  still: '정지',
+  zoomIn: '줌 인',
+  zoomOut: '줌 아웃',
+  panLeftToRight: '팬 좌→우',
+  panRightToLeft: '팬 우→좌',
+  panTopToBottom: '팬 상→하',
+  panBottomToTop: '팬 하→상',
+};
 
 /** Timeline clip names per Day1 section. Day1 Design Ref: §3.1. */
 export const DAY1_SECTION_LABELS = {
@@ -298,13 +314,27 @@ export type Day1Props = {
  * framing to draw them with. Flattened like `Day1PanelRenderProps` rather than
  * carrying the stored `transform`, so the composition reads render inputs only.
  */
+/**
+ * kv-motion-effects Design Ref: §2.1 — the curve is named rather than passed as
+ * a function, because `domain` may not import Remotion and the easing belongs to
+ * whoever draws frames.
+ */
+export type KvEasing = 'linear' | 'easeOut' | 'easeInOut';
+
+/** The two camera positions a hold travels between, and how. */
+export interface KvMotionKeyframes {
+  from: KvRect;
+  to: KvRect;
+  easing: KvEasing;
+}
+
 export interface KvSlotRenderProps {
   url: string | null;
   fit: MediaTransform['fit'];
   scale: number;
   x: number;
   y: number;
-  kenBurns: boolean;
+  motion: KvMotionKeyframes;
 }
 
 /** key-visual-looping Design Ref: §5.3 — absent is a normal state (Plan L5). */

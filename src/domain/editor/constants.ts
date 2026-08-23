@@ -36,11 +36,35 @@ export const DEFAULT_KV_LOOPS = 2;
 export const DEFAULT_KV_TRANSITION_MS = 400;
 
 /**
- * Scale a key visual reaches at Ken Burns intensity 1. key-visual-looping
- * Design Ref: §2.3 — deliberately small, because a still image scaled far
- * enough to notice also resamples every frame.
+ * kv-motion-effects Design Ref: §1.3 — two bounds, not one.
+ *
+ * The intensity slider maps to `PRESET`: it is the comfortable range a preset
+ * reaches, widened from the 1.08 the looping cycle shipped with, because 1.08 at
+ * the intensity people actually use moved a 1080-wide frame by 42px and did not
+ * read as camera work at all.
+ *
+ * `MAX` is the hard bound any rectangle obeys, drag-selected ones included.
+ * Collapsing the two would kill one side or the other: a 1.20 ceiling leaves the
+ * tightest drawable region at 83% of the frame, and mapping intensity 1 to 3.0
+ * makes every preset violent. Still one bound for every path — not a bound
+ * lifted for manual work.
+ *
+ * 3.0 is provisional until the render benchmark runs on a machine with an H.264
+ * encoder (Design §8.4). Narrow it if the measurement says so.
  */
-export const KV_LOOP_MAX_KEN_BURNS_SCALE = 1.08;
+export const KV_MOTION_MAX_PRESET_SCALE = 1.2;
+export const KV_MOTION_MAX_SCALE = 3;
+
+/** kv-motion-effects Design Ref: §4.1. Rotation is absent from every reference. */
+export const KV_MOTION_PRESETS = [
+  'still',
+  'zoomIn',
+  'zoomOut',
+  'panLeftToRight',
+  'panRightToLeft',
+  'panTopToBottom',
+  'panBottomToTop',
+] as const;
 
 /** The only output ratio the looping template renders. Plan L3 / FR-L14. */
 export const KV_LOOP_RATIO = '9:16';

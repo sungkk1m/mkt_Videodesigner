@@ -1,6 +1,8 @@
 // key-visual-looping Design Ref: §6.3 — the selected key visual's framing and
 // motion, the loop-wide motion values, and the two optional overlays.
 import {
+  KV_MOTION_LABELS,
+  KV_MOTION_PRESETS,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
   MAX_SUBTITLE_FONT_SIZE,
@@ -9,10 +11,16 @@ import {
   MIN_SUBTITLE_FONT_SIZE,
   MIN_TRANSITION_MS,
   type KvLoopSettings,
+  type KvMotion,
+  type KvMotionPreset,
   type Locale,
   type MediaReference,
   type MediaTransform,
 } from '../../domain/editor/types';
+import {
+  effectiveKvMotion,
+  resolveKvMotion,
+} from '../../domain/kvloop/motion';
 import {LOCALE_LABELS} from './CopyPanel';
 import {AssetField, PercentField, PlainField} from './inspectorFields';
 
@@ -29,7 +37,8 @@ export interface KvLoopInspectorProps {
   disabled: boolean;
   onTransform: (patch: Partial<MediaTransform>) => void;
   onResetTransform: () => void;
-  onKenBurns: (enabled: boolean) => void;
+  onSlotMotion: (motion: KvMotion | null) => void;
+  onDefaultMotion: (motion: KvMotion) => void;
   onLoop: (
     patch: Partial<{
       kenBurnsIntensity: number;
@@ -56,7 +65,8 @@ export const KvLoopInspector = ({
   disabled,
   onTransform,
   onResetTransform,
-  onKenBurns,
+  onSlotMotion,
+  onDefaultMotion,
   onLoop,
   onTitleImage,
   onPickTitle,
@@ -65,6 +75,37 @@ export const KvLoopInspector = ({
   onDisclaimerStyle,
 }: KvLoopInspectorProps) => {
   const slot = settings.slots[index];
+  const effective = effectiveKvMotion(settings, index);
+  const customMotion = effective.kind === 'custom';
+  const panSelected = settings.slots.some((_, slotIndex) => {
+    const motion = effectiveKvMotion(settings, slotIndex);
+
+    return motion.kind === 'preset' && motion.preset.startsWith('pan');
+  });
+  const defaultPreset =
+    settings.motion.kind === 'preset' ? settings.motion.preset : null;
+
+  const motionValue = (motion: KvMotion | null) =>
+    motion === null ? 'inherit' : motion.kind === 'custom' ? 'custom' : motion.preset;
+
+  /**
+   * Switching to a drawn pair seeds it from the keyframes already on screen, so
+   * the rectangles appear where the camera currently is rather than somewhere
+   * the operator has to hunt for.
+   */
+  const readMotion = (value: string): KvMotion | null => {
+    if (value === 'inherit') {
+      return null;
+    }
+
+    if (value === 'custom') {
+      const {from, to} = resolveKvMotion(effective, settings.kenBurnsIntensity);
+
+      return {kind: 'custom', from, to};
+    }
+
+    return {kind: 'preset', preset: value as KvMotionPreset};
+  };
 
   return (
     <aside aria-label="루핑 인스펙터" className="inspector">
@@ -130,27 +171,72 @@ export const KvLoopInspector = ({
             프레이밍 초기화
           </button>
 
-          {/* FR-L09 — per key visual, because one busy illustration can be worth
-              holding still while the rest push in. */}
-          <label className="field field--toggle">
-            <input
-              checked={slot.kenBurns}
-              data-testid="kv-ken-burns"
+          {/* FR-M01/FR-M02 — per key visual, because one busy illustration can
+              be worth holding still while the rest push in. Inheriting is the
+              default so raising the count does not ask for the same choice
+              again on every new slot. */}
+          <label className="field">
+            <span>KV {index + 1} 모션</span>
+            <select
+              data-testid="kv-slot-motion"
               disabled={disabled}
-              onChange={(event) => onKenBurns(event.target.checked)}
-              type="checkbox"
-            />
-            <span>이 KV에 Ken Burns 적용</span>
+              onChange={(event) => onSlotMotion(readMotion(event.target.value))}
+              value={motionValue(slot.motion)}
+            >
+              <option value="inherit">
+                기본값 따름 (
+                {defaultPreset ? KV_MOTION_LABELS[defaultPreset] : '직접 지정'})
+              </option>
+              {KV_MOTION_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>
+                  {KV_MOTION_LABELS[preset]}
+                </option>
+              ))}
+              <option value="custom">직접 지정한 영역</option>
+            </select>
           </label>
+
+          {customMotion ? (
+            <p className="panel__hint" data-testid="kv-motion-custom-hint">
+              미리보기 위의 두 사각형이 카메라의 시작·끝입니다. 끌어서 옮기고
+              모서리로 크기를 바꾸세요.
+            </p>
+          ) : null}
         </section>
       ) : null}
 
       <section className="panel__group" data-testid="kv-inspector-motion">
         <h3 className="panel__subtitle">모션 · 전환</h3>
 
+        {/* D-04 — set the loop once; a slot above overrides it. */}
+        <label className="field">
+          <span>루프 기본 모션</span>
+          <select
+            data-testid="kv-default-motion"
+            disabled={disabled}
+            onChange={(event) =>
+              onDefaultMotion({
+                kind: 'preset',
+                preset: event.target.value as KvMotionPreset,
+              })
+            }
+            value={
+              settings.motion.kind === 'preset'
+                ? settings.motion.preset
+                : 'zoomIn'
+            }
+          >
+            {KV_MOTION_PRESETS.map((preset) => (
+              <option key={preset} value={preset}>
+                {KV_MOTION_LABELS[preset]}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <PercentField
-          disabled={disabled}
-          label="Ken Burns 강도"
+          disabled={disabled || customMotion}
+          label="모션 강도"
           max={1}
           min={0}
           onChange={(kenBurnsIntensity) => onLoop({kenBurnsIntensity})}
@@ -158,6 +244,22 @@ export const KvLoopInspector = ({
           testId="kv-ken-burns-intensity"
           value={settings.kenBurnsIntensity}
         />
+
+        {/* I-4 — a drawn pair already says how far the camera goes, so letting
+            the slider rescale it would make the preview disagree with the
+            drawing. */}
+        {customMotion ? (
+          <p className="panel__hint" data-testid="kv-motion-strength-note">
+            직접 지정한 영역은 강도를 따르지 않습니다. 사각형이 이동 폭입니다.
+          </p>
+        ) : null}
+
+        {/* §4.1 — at zero there is no room to travel, so a pan is a still. */}
+        {settings.kenBurnsIntensity === 0 && panSelected ? (
+          <p className="notice notice--warning" data-testid="kv-motion-zero-hint">
+            강도가 0이면 팬은 정지와 같습니다. 강도를 올리세요.
+          </p>
+        ) : null}
         <PlainField
           disabled={disabled}
           label="크로스페이드"

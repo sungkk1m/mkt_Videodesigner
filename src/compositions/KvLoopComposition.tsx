@@ -94,7 +94,6 @@ export const KvLoopComposition = ({
             <KvScene
               fadeInFrames={index === 0 ? 0 : transitionInFrames}
               holdInFrames={segment.durationInFrames}
-              intensity={kenBurnsIntensity}
               slot={slots[segment.kvIndex] as KvSlotRenderProps}
             />
           </Sequence>

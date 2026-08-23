@@ -523,6 +523,8 @@
    max-width clamps it back for landscape ratios. Without an explicit height the
    frame has no content and collapses to zero. */
 .stage__frame {
+  /* The motion overlay anchors here. Layout is unchanged by it. */
+  position: relative;
   place-self: center;
   width: auto;
   height: 100%;
@@ -672,6 +674,62 @@
 .kv-slot__actions {
   display: flex;
   gap: 4px;
+}
+
+/* kv-motion-effects §6.2 — the two camera rectangles, over the preview. */
+.kv-motion {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.kv-motion__rect {
+  position: absolute;
+  border: 2px solid;
+  border-radius: 2px;
+  cursor: move;
+}
+
+.kv-motion__rect--from {
+  border-color: #34d399;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0%);
+}
+
+.kv-motion__rect--to {
+  border-color: #f59e0b;
+  border-style: dashed;
+}
+
+.kv-motion__label {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0b0c10;
+  background: currentcolor;
+  border-radius: 3px;
+}
+
+.kv-motion__rect--from .kv-motion__label {
+  color: #052e1c;
+}
+
+.kv-motion__rect--to .kv-motion__label {
+  color: #3a2606;
+}
+
+.kv-motion__handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: currentcolor;
+  border-radius: 3px;
+  cursor: nwse-resize;
 }
 
 .kv-slot__select {

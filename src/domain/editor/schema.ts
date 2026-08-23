@@ -19,6 +19,8 @@ import {
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
+  KV_MOTION_MAX_SCALE,
+  KV_MOTION_PRESETS,
   LOCALES,
   MAX_BATCH_JOBS,
   MAX_COPY_LENGTH,
@@ -315,10 +317,60 @@ export const day1SettingsSchema = z.object({
  * key visual kept whole over a blurred backdrop) a real option rather than a
  * warning.
  */
-export const kvSlotSchema = z.object({
-  transform: mediaTransformSchema,
-  kenBurns: z.boolean(),
+/**
+ * kv-motion-effects Design Ref: §2.3 — a camera position, in frame coordinates.
+ * `size` applies to both axes, so the region is always the frame's own aspect and
+ * FR-M04 holds by construction rather than by validation.
+ */
+export const kvRectSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  size: z.number().min(1 / KV_MOTION_MAX_SCALE).max(1),
 });
+
+/** A preset, or the two rectangles the operator drew (Design §3.1). */
+export const kvMotionSchema = z.discriminatedUnion('kind', [
+  z.object({kind: z.literal('preset'), preset: z.enum(KV_MOTION_PRESETS)}),
+  z.object({kind: z.literal('custom'), from: kvRectSchema, to: kvRectSchema}),
+]);
+
+const ZOOM_IN_MOTION = {kind: 'preset', preset: 'zoomIn'} as const;
+const STILL_MOTION = {kind: 'preset', preset: 'still'} as const;
+
+/**
+ * kv-motion-effects Design Ref: §3.2 — `motion` replaces the `kenBurns` boolean,
+ * and a stored document has to keep opening to the same result.
+ *
+ * `.default()` cannot express this: the value depends on a sibling field, which
+ * is why the end-card-video precedent does not apply here. `z.preprocess` reads
+ * the legacy boolean once, on the way in, and nothing downstream ever sees two
+ * fields that could disagree about whether a key visual moves.
+ *
+ * `kenBurns: true` becomes `zoomIn`, which Design §2.3 shows is frame-for-frame
+ * what the old code drew.
+ */
+export const kvSlotSchema = z.preprocess((input) => {
+  if (
+    typeof input !== 'object' ||
+    input === null ||
+    Array.isArray(input) ||
+    (input as {motion?: unknown}).motion !== undefined
+  ) {
+    return input;
+  }
+
+  return {
+    ...input,
+    motion:
+      (input as {kenBurns?: unknown}).kenBurns === false
+        ? STILL_MOTION
+        : ZOOM_IN_MOTION,
+  };
+}, z.object({
+  transform: mediaTransformSchema,
+  /** Null follows the loop-wide default (D-04). */
+  motion: kvMotionSchema.nullable(),
+}));
 
 export const kvLoopSettingsSchema = z.object({
   template: z.literal('kv-loop'),
@@ -335,8 +387,18 @@ export const kvLoopSettingsSchema = z.object({
   ),
   /** Plan L1 — the cycle is what the timeline edits; this is how often it plays. */
   loopCount: z.number().int().min(KV_LOOP_MIN_LOOPS).max(KV_LOOP_MAX_LOOPS),
-  /** 0-1, where 1 means `KV_LOOP_MAX_KEN_BURNS_SCALE`. */
+  /**
+   * 0-1, where 1 means `KV_MOTION_MAX_PRESET_SCALE`. The name is kept because
+   * renaming a persisted field would force a migration and buy nothing; the
+   * inspector labels it as motion strength.
+   */
   kenBurnsIntensity: z.number().min(0).max(1),
+  /**
+   * D-04 — the preset the whole loop follows, which a slot may override. Stored
+   * documents have none, and never consult it either: the preprocess above gives
+   * every one of their slots an explicit motion.
+   */
+  motion: kvMotionSchema.default(ZOOM_IN_MOTION),
   transitionMs: z.number().min(MIN_TRANSITION_MS).max(MAX_TRANSITION_MS),
   /** Plan L5 — every field here may be empty and the render still runs. */
   title: z.object({
@@ -677,4 +739,7 @@ export type Day1Settings = z.infer<typeof day1SettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
 export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
 export type KvSlot = z.infer<typeof kvSlotSchema>;
+export type KvRect = z.infer<typeof kvRectSchema>;
+export type KvMotion = z.infer<typeof kvMotionSchema>;
+export type KvMotionPreset = (typeof KV_MOTION_PRESETS)[number];
 export type EditorScenes = ThreeSceneSettings['scenes'];

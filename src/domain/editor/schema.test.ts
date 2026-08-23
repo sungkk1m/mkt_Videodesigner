@@ -1,7 +1,8 @@
 import {describe, expect, it} from 'vitest';
 
 import {testMediaReference} from '../../test/fixtures/media';
-import {createProject, parseProject, threeSceneOf} from './project';
+import {createProject, kvLoopOf, parseProject, threeSceneOf} from './project';
+import {kvLoopProjectFixture} from '../../test/fixtures/project';
 import type {EditorProject, Section, ThreeSceneSettings} from './types';
 
 const valid = (): EditorProject => createProject(15);
@@ -311,6 +312,106 @@ describe('parseProject — Day1 payload', () => {
 
     expect(issuePaths(project)).toContain(
       'templateSettings.panelA.trim.outMs',
+    );
+  });
+});
+
+
+describe('parseProject — motion migration (kv-motion-effects §3.2)', () => {
+  /** A stored looping document, as it was written before `motion` existed. */
+  const storedWithBoolean = (kenBurns: boolean[]) => {
+    const project = kvLoopProjectFixture();
+    const settings = kvLoopOf(project);
+
+    if (!settings) {
+      throw new Error('fixture is not a looping project');
+    }
+
+    const {motion: _loopMotion, ...rest} = settings;
+
+    return JSON.parse(
+      JSON.stringify({
+        ...project,
+        templateSettings: {
+          ...rest,
+          slots: kenBurns.map((enabled, index) => {
+            const slot = settings.slots[index];
+            const {motion: _slotMotion, ...slotRest} = slot ?? {
+              transform: {fit: 'cover', scale: 1, x: 0, y: 0},
+              motion: null,
+            };
+
+            return {...slotRest, kenBurns: enabled};
+          }),
+        },
+      }),
+    ) as unknown;
+  };
+
+  it('reads `kenBurns: true` as zoom in — U-11', () => {
+    const parsed = parseProject(storedWithBoolean([true, true, true, true]));
+
+    expect(parsed.ok).toBe(true);
+    expect(
+      parsed.ok ? kvLoopOf(parsed.value)?.slots.map((slot) => slot.motion) : null,
+    ).toEqual(
+      Array.from({length: 4}, () => ({kind: 'preset', preset: 'zoomIn'})),
+    );
+  });
+
+  it('reads `kenBurns: false` as a still — U-12', () => {
+    // The distinction the boolean could not carry: an unchecked box and a chosen
+    // still now land on the same explicit value, per slot.
+    const parsed = parseProject(storedWithBoolean([true, false, true, true]));
+
+    expect(
+      parsed.ok ? kvLoopOf(parsed.value)?.slots[1]?.motion : null,
+    ).toEqual({kind: 'preset', preset: 'still'});
+  });
+
+  it('leaves an already-migrated slot alone — U-13', () => {
+    const project = kvLoopProjectFixture();
+    const settings = kvLoopOf(project);
+    const own = {kind: 'preset', preset: 'panLeftToRight'} as const;
+    const stored = JSON.parse(
+      JSON.stringify({
+        ...project,
+        templateSettings: {
+          ...settings,
+          slots: settings?.slots.map((slot, index) => ({
+            ...slot,
+            // Both fields present: the newer one has to win.
+            kenBurns: false,
+            motion: index === 0 ? own : null,
+          })),
+        },
+      }),
+    ) as unknown;
+    const parsed = parseProject(stored);
+
+    expect(parsed.ok).toBe(true);
+    expect(
+      parsed.ok ? kvLoopOf(parsed.value)?.slots.map((slot) => slot.motion) : null,
+    ).toEqual([own, null, null, null]);
+  });
+
+  it('gives a stored document the loop-wide default it never had', () => {
+    const parsed = parseProject(storedWithBoolean([true, true, true, true]));
+
+    expect(parsed.ok ? kvLoopOf(parsed.value)?.motion : null).toEqual({
+      kind: 'preset',
+      preset: 'zoomIn',
+    });
+  });
+
+  it('leaves a three-scene document untouched — U-14', () => {
+    const parsed = parseProject(
+      JSON.parse(JSON.stringify(createProject(15))) as unknown,
+    );
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.ok ? parsed.value.templateSettings.template : null).toBe(
+      'three-scene',
     );
   });
 });

@@ -47,6 +47,11 @@ import {
   resolveKvSet,
   resolveKvTitle,
 } from '../../domain/kvloop/assets';
+import {
+  effectiveKvMotion,
+  isKvMotionStill,
+  resolveKvMotion,
+} from '../../domain/kvloop/motion';
 import {hookCandidateDurationMs} from '../../domain/hook/scoring';
 import type {TtsProvider} from '../../domain/tts/types';
 import type {
@@ -75,6 +80,7 @@ import {Day1AssetPanel} from './Day1AssetPanel';
 import {Day1Inspector} from './Day1Inspector';
 import {KvLoopAssetPanel} from './KvLoopAssetPanel';
 import {KvLoopInspector} from './KvLoopInspector';
+import {KvMotionOverlay} from './KvMotionOverlay';
 import {Dropzone} from './Dropzone';
 import {HookCandidateDrawer} from './HookCandidateDrawer';
 import {ProjectMenu} from './ProjectMenu';
@@ -318,6 +324,9 @@ export const EditorWorkspace = ({
     : null;
   const kvTitle = kvLoop
     ? resolveKvTitle(kvLoop.title.images, project.selectedLocale)
+    : null;
+  const selectedKvMotion = kvLoop
+    ? effectiveKvMotion(kvLoop, selectedKvIndex)
     : null;
   const kvAssets = useKvLoopAssets({
     resolver: mediaResolver,
@@ -653,7 +662,10 @@ export const EditorWorkspace = ({
       // still key visual once took decoding the MP4 and diffing every frame.
       kvLoop: kvLoop
         ? `${kvLoop.slots.length}장 · ${kvLoop.loopCount}회 · 모션 ${
-            kvLoop.slots.filter((slot) => slot.kenBurns).length
+            kvLoop.slots.filter(
+              (_, index) =>
+                !isKvMotionStill(effectiveKvMotion(kvLoop, index)),
+            ).length
           }/${kvLoop.slots.length}`
         : 'n/a',
       fps: project.fps,
@@ -1268,6 +1280,23 @@ export const EditorWorkspace = ({
               style={{height: '100%', width: '100%'}}
             />
           )}
+
+          {/* §6.2 — visible precisely when the selected key visual's motion is a
+              drawn pair, so the rectangles are on screen exactly when they are
+              the thing being edited. */}
+          {kvLoop && selectedKvMotion?.kind === 'custom' ? (
+            <KvMotionOverlay
+              disabled={isRendering}
+              from={selectedKvMotion.from}
+              to={selectedKvMotion.to}
+              onChange={(which, rect) =>
+                store().setKvMotion(selectedKvIndex, {
+                  ...selectedKvMotion,
+                  [which]: rect,
+                })
+              }
+            />
+          ) : null}
         </div>
 
       </main>
@@ -1278,8 +1307,9 @@ export const EditorWorkspace = ({
           index={selectedKvIndex}
           locale={project.selectedLocale}
           onDisclaimerStyle={(patch) => store().setKvDisclaimerStyle(patch)}
-          onKenBurns={(enabled) =>
-            store().setKvKenBurns(selectedKvIndex, enabled)
+          onDefaultMotion={(motion) => store().setKvDefaultMotion(motion)}
+          onSlotMotion={(motion) =>
+            store().setKvMotion(selectedKvIndex, motion)
           }
           onLoop={(patch) => store().setKvLoop(patch)}
           onPickTitle={() => void kvAssets.pickAndUploadTitle()}

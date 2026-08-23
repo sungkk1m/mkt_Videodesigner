@@ -16,7 +16,8 @@ import {
   setKvCount,
   setKvImage,
   setKvImageStatus,
-  setKvKenBurns,
+  setKvDefaultMotion,
+  setKvMotion,
   setKvLoopCount,
   setKvTitleImage,
   switchTemplate,
@@ -265,13 +266,20 @@ describe('buildKvLoopProps', () => {
       'blob:kv',
       'blob:kv',
     ]);
+    // The keyframes are resolved here so the Player and the render job read the
+    // same pair (kv-motion-effects §2.2). The default loop preset is zoomIn, so
+    // slot 0 inherits "whole frame → centred crop".
     expect(props?.slots[0]).toMatchObject({
       fit: 'cover',
       scale: 1,
       x: 0,
       y: 0,
-      kenBurns: true,
+      motion: {
+        from: {x: 0, y: 0, size: 1},
+        easing: 'easeOut',
+      },
     });
+    expect(props?.slots[0]?.motion.to.size).toBeLessThan(1);
   });
 
   it('renders with no title and no disclaimer — SC5', () => {
@@ -492,12 +500,40 @@ describe('the looping commands', () => {
     expect(parseProject(motion).ok).toBe(true);
   });
 
-  it('turns Ken Burns off for one key visual only — FR-L09', () => {
-    const project = setKvKenBurns(kvLoopProjectFixture(), 2, false);
+  it('holds one key visual still and leaves the rest inheriting — FR-M01', () => {
+    const project = setKvMotion(kvLoopProjectFixture(), 2, {
+      kind: 'preset',
+      preset: 'still',
+    });
 
-    expect(
-      kvLoopSettingsOf(project).slots.map((slot) => slot.kenBurns),
-    ).toEqual([true, true, false, true]);
+    expect(kvLoopSettingsOf(project).slots.map((slot) => slot.motion)).toEqual([
+      null,
+      null,
+      {kind: 'preset', preset: 'still'},
+      null,
+    ]);
+  });
+
+  it('moves every inheriting slot when the loop default changes — FR-M02', () => {
+    const project = setKvDefaultMotion(
+      setKvMotion(kvLoopProjectFixture(), 1, {kind: 'preset', preset: 'still'}),
+      {kind: 'preset', preset: 'panLeftToRight'},
+    );
+    const settings = kvLoopSettingsOf(project);
+
+    expect(settings.motion).toEqual({kind: 'preset', preset: 'panLeftToRight'});
+    // The one that opted out keeps its own choice.
+    expect(settings.slots[1]?.motion).toEqual({kind: 'preset', preset: 'still'});
+  });
+
+  it('hands a slot back to the default with null — FR-M02', () => {
+    const project = setKvMotion(
+      setKvMotion(kvLoopProjectFixture(), 0, {kind: 'preset', preset: 'zoomOut'}),
+      0,
+      null,
+    );
+
+    expect(kvLoopSettingsOf(project).slots[0]?.motion).toBeNull();
   });
 
   it('adds and removes a per-locale title — FR-L10', () => {
@@ -532,7 +568,12 @@ describe('the looping commands', () => {
 
     expect(setKvImage(project, 'ko', 0, kvImage('a'))).toBe(project);
     expect(setKvCount(project, 6)).toBe(project);
-    expect(setKvKenBurns(project, 0, false)).toBe(project);
+    expect(setKvMotion(project, 0, {kind: 'preset', preset: 'still'})).toBe(
+      project,
+    );
+    expect(
+      setKvDefaultMotion(project, {kind: 'preset', preset: 'zoomOut'}),
+    ).toBe(project);
     expect(updateKvLoopSettings(project, {fadeOutMs: 0})).toBe(project);
   });
 });

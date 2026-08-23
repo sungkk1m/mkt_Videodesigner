@@ -9,6 +9,7 @@ import {
   day1SectionDurations,
 } from '../day1/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
+import {resolveKvMotion} from '../kvloop/motion';
 import {
   kvLoopCombination,
   kvLoopCycleDurations,
@@ -90,6 +91,7 @@ import {
   type IconAdjust,
   type KvLoopProps,
   type KvLoopSettings,
+  type KvMotion,
   type KvSegment,
   type KvSlotRenderProps,
   type Locale,
@@ -193,11 +195,14 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
   template: 'kv-loop',
   slots: Array.from({length: DEFAULT_KV_COUNT}, () => ({
     transform: {...DEFAULT_TRANSFORM},
-    kenBurns: true,
+    // D-04 — null follows the loop-wide preset, so raising the count does not
+    // ask the operator to set the same motion again on every new slot.
+    motion: null,
   })),
   images: {},
   loopCount: DEFAULT_KV_LOOPS,
   kenBurnsIntensity: 0.5,
+  motion: {kind: 'preset', preset: 'zoomIn'},
   transitionMs: DEFAULT_KV_TRANSITION_MS,
   // An overlay is artwork with its own margins, so it opens on `contain`:
   // cropping a game logo is never what was meant. §5.3.
@@ -1418,7 +1423,7 @@ const withKvCycle = (
         (_, index) =>
           settings.slots[index] ?? {
             transform: {...DEFAULT_TRANSFORM},
-            kenBurns: true,
+            motion: null,
           },
       ),
       images: Object.fromEntries(
@@ -1498,17 +1503,27 @@ export const resetKvSlotTransform = (
     ),
   }));
 
-export const setKvKenBurns = (
+/**
+ * kv-motion-effects FR-M01/FR-M02 — one key visual's motion. `null` hands the
+ * slot back to the loop-wide default, which is the state a new slot starts in.
+ */
+export const setKvMotion = (
   project: EditorProject,
   index: number,
-  enabled: boolean,
+  motion: KvMotion | null,
 ): EditorProject =>
   mapKvLoop(project, (settings) => ({
     ...settings,
     slots: settings.slots.map((slot, slotIndex) =>
-      slotIndex === index ? {...slot, kenBurns: enabled} : slot,
+      slotIndex === index ? {...slot, motion} : slot,
     ),
   }));
+
+/** FR-M02 — the preset every slot follows unless it says otherwise. */
+export const setKvDefaultMotion = (
+  project: EditorProject,
+  motion: KvMotion,
+): EditorProject => mapKvLoop(project, (settings) => ({...settings, motion}));
 
 export type KvLoopPatch = Partial<{
   kenBurnsIntensity: number;
@@ -1969,6 +1984,8 @@ export const buildKvLoopProps = (
       )
     : 0;
 
+  // kv-motion-effects §2.2 — the keyframes are resolved once, here, so the
+  // Player and the render job interpolate the identical pair.
   const slots = settings.slots.map((slot, index) =>
     Object.freeze({
       url: resolveUrl(references[index]),
@@ -1976,7 +1993,12 @@ export const buildKvLoopProps = (
       scale: slot.transform.scale,
       x: slot.transform.x,
       y: slot.transform.y,
-      kenBurns: slot.kenBurns,
+      motion: Object.freeze(
+        resolveKvMotion(
+          slot.motion ?? settings.motion,
+          settings.kenBurnsIntensity,
+        ),
+      ),
     }),
   );
 
