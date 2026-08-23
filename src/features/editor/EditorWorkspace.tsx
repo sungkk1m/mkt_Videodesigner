@@ -626,6 +626,12 @@ export const EditorWorkspace = ({
       return;
     }
 
+    // What the render actually mixes: the selected locale's narration is the
+    // only set that reaches the output.
+    const narrationTracks = Object.keys(
+      project.audio.narration[project.selectedLocale] ?? {},
+    ).length;
+
     const report = debugReport({
       // Which bundle actually ran. A CDN-cached index.html keeps serving the
       // previous one, and without this an unchanged behaviour is impossible to
@@ -635,11 +641,35 @@ export const EditorWorkspace = ({
       blockers: capabilities?.blockers ?? null,
       warnings: capabilities?.warnings ?? null,
       outputTarget: capabilities?.preferredOutputTarget ?? null,
-      template: day1 ? 'day1' : 'three-scene',
+      // The discriminant itself, not a guess reassembled from the narrowing
+      // helpers. Reading `day1 ? 'day1' : 'three-scene'` reported every looping
+      // render as three-scene, because the looping arm was never added to that
+      // ternary — and a header naming the wrong template sends the next
+      // diagnosis to the wrong code. The discriminant cannot drift again.
+      template: project.templateSettings.template,
+      // key-visual-looping — the two numbers that say what the loop is, plus how
+      // many key visuals actually move. Motion is a per-slot toggle, so one left
+      // off is invisible in the output until the frames are compared: finding a
+      // still key visual once took decoding the MP4 and diffing every frame.
+      kvLoop: kvLoop
+        ? `${kvLoop.slots.length}장 · ${kvLoop.loopCount}회 · 모션 ${
+            kvLoop.slots.filter((slot) => slot.kenBurns).length
+          }/${kvLoop.slots.length}`
+        : 'n/a',
       fps: project.fps,
       profile: project.render.profile,
       ratio: project.selectedRatio,
       renderStatus: renderState.status,
+      // Without this the `audioMixing` timing cannot be read at all: a second
+      // and a half of mixing is either the cost of the tracks or the cost of
+      // silence, and the two ask for opposite conclusions.
+      audio:
+        [
+          project.audio.bgm ? 'BGM' : null,
+          narrationTracks > 0 ? `나레이션 ${narrationTracks}` : null,
+        ]
+          .filter((part) => part !== null)
+          .join(' + ') || 'none',
       // Day1 render speed — whether each panel was cropped, and why not if not.
       sourceProxy:
         panelProxies.notes.length > 0 ? panelProxies.notes.join(' | ') : 'none',
