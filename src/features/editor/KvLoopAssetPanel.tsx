@@ -48,12 +48,15 @@ export interface KvLoopAssetPanelProps {
   uploadError: AppError | null;
   autosaveError: AppError | null;
   supportsFilePicker: boolean;
+  /** Which key visual the inspector is editing, so the panel can say so. */
+  selectedIndex: number;
   imageUrl: (index: number) => string | null;
   canGrantPermission: (reference: MediaReference | null) => boolean;
   onLocale: (locale: Locale) => void;
   onUpload: (index: number, file: File | null) => void;
   onPickFile: (index: number) => void;
   onGrantPermission: (mediaId: string) => void;
+  onSelect: (index: number) => void;
   onMove: (from: number, to: number) => void;
   onCount: (count: number) => void;
   onLoopCount: (loopCount: number) => void;
@@ -72,12 +75,14 @@ export const KvLoopAssetPanel = ({
   uploadError,
   autosaveError,
   supportsFilePicker,
+  selectedIndex,
   imageUrl,
   canGrantPermission,
   onLocale,
   onUpload,
   onPickFile,
   onGrantPermission,
+  onSelect,
   onMove,
   onCount,
   onLoopCount,
@@ -132,7 +137,20 @@ export const KvLoopAssetPanel = ({
               key={index}
             >
               <div className="kv-slot__head">
-                <strong>KV {index + 1}</strong>
+                {/* Selecting a key visual used to be a timeline-only gesture,
+                    which is not discoverable from the panel that holds the
+                    images. The inspector edits whichever one is selected. */}
+                <button
+                  aria-pressed={index === selectedIndex}
+                  className={`kv-slot__select${
+                    index === selectedIndex ? ' kv-slot__select--on' : ''
+                  }`}
+                  data-testid={`kv-slot-${index}-select`}
+                  onClick={() => onSelect(index)}
+                  type="button"
+                >
+                  KV {index + 1}
+                </button>
                 <span className="kv-slot__actions">
                   <button
                     aria-label={`KV ${index + 1} 앞으로`}

@@ -36,6 +36,8 @@ const RENDER_TIMEOUT = 10 * 60 * 1000;
 /** Default 15s project: four key visuals, two repeats, 1.875s each. */
 const HOLD_MS = 1875;
 const CYCLE_MS = HOLD_MS * 4;
+/** The default crossfade, which every boundary sample has to reason about. */
+const TRANSITION_MS = 400;
 
 const selectKvLoop = async (page: Page) => {
   await page.getByTestId('template-kv-loop').click();
@@ -206,6 +208,62 @@ test.describe('looping editor — controls', () => {
     await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('1장');
   });
 
+  // The inspector edits one key visual, the selected one (§6.3), and the
+  // selection is React state holding a section id. Two ways it used to end up
+  // pointing at a section that does not exist — a reload, which restores the
+  // project but leaves the state on its initial `panel-a`, and lowering the
+  // count out from under the selected key visual — and both fell through
+  // `Math.max(0, -1)`: the inspector read "KV 1" while the timeline leaked the
+  // raw id, and every framing or Ken Burns edit went to slot 0 whichever key
+  // visual the operator meant.
+  test('keeps the inspector on a key visual that exists', async ({page}) => {
+    await page.goto('/');
+    await selectKvLoop(page);
+    await page.getByTestId('kv-count').selectOption('3');
+
+    for (const index of [0, 1, 2]) {
+      await page
+        .getByTestId(`kv-slot-${index}-input`)
+        .setInputFiles(KV_FILES[index] as string);
+    }
+
+    // Selecting from the asset panel, next to the images, rather than only by
+    // finding the timeline clip.
+    await expect(page.getByTestId('kv-slot-0-select')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    await page.getByTestId('kv-slot-2-select').click();
+    await expect(page.getByRole('heading', {level: 2, name: 'KV 3'})).toBeVisible();
+    await expect(page.getByText('KV 3 선택됨')).toBeVisible();
+    await expect(page.getByTestId('kv-slot-0-select')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    // Dropping to two key visuals removes the one that was selected.
+    await page.getByTestId('kv-count').selectOption('2');
+    await expect(page.getByRole('heading', {level: 2, name: 'KV 1'})).toBeVisible();
+    await expect(page.getByText('KV 1 선택됨')).toBeVisible();
+
+    await page.getByTestId('kv-count').selectOption('3');
+    await page.getByTestId('kv-slot-2-select').click();
+    await expect(page.getByText('KV 3 선택됨')).toBeVisible();
+
+    await expect(page.getByTestId('editor-save-state')).toContainText('저장됨');
+    await page.reload();
+    await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');
+
+    // A restored project lands on its own axis, never on Day1's.
+    await expect(page.getByText('panel-a 선택됨')).toHaveCount(0);
+    await expect(page.getByText('KV 1 선택됨')).toBeVisible();
+    await expect(page.getByTestId('kv-slot-0-select')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   test('shows one editable cycle and the repeats as ghosts (FR-L06/§6.4)', async ({
     page,
   }) => {
@@ -371,12 +429,24 @@ test.describe('looping render', () => {
       }
     }
 
-    // SC4 — the crossfade is a real blend: the frame on the boundary matches
-    // neither of the two key visuals it sits between.
-    const boundarySeconds = HOLD_MS / 1000;
-    const blended = await centreRgbAt(output, boundarySeconds);
-    const before = await centreRgbAt(output, (HOLD_MS - 400) / 1000);
-    const after = await centreRgbAt(output, (HOLD_MS + 400) / 1000);
+    // SC4 — the crossfade is a real blend: a frame inside it matches neither of
+    // the two key visuals it sits between.
+    //
+    // Sampled halfway through the fade, not on the boundary. A crossfade lives
+    // inside the *incoming* segment, so it starts at the boundary and ends
+    // `transitionMs` later — measured frame by frame on a real 60fps render,
+    // the incoming key visual is at 4% opacity on the boundary frame itself and
+    // only reaches an even blend at +200ms. Sampling the boundary would compare
+    // the outgoing image against itself and fail on a correct render.
+    const blended = await centreRgbAt(
+      output,
+      (HOLD_MS + TRANSITION_MS / 2) / 1000,
+    );
+    const before = await centreRgbAt(output, (HOLD_MS - TRANSITION_MS) / 1000);
+    const after = await centreRgbAt(
+      output,
+      (HOLD_MS + TRANSITION_MS * 1.5) / 1000,
+    );
     const distance = (a: readonly number[], b: readonly number[]) =>
       Math.sqrt(
         [0, 1, 2].reduce(

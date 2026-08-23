@@ -674,6 +674,27 @@
   gap: 4px;
 }
 
+.kv-slot__select {
+  padding: 2px 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.kv-slot__select:hover:not(.kv-slot__select--on) {
+  color: var(--text);
+  background: var(--input-bg);
+}
+
+.kv-slot__select--on {
+  color: #c7c9ff;
+  background: var(--accent-soft);
+}
+
 .field--asset {
   display: grid;
   gap: 4px;

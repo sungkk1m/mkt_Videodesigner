@@ -295,17 +295,23 @@ export const EditorWorkspace = ({
     commands: day1Commands,
   });
 
+  // The selection is React state, so it outlives the axis it was made on: a
+  // restored project arrives with the initial `panel-a` whatever its template,
+  // and lowering the key visual count can drop the section that was selected.
+  // Both used to fall through `Math.max(0, -1)` and read as "KV 1" while every
+  // inspector edit went to slot 0 no matter which key visual was meant, so the
+  // effective id is derived against the axis that actually exists.
+  const selectedSectionId =
+    project.sections.some((section) => section.id === selectedDay1Section)
+      ? selectedDay1Section
+      : (project.sections[0]?.id ?? selectedDay1Section);
+
   // key-visual-looping §6.2 — the set the selected locale actually shows, which
   // is its own or the one it inherits (FR-L04).
   // The looping template reuses the Day1 section-selection state: both select a
   // section id off the shared axis rather than a scene kind.
   const selectedKvIndex = kvLoop
-    ? Math.max(
-        0,
-        project.sections.findIndex(
-          (section) => section.id === selectedDay1Section,
-        ),
-      )
+    ? project.sections.findIndex((section) => section.id === selectedSectionId)
     : 0;
   const kvSet = kvLoop
     ? resolveKvSet(kvLoop.images, project.selectedLocale, kvLoop.slots.length)
@@ -926,9 +932,11 @@ export const EditorWorkspace = ({
             onLoopCount={(loopCount) => store().setKvLoopCount(loopCount)}
             onMove={(from, to) => store().moveKvImage(from, to)}
             onPickFile={(index) => void kvAssets.pickAndUploadImage(index)}
+            onSelect={(index) => setSelectedDay1Section(kvSectionId(index))}
             onUpload={(index, file) => void kvAssets.uploadImage(index, file)}
             preset={project.durationPreset}
             references={kvSet?.references ?? []}
+            selectedIndex={selectedKvIndex}
             settings={kvLoop}
             supportsFilePicker={kvAssets.supportsFilePicker}
             uploadError={kvAssets.uploadError}
@@ -1386,7 +1394,7 @@ export const EditorWorkspace = ({
         // told how many times it plays. Every other template passes nothing.
         repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={day1 || kvLoop ? selectedDay1Section : selectedKind}
+        selectedId={day1 || kvLoop ? selectedSectionId : selectedKind}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />
