@@ -3,11 +3,13 @@
 import {renderMediaOnWeb} from '@remotion/web-renderer';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
+import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {outputDimensions} from '../../domain/editor/project';
 import type {
   Day1Props,
   EditorSnapshot,
+  KvLoopProps,
   ThreeSceneProps,
 } from '../../domain/editor/types';
 import {DEFAULT_PROFILE, PROFILE_SPECS} from '../../domain/render/profile';
@@ -23,11 +25,13 @@ export type {EditorRenderConfig, EditorRenderMetrics};
 
 /**
  * Day1 Design Ref: §2.1 — the render path's template branch. Adding a template is
- * one arm here plus one arm in `buildEditorSnapshot`.
+ * one arm here plus one arm in `buildEditorSnapshot`, which is why the looping
+ * arm landed with its composition rather than with its schema.
  */
 export type EditorRenderRequest =
   | WebRenderRequest<ThreeSceneProps>
-  | WebRenderRequest<Day1Props>;
+  | WebRenderRequest<Day1Props>
+  | WebRenderRequest<KvLoopProps>;
 
 export type EditorRenderMediaAdapter = (
   request: EditorRenderRequest,
@@ -70,6 +74,19 @@ export const createEditorRenderRequest = (
       composition: {
         id: 'day1-editor',
         component: Day1Composition,
+        ...timing,
+        defaultProps: snapshot.props,
+      },
+      inputProps: snapshot.props,
+      ...encoding,
+    };
+  }
+
+  if (snapshot.template === 'kv-loop') {
+    return {
+      composition: {
+        id: 'kv-loop-editor',
+        component: KvLoopComposition,
         ...timing,
         defaultProps: snapshot.props,
       },

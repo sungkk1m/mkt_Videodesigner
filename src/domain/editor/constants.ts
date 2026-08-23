@@ -5,17 +5,45 @@ export const SCENE_ORDER = ['hook', 'gameplay', 'cta'] as const;
 export const DURATION_PRESETS = [15, 30, 60] as const;
 
 /**
- * Day1 Design Ref: §3.1 — every template shares a three-section time axis, so
- * the timeline commands stay template-agnostic. Day1 Design Ref: §1.3 D10 keeps
- * this fixed at three until a template actually needs a different count.
+ * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
+ * list now. The bounds are the schema's, not a template's: the existing two
+ * templates still pin themselves to three section ids, and the looping template
+ * takes one section per key visual (Plan L8).
  */
-export const SECTION_COUNT = 3;
+export const MIN_SECTION_COUNT = 2;
+export const MAX_SECTION_COUNT = 8;
 
-export const TEMPLATE_KINDS = ['three-scene', 'day1'] as const;
+export const TEMPLATE_KINDS = ['three-scene', 'day1', 'kv-loop'] as const;
 export const DEFAULT_TEMPLATE = 'three-scene';
 
 /** Day1 Design Ref: §1.2 — `[panel A active, panel B active, end card]`. */
 export const DAY1_SECTION_ORDER = ['panel-a', 'panel-b', 'endcard'] as const;
+
+/**
+ * key-visual-looping Design Ref: §3.1 — the looping template's section ids are
+ * derived from the key visual count rather than listed, because the count is
+ * what the user chooses. One section per key visual (Plan L1 / Design D-02).
+ */
+export const kvSectionId = (index: number) => `kv-${index}`;
+
+/** key-visual-looping Plan L8 — 1-4 repeats of the one editable cycle. */
+export const KV_LOOP_MIN_LOOPS = 1;
+export const KV_LOOP_MAX_LOOPS = 4;
+
+/** Starting values for a new looping payload, taken from the reference videos. */
+export const DEFAULT_KV_COUNT = 4;
+export const DEFAULT_KV_LOOPS = 2;
+export const DEFAULT_KV_TRANSITION_MS = 400;
+
+/**
+ * Scale a key visual reaches at Ken Burns intensity 1. key-visual-looping
+ * Design Ref: §2.3 — deliberately small, because a still image scaled far
+ * enough to notice also resamples every frame.
+ */
+export const KV_LOOP_MAX_KEN_BURNS_SCALE = 1.08;
+
+/** The only output ratio the looping template renders. Plan L3 / FR-L14. */
+export const KV_LOOP_RATIO = '9:16';
 
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;

@@ -10,17 +10,20 @@ import {
 } from 'react';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
+import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   activeTransform,
   buildCompositionProps,
   buildEditorSnapshot,
   buildDay1Props,
+  buildKvLoopProps,
   createProject,
   day1MissingPanels,
   day1Of,
   day1PanelsShorterThanSection,
   hasRatioOverride,
+  kvLoopOf,
   outputDimensions,
   projectTotalFrames,
   threeSceneOf,
@@ -30,6 +33,8 @@ import {
   ASPECT_RATIOS,
   DEFAULT_TRANSFORM,
   DURATION_PRESETS,
+  KV_LOOP_RATIO,
+  kvSectionId,
   type DurationPreset,
   type EditorProject,
   type LocalizedCopy,
@@ -37,6 +42,11 @@ import {
   type SceneKind,
 } from '../../domain/editor/types';
 import {narrationBlockers} from '../../domain/audio/mix';
+import {
+  kvLoopMissingImages,
+  resolveKvSet,
+  resolveKvTitle,
+} from '../../domain/kvloop/assets';
 import {hookCandidateDurationMs} from '../../domain/hook/scoring';
 import type {TtsProvider} from '../../domain/tts/types';
 import type {
@@ -63,6 +73,8 @@ import './editor.css';
 import {CopyPanel} from './CopyPanel';
 import {Day1AssetPanel} from './Day1AssetPanel';
 import {Day1Inspector} from './Day1Inspector';
+import {KvLoopAssetPanel} from './KvLoopAssetPanel';
+import {KvLoopInspector} from './KvLoopInspector';
 import {Dropzone} from './Dropzone';
 import {HookCandidateDrawer} from './HookCandidateDrawer';
 import {ProjectMenu} from './ProjectMenu';
@@ -72,6 +84,7 @@ import {SourceRepair} from './SourceRepair';
 import {TemplateSelector} from './TemplateSelector';
 import {Timeline} from './Timeline';
 import {useDay1Assets, type Day1AssetCommands} from './useDay1Assets';
+import {useKvLoopAssets, type KvLoopAssetCommands} from './useKvLoopAssets';
 import {
   useEditorAudio,
   type EditorAudioCommands,
@@ -110,6 +123,13 @@ const LEFT_TABS: {kind: LeftTab; icon: string; label: string}[] = [
  * So Day1 keeps only the tabs that do something.
  */
 const DAY1_LEFT_TABS: LeftTab[] = ['assets', 'audio'];
+
+/**
+ * key-visual-looping FR-L15 — Hook analysis has no meaning for stills (Plan
+ * §2.2), and narration is out of scope (Plan L9). The copy tab stays because the
+ * disclaimer lives there, as the only field it shows for this template.
+ */
+const KV_LOOP_LEFT_TABS: LeftTab[] = ['assets', 'copy', 'audio'];
 
 const LEFT_TAB_TITLES: Record<LeftTab, string> = {
   assets: '소재',
@@ -236,6 +256,15 @@ export const EditorWorkspace = ({
     [store],
   );
 
+  const kvLoopCommands = useMemo<KvLoopAssetCommands>(
+    () => ({
+      setImage: (locale, index, reference) =>
+        store().setKvImageAt(locale, index, reference),
+      setTitle: (locale, reference) => store().setKvTitle(locale, reference),
+    }),
+    [store],
+  );
+
   const source = useEditorSource({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
@@ -251,6 +280,7 @@ export const EditorWorkspace = ({
   // editor. Everything below narrows through `threeScene` or `day1`.
   const threeScene = threeSceneOf(project);
   const day1 = day1Of(project);
+  const kvLoop = kvLoopOf(project);
   const selectedIndex = sceneIndexOf(selectedKind);
   const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
   const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
@@ -263,6 +293,33 @@ export const EditorWorkspace = ({
     session,
     project,
     commands: day1Commands,
+  });
+
+  // key-visual-looping §6.2 — the set the selected locale actually shows, which
+  // is its own or the one it inherits (FR-L04).
+  // The looping template reuses the Day1 section-selection state: both select a
+  // section id off the shared axis rather than a scene kind.
+  const selectedKvIndex = kvLoop
+    ? Math.max(
+        0,
+        project.sections.findIndex(
+          (section) => section.id === selectedDay1Section,
+        ),
+      )
+    : 0;
+  const kvSet = kvLoop
+    ? resolveKvSet(kvLoop.images, project.selectedLocale, kvLoop.slots.length)
+    : null;
+  const kvTitle = kvLoop
+    ? resolveKvTitle(kvLoop.title.images, project.selectedLocale)
+    : null;
+  const kvAssets = useKvLoopAssets({
+    resolver: mediaResolver,
+    session,
+    project,
+    references: kvSet?.references ?? [],
+    titleReference: kvTitle?.reference ?? null,
+    commands: kvLoopCommands,
   });
 
   const audio = useEditorAudio({
@@ -336,6 +393,11 @@ export const EditorWorkspace = ({
     [project, resolveUrl],
   );
 
+  const kvLoopProps = useMemo(
+    () => buildKvLoopProps(project, resolveUrl),
+    [project, resolveUrl],
+  );
+
   const output = outputDimensions(project.selectedRatio);
   const selectedTransform = selectedScene
     ? activeTransform(selectedScene, project.selectedRatio)
@@ -348,9 +410,17 @@ export const EditorWorkspace = ({
         (panel) => day1Assets.panelUrl(panel) === null,
       )
     : [];
+  // key-visual-looping FR-L13 — two key visuals is the floor, and each of them
+  // has to have decoded. Overlays are not part of either count (Plan L5).
+  const missingKvImages = kvLoopMissingImages(project);
+  const unresolvedKvImages = (kvSet?.references ?? []).filter(
+    (reference, index) => reference !== null && kvAssets.imageUrl(index) === null,
+  ).length;
   const renderableSource = day1
     ? unresolvedPanels.length === 0
-    : source.sourceUrl !== null;
+    : kvLoop
+      ? missingKvImages === 0 && unresolvedKvImages === 0
+      : source.sourceUrl !== null;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
   // or it only half-applies.
@@ -585,7 +655,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene && !day1) {
+  if (!threeScene && !day1 && !kvLoop) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -596,10 +666,16 @@ export const EditorWorkspace = ({
     );
   }
 
-  const visibleTabs = day1
-    ? LEFT_TABS.filter((tab) => DAY1_LEFT_TABS.includes(tab.kind))
+  const allowedTabs = day1
+    ? DAY1_LEFT_TABS
+    : kvLoop
+      ? KV_LOOP_LEFT_TABS
+      : null;
+  const visibleTabs = allowedTabs
+    ? LEFT_TABS.filter((tab) => allowedTabs.includes(tab.kind))
     : LEFT_TABS;
-  const activeTab = day1 && !DAY1_LEFT_TABS.includes(leftTab) ? 'assets' : leftTab;
+  const activeTab =
+    allowedTabs && !allowedTabs.includes(leftTab) ? 'assets' : leftTab;
 
   return (
     <div
@@ -637,7 +713,11 @@ export const EditorWorkspace = ({
             onSwitch={(template) => {
               store().switchTemplate(template);
               setSelectedKind('hook');
-              setSelectedDay1Section('panel-a');
+              // The section selection is shared by Day1 and the looping
+              // template, so it resets to whichever axis is arriving.
+              setSelectedDay1Section(
+                template === 'kv-loop' ? kvSectionId(0) : 'panel-a',
+              );
               setLeftTab('assets');
               setRenderState({status: 'idle'});
               seekToMs(0);
@@ -654,6 +734,11 @@ export const EditorWorkspace = ({
           {day1 && missingPanels.length > 0 ? (
             <span className="editor__blocker" data-testid="day1-render-blocker">
               영상 {missingPanels.length}개가 더 필요합니다
+            </span>
+          ) : null}
+          {kvLoop && missingKvImages > 0 ? (
+            <span className="editor__blocker" data-testid="kv-render-blocker">
+              키비주얼 {missingKvImages}장이 더 필요합니다
             </span>
           ) : null}
           {shortPanels.length > 0 ? (
@@ -793,6 +878,30 @@ export const EditorWorkspace = ({
             supportsFilePicker={day1Assets.supportsFilePicker}
             uploadError={day1Assets.uploadError}
           />
+        ) : kvLoop && activeTab === 'assets' ? (
+          <KvLoopAssetPanel
+            autosaveError={
+              persistence.saveState.status === 'failed'
+                ? persistence.saveState.error
+                : null
+            }
+            busy={kvAssets.busy}
+            disabled={isRendering}
+            imageUrl={kvAssets.imageUrl}
+            inheritedFrom={kvSet?.inheritedFrom ?? null}
+            locale={project.selectedLocale}
+            missingImages={missingKvImages}
+            onCount={(count) => store().setKvCount(count)}
+            onFit={(index, fit) => store().setKvTransform(index, {fit})}
+            onLocale={(locale) => store().setLocale(locale)}
+            onLoopCount={(loopCount) => store().setKvLoopCount(loopCount)}
+            onMove={(from, to) => store().moveKvImage(from, to)}
+            onUpload={(index, file) => void kvAssets.uploadImage(index, file)}
+            preset={project.durationPreset}
+            references={kvSet?.references ?? []}
+            settings={kvLoop}
+            uploadError={kvAssets.uploadError}
+          />
         ) : activeTab === 'hook' ? (
           <HookCandidateDrawer
             analyzer={hookAnalyzer}
@@ -808,6 +917,8 @@ export const EditorWorkspace = ({
           />
         ) : activeTab === 'audio' ? (
           <AudioPanel
+            // Plan L9 — a loop has no original sound and no narration.
+            bgmOnly={kvLoop !== null}
             capabilities={audio.capabilities}
             disabled={isRendering}
             job={audio.job}
@@ -838,6 +949,14 @@ export const EditorWorkspace = ({
           <CopyPanel
             copy={project.copy[project.selectedLocale] as LocalizedCopy}
             disabled={isRendering}
+            kvLoop={
+              kvLoop
+                ? {
+                    onDisclaimer: (value) =>
+                      store().setCopy('kvLoopDisclaimer', value),
+                  }
+                : undefined
+            }
             locale={project.selectedLocale}
             onField={(field, value) => store().setCopy(field, value)}
             onLocale={(locale) => store().setLocale(locale)}
@@ -970,15 +1089,27 @@ export const EditorWorkspace = ({
                   project.selectedRatio === ratio ? ' segmented__item--on' : ''
                 }`}
                 data-testid={`ratio-${ratio}`}
-                disabled={isRendering}
+                // key-visual-looping FR-L14 — vertical only, and the reason is
+                // stated next to the control rather than left to be inferred.
+                disabled={isRendering || (kvLoop !== null && ratio !== KV_LOOP_RATIO)}
                 key={ratio}
                 onClick={() => store().setRatio(ratio)}
+                title={
+                  kvLoop && ratio !== KV_LOOP_RATIO
+                    ? '루핑 템플릿은 세로 전용입니다'
+                    : undefined
+                }
                 type="button"
               >
                 {ratio}
               </button>
             ))}
           </div>
+          {kvLoop ? (
+            <span className="stage__chip" data-testid="kv-ratio-locked">
+              세로 전용
+            </span>
+          ) : null}
           <span className="stage__divider" />
           <div aria-label="전체 길이" className="segmented" role="group">
             {DURATION_PRESETS.map((preset) => (
@@ -1031,7 +1162,19 @@ export const EditorWorkspace = ({
         >
           {/* Day1 Design Ref: §2.1 — the template picks the composition, and each
               one gets the snapshot its own prop builder produced. */}
-          {day1 && day1Props ? (
+          {kvLoop && kvLoopProps ? (
+            <Player
+              acknowledgeRemotionLicense
+              component={KvLoopComposition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={kvLoopProps}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          ) : day1 && day1Props ? (
             <Player
               acknowledgeRemotionLicense
               component={Day1Composition}
@@ -1060,7 +1203,26 @@ export const EditorWorkspace = ({
 
       </main>
 
-      {day1 ? (
+      {kvLoop ? (
+        <KvLoopInspector
+          disabled={isRendering}
+          index={selectedKvIndex}
+          locale={project.selectedLocale}
+          onDisclaimerStyle={(patch) => store().setKvDisclaimerStyle(patch)}
+          onKenBurns={(enabled) =>
+            store().setKvKenBurns(selectedKvIndex, enabled)
+          }
+          onLoop={(patch) => store().setKvLoop(patch)}
+          onResetTransform={() => store().resetKvTransform(selectedKvIndex)}
+          onTitleImage={(file) => void kvAssets.uploadTitle(file)}
+          onTitleTransform={(patch) => store().setKvTitleTransform(patch)}
+          onTransform={(patch) => store().setKvTransform(selectedKvIndex, patch)}
+          settings={kvLoop}
+          titleInheritedFrom={kvTitle?.inheritedFrom ?? null}
+          titleReference={kvTitle?.reference ?? null}
+          titleUrl={kvAssets.titleUrl()}
+        />
+      ) : day1 ? (
         <Day1Inspector
           activeTransformOf={(panel) =>
             activeTransform(day1[panel], project.selectedRatio)
@@ -1089,8 +1251,8 @@ export const EditorWorkspace = ({
           onTransform={(panel, patch) => store().setDay1Transform(panel, patch)}
           onTrimIn={(panel, ms) => store().setDay1TrimIn(panel, ms)}
           panelDurationsMs={{
-            panelA: project.sections[0].durationMs,
-            panelB: project.sections[1].durationMs,
+            panelA: project.sections[0]?.durationMs ?? 0,
+            panelB: project.sections[1]?.durationMs ?? 0,
           }}
           ratio={project.selectedRatio}
           resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}
@@ -1176,13 +1338,16 @@ export const EditorWorkspace = ({
         onSeek={seekToMs}
         onSeekFrame={(frame) => seekToMs((frame / project.fps) * 1000)}
         onSelect={(sectionId) =>
-          day1
+          day1 || kvLoop
             ? setSelectedDay1Section(sectionId)
             : setSelectedKind(sectionId as SceneKind)
         }
         onTogglePlay={() => playerRef.current?.toggle()}
+        // key-visual-looping §6.4 — the axis is one cycle here, so the track is
+        // told how many times it plays. Every other template passes nothing.
+        repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={day1 ? selectedDay1Section : selectedKind}
+        selectedId={day1 || kvLoop ? selectedDay1Section : selectedKind}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

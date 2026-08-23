@@ -15,11 +15,13 @@ import {
   applyDurationPreset,
   applySourceToAllScenes,
   createProject,
+  moveKvImage,
   moveTimelineBoundary,
   relinkDay1PanelSource,
   relinkSource,
   renameProject,
   resetDay1Transform,
+  resetKvSlotTransform,
   resetSceneTransform,
   setCopyField,
   setDay1LabelText,
@@ -30,6 +32,12 @@ import {
   setDay1EndCardTrimLengthMs,
   setDay1EndCardVideo,
   setDay1TrimInMs,
+  setKvCount,
+  setKvImage,
+  setKvImageStatus,
+  setKvKenBurns,
+  setKvLoopCount,
+  setKvTitleImage,
   setRatioOverride,
   setSceneSubtitleText,
   setSceneTransition,
@@ -51,10 +59,15 @@ import {
   updateDay1Split,
   updateDay1Transform,
   updateHookSettings,
+  updateKvDisclaimerStyle,
+  updateKvLoopSettings,
+  updateKvSlotTransform,
+  updateKvTitleTransform,
   updateSceneTransform,
   updateSubtitleStyle,
   type Day1EndCardPatch,
   type Day1PanelKey,
+  type KvLoopPatch,
 } from '../../domain/editor/project';
 import type {
   ActivePanel,
@@ -64,6 +77,7 @@ import type {
   CtaSceneSettings,
   Day1Settings,
   DurationPreset,
+  KvLoopSettings,
   EditorProject,
   HookSceneSettings,
   Locale,
@@ -80,7 +94,13 @@ import type {FrameRate, RenderProfile} from '../../domain/render/profile';
 import type {BoundaryIndex} from '../../domain/timeline/timeline';
 import type {CtaAssetSlot} from './SceneInspector';
 
-export type CopyTextField = 'hook' | 'hookSubcopy' | 'ctaText' | 'ctaSubcopy';
+export type CopyTextField =
+  | 'hook'
+  | 'hookSubcopy'
+  | 'ctaText'
+  | 'ctaSubcopy'
+  /** key-visual-looping FR-L11 — the looping bottom line. */
+  | 'kvLoopDisclaimer';
 
 export interface ProjectStore {
   project: EditorProject;
@@ -155,6 +175,26 @@ export interface ProjectStore {
    * once rather than following the header. Day1 Design Ref: §6.3.
    */
   setDay1LabelAt: (locale: Locale, panel: ActivePanel, value: string) => void;
+  /** key-visual-looping commands. Design Ref: §6.2, §6.3. */
+  setKvImage: (index: number, reference: MediaReference | null) => void;
+  setKvImageAt: (
+    locale: Locale,
+    index: number,
+    reference: MediaReference | null,
+  ) => void;
+  setKvImageStatus: (index: number, status: MediaStatus) => void;
+  moveKvImage: (from: number, to: number) => void;
+  setKvCount: (count: number) => void;
+  setKvLoopCount: (loopCount: number) => void;
+  setKvTransform: (index: number, patch: Partial<MediaTransform>) => void;
+  resetKvTransform: (index: number) => void;
+  setKvKenBurns: (index: number, enabled: boolean) => void;
+  setKvLoop: (patch: KvLoopPatch) => void;
+  setKvTitle: (locale: Locale, reference: MediaReference | null) => void;
+  setKvTitleTransform: (patch: Partial<MediaTransform>) => void;
+  setKvDisclaimerStyle: (
+    patch: Partial<KvLoopSettings['disclaimer']>,
+  ) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set) => ({
@@ -343,4 +383,51 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({
       project: setDay1LabelText(state.project, locale, panel, value),
     })),
+  // The key visual commands follow the header's locale, like the copy ones do.
+  setKvImage: (index, reference) =>
+    set((state) => ({
+      project: setKvImage(
+        state.project,
+        state.project.selectedLocale,
+        index,
+        reference,
+      ),
+    })),
+  setKvImageAt: (locale, index, reference) =>
+    set((state) => ({
+      project: setKvImage(state.project, locale, index, reference),
+    })),
+  setKvImageStatus: (index, status) =>
+    set((state) => ({
+      project: setKvImageStatus(
+        state.project,
+        state.project.selectedLocale,
+        index,
+        status,
+      ),
+    })),
+  moveKvImage: (from, to) =>
+    set((state) => ({project: moveKvImage(state.project, from, to)})),
+  setKvCount: (count) =>
+    set((state) => ({project: setKvCount(state.project, count)})),
+  setKvLoopCount: (loopCount) =>
+    set((state) => ({project: setKvLoopCount(state.project, loopCount)})),
+  setKvTransform: (index, patch) =>
+    set((state) => ({
+      project: updateKvSlotTransform(state.project, index, patch),
+    })),
+  resetKvTransform: (index) =>
+    set((state) => ({project: resetKvSlotTransform(state.project, index)})),
+  setKvKenBurns: (index, enabled) =>
+    set((state) => ({project: setKvKenBurns(state.project, index, enabled)})),
+  setKvLoop: (patch) =>
+    set((state) => ({project: updateKvLoopSettings(state.project, patch)})),
+  setKvTitle: (locale, reference) =>
+    set((state) => ({
+      project: setKvTitleImage(state.project, locale, reference),
+    })),
+  setKvTitleTransform: (patch) =>
+    set((state) => ({project: updateKvTitleTransform(state.project, patch)})),
+  setKvDisclaimerStyle: (patch) =>
+    set((state) => ({project: updateKvDisclaimerStyle(state.project, patch)})),
 }));

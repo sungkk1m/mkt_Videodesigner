@@ -12,11 +12,13 @@ import {
 const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   'three-scene': '3장면',
   day1: 'Day1 비교',
+  'kv-loop': '키비주얼 루핑',
 };
 
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   'three-scene': '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
   day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
+  'kv-loop': '키비주얼 이미지와 반복·모션·오버레이 설정',
 };
 
 export interface TemplateSelectorProps {
@@ -72,6 +74,14 @@ export const TemplateSelector = ({
               시작합니다. 프로젝트 이름·카피·오디오·렌더 설정은 그대로
               유지됩니다.
             </p>
+            {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way
+                in, so the dialog says so before it happens. */}
+            {pending === 'kv-loop' ? (
+              <p className="panel__hint" data-testid="template-switch-ratio-note">
+                루핑 템플릿은 세로 전용입니다. 출력 규격이 9:16으로 고정되고,
+                선택해 둔 다른 규격은 해제됩니다.
+              </p>
+            ) : null}
             <div className="dialog__actions">
               <button
                 className="button button--secondary"

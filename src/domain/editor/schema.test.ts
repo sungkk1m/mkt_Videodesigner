@@ -2,9 +2,13 @@ import {describe, expect, it} from 'vitest';
 
 import {testMediaReference} from '../../test/fixtures/media';
 import {createProject, parseProject, threeSceneOf} from './project';
-import type {EditorProject, ThreeSceneSettings} from './types';
+import type {EditorProject, Section, ThreeSceneSettings} from './types';
 
 const valid = (): EditorProject => createProject(15);
+
+/** The section axis is a variable length array, so mutating one narrows first. */
+const sectionAt = (project: EditorProject, index: number) =>
+  project.sections[index] as Section;
 
 /** Every test here builds a three-scene project, so narrowing is unconditional. */
 const scenesOf = (project: EditorProject) =>
@@ -39,22 +43,36 @@ describe('parseProject', () => {
 
   it('rejects section durations that do not add up to the preset', () => {
     const project = valid();
-    project.sections[0].durationMs = 5000;
+    sectionAt(project, 0).durationMs = 5000;
 
     expect(issuePaths(project)).toContain('sections');
   });
 
   it('rejects a section shorter than one second', () => {
     const project = valid();
-    project.sections[0].durationMs = 500;
-    project.sections[1].durationMs = 11500;
+    sectionAt(project, 0).durationMs = 500;
+    sectionAt(project, 1).durationMs = 11500;
 
     expect(issuePaths(project)).toContain('sections.0.durationMs');
   });
 
+  it('rejects a section count the template does not have', () => {
+    const project = valid();
+
+    // key-visual-looping Design Ref: §3.1 — the axis takes 2-8 sections now, so
+    // the three-scene count is pinned by the refinement rather than by the shape.
+    // The two sections still total the preset, so the count is the only breach.
+    project.sections = [
+      sectionAt(project, 0),
+      {...sectionAt(project, 1), durationMs: 13_000},
+    ];
+
+    expect(issuePaths(project)).toEqual(['sections']);
+  });
+
   it('rejects section ids that do not match the template order', () => {
     const project = valid();
-    project.sections[0].id = 'cta';
+    sectionAt(project, 0).id = 'cta';
 
     expect(issuePaths(project)).toContain('sections.0.id');
   });
@@ -263,7 +281,7 @@ describe('parseProject — Day1 payload', () => {
 
   it('rejects three-scene section ids on a Day1 project', () => {
     const project = day1Project();
-    project.sections[0].id = 'hook';
+    sectionAt(project, 0).id = 'hook';
 
     expect(issuePaths(project)).toContain('sections.0.id');
   });

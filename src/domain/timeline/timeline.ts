@@ -8,8 +8,15 @@ import type {
 } from '../editor/types';
 import {MIN_SCENE_MS} from '../editor/types';
 
-export type SceneDurationsMs = [number, number, number];
-export type BoundaryIndex = 0 | 1;
+/**
+ * The section axis, in order. key-visual-looping Design Ref: §4.4 — a variable
+ * length list rather than the three-tuple it used to be, so a template can take
+ * as many sections as it has clips. The existing two stay at three, which the
+ * schema pins.
+ */
+export type SceneDurationsMs = readonly number[];
+/** Index of a boundary, so `0` is the one between sections 0 and 1. */
+export type BoundaryIndex = number;
 
 export const SCENE_DURATION_PRESETS_MS: Record<
   DurationPreset,
@@ -34,25 +41,32 @@ export const msToFrames = (ms: number, fps: number) =>
  * dragging, frame allocation, presets — reusable by any template unchanged.
  * Day1 Design Ref: §1.2.
  */
-export const sectionDurationsOf = (sections: Sections): SceneDurationsMs => [
-  sections[0].durationMs,
-  sections[1].durationMs,
-  sections[2].durationMs,
-];
+export const sectionDurationsOf = (sections: Sections): SceneDurationsMs =>
+  sections.map((section) => section.durationMs);
 
 export const sumDurationsMs = (durations: SceneDurationsMs) =>
-  durations[0] + durations[1] + durations[2];
+  durations.reduce((sum, durationMs) => sum + durationMs, 0);
 
-export const sceneStartsMs = (durations: SceneDurationsMs): SceneDurationsMs => [
-  0,
-  durations[0],
-  durations[0] + durations[1],
-];
+/** Where each section opens, so the first is always zero. */
+export const sceneStartsMs = (durations: SceneDurationsMs): SceneDurationsMs => {
+  const starts: number[] = [];
+  let cursor = 0;
 
-/** Absolute timeline positions of the Hook|Gameplay and Gameplay|CTA boundaries. */
+  for (const durationMs of durations) {
+    starts.push(cursor);
+    cursor += durationMs;
+  }
+
+  return starts;
+};
+
+/**
+ * Absolute timeline positions of the inner boundaries — the section starts with
+ * the leading zero dropped, so n sections give n-1 handles.
+ */
 export const boundaryPositionsMs = (
   durations: SceneDurationsMs,
-): [number, number] => [durations[0], durations[0] + durations[1]];
+): readonly number[] => sceneStartsMs(durations).slice(1);
 
 /**
  * Moves one boundary to an absolute timeline position. Only the two adjacent
@@ -63,17 +77,30 @@ export const moveBoundary = (
   boundary: BoundaryIndex,
   positionMs: number,
 ): SceneDurationsMs => {
-  const [hook, gameplay, cta] = durations;
-  const total = hook + gameplay + cta;
-  const requested = Math.round(positionMs);
+  const left = durations[boundary];
+  const right = durations[boundary + 1];
 
-  if (boundary === 0) {
-    const next = clamp(requested, MIN_SCENE_MS, hook + gameplay - MIN_SCENE_MS);
-    return [next, hook + gameplay - next, cta];
+  // A boundary sits between two sections, so the index past the last pair has
+  // nothing to move. Reachable now that the index is a plain number.
+  if (left === undefined || right === undefined) {
+    return durations;
   }
 
-  const next = clamp(requested, hook + MIN_SCENE_MS, total - MIN_SCENE_MS);
-  return [hook, next - hook, total - next];
+  const before = sceneStartsMs(durations)[boundary] as number;
+  const pairEndMs = before + left + right;
+  const next = clamp(
+    Math.round(positionMs),
+    before + MIN_SCENE_MS,
+    pairEndMs - MIN_SCENE_MS,
+  );
+
+  return durations.map((durationMs, index) =>
+    index === boundary
+      ? next - before
+      : index === boundary + 1
+        ? pairEndMs - next
+        : durationMs,
+  );
 };
 
 /**
@@ -84,21 +111,29 @@ export const allocateSceneFrames = (
   durations: SceneDurationsMs,
   preset: DurationPreset,
   fps: number,
-): [number, number, number] => {
+): readonly number[] => {
   const totalFrames = preset * fps;
   const minFrames = msToFrames(MIN_SCENE_MS, fps);
-  const hook = clamp(
-    msToFrames(durations[0], fps),
-    minFrames,
-    totalFrames - minFrames * 2,
-  );
-  const gameplay = clamp(
-    msToFrames(durations[1], fps),
-    minFrames,
-    totalFrames - hook - minFrames,
-  );
+  const frames: number[] = [];
+  let allocated = 0;
 
-  return [hook, gameplay, totalFrames - hook - gameplay];
+  // Every section but the last takes its own length, kept clear of the minimum
+  // the sections after it still need.
+  for (let index = 0; index < durations.length - 1; index += 1) {
+    const remaining = durations.length - 1 - index;
+    const scene = clamp(
+      msToFrames(durations[index] as number, fps),
+      minFrames,
+      totalFrames - allocated - minFrames * remaining,
+    );
+
+    frames.push(scene);
+    allocated += scene;
+  }
+
+  frames.push(totalFrames - allocated);
+
+  return frames;
 };
 
 /**
@@ -126,9 +161,9 @@ export const isTrimShorterThanScene = (
   sceneDurationMs: number,
 ) => trim.outMs - trim.inMs < sceneDurationMs;
 
-export const createSceneDurations = (
-  preset: DurationPreset,
-): SceneDurationsMs => [...SCENE_DURATION_PRESETS_MS[preset]];
+export const createSceneDurations = (preset: DurationPreset): number[] => [
+  ...SCENE_DURATION_PRESETS_MS[preset],
+];
 
 export const sceneIndexOf = (kind: SceneKind): 0 | 1 | 2 =>
   kind === 'hook' ? 0 : kind === 'gameplay' ? 1 : 2;

@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import type {Sections} from '../../domain/editor/types';
+import type {Section, Sections} from '../../domain/editor/types';
 import {
   boundaryPositionsMs,
   sectionDurationsOf,
@@ -88,6 +88,15 @@ export interface TimelineProps {
   onSeekFrame: (frame: number) => void;
   onTogglePlay: () => void;
   onMoveBoundary: (boundary: BoundaryIndex, positionMs: number) => void;
+  /**
+   * key-visual-looping Design Ref: §6.4 — passed only by the looping template,
+   * where `sections` is one cycle rather than the whole output. Without it this
+   * behaves exactly as it did before.
+   *
+   * The cycle length is not passed with it: it is the section sum, and a second
+   * copy of it could drift.
+   */
+  repeat?: {count: number};
 }
 
 export const Timeline = ({
@@ -104,6 +113,7 @@ export const Timeline = ({
   onSeekFrame,
   onTogglePlay,
   onMoveBoundary,
+  repeat,
 }: TimelineProps) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<BoundaryIndex | null>(null);
@@ -114,7 +124,11 @@ export const Timeline = ({
   const [zoom, setZoom] = useState(1);
 
   const durations = sectionDurationsOf(sections);
-  const totalMs = sumDurationsMs(durations);
+  const cycleMs = sumDurationsMs(durations);
+  const cycles = Math.max(1, repeat?.count ?? 1);
+  // The ruler, playhead, and scrub all speak in output time, so a looping
+  // project's lane is the whole loop even though only one cycle is editable.
+  const totalMs = cycleMs * cycles;
   const starts = sceneStartsMs(durations);
   const boundaries = boundaryPositionsMs(durations);
 
@@ -328,45 +342,64 @@ export const Timeline = ({
             data-testid="timeline-track"
             ref={trackRef}
           >
-            {sections.map((section, index) => (
-              <button
-                className={`timeline__clip${
-                  section.id === selectedId ? ' timeline__clip--active' : ''
-                }`}
-                data-testid={`timeline-clip-${section.id}`}
-                key={section.id}
-                onClick={(event) => {
-                  onSelect(section.id);
-                  onSeek(msFromClientX(event.clientX));
-                }}
-                // Exact time proportions so clip edges line up with the boundary
-                // handles, which are positioned by percentage.
-                style={{
-                  flex: `0 0 ${(section.durationMs / totalMs) * 100}%`,
-                }}
-                type="button"
-              >
-                <span className="timeline__clip-name">{section.label}</span>
-                <span
-                  className="timeline__clip-duration"
-                  data-testid={`timeline-duration-${section.id}`}
-                >
-                  {formatSeconds(section.durationMs)}
-                </span>
-                <span className="timeline__clip-range">
-                  {(starts[index] as number) / 1000}s –{' '}
-                  {((starts[index] as number) + section.durationMs) / 1000}s
-                </span>
-              </button>
-            ))}
+            {Array.from({length: cycles}, (_, cycle) =>
+              sections.map((section, index) => {
+                const start = (starts[index] as number) + cycle * cycleMs;
+                // Only the first cycle is editable (Plan L1): every repeat after
+                // it is a read-only ghost, so a hold time is edited in one place.
+                const ghost = cycle > 0;
 
-            {boundaries.map((positionMs, index) => {
-              const boundary = index as BoundaryIndex;
+                return (
+                  <button
+                    // Emitted only for a ghost: `aria-hidden={false}` would put
+                    // a new attribute on every clip of the other templates.
+                    aria-hidden={ghost || undefined}
+                    className={`timeline__clip${
+                      !ghost && section.id === selectedId
+                        ? ' timeline__clip--active'
+                        : ''
+                    }${ghost ? ' timeline__clip--ghost' : ''}`}
+                    data-testid={
+                      ghost
+                        ? `timeline-clip-${section.id}-repeat-${cycle}`
+                        : `timeline-clip-${section.id}`
+                    }
+                    disabled={ghost || undefined}
+                    key={`${cycle}-${section.id}`}
+                    onClick={(event) => {
+                      onSelect(section.id);
+                      onSeek(msFromClientX(event.clientX));
+                    }}
+                    // Exact time proportions so clip edges line up with the
+                    // boundary handles, which are positioned by percentage.
+                    style={{
+                      flex: `0 0 ${(section.durationMs / totalMs) * 100}%`,
+                      ...(ghost ? {pointerEvents: 'none' as const} : {}),
+                    }}
+                    type="button"
+                  >
+                    <span className="timeline__clip-name">{section.label}</span>
+                    <span
+                      className="timeline__clip-duration"
+                      data-testid={
+                        ghost ? undefined : `timeline-duration-${section.id}`
+                      }
+                    >
+                      {formatSeconds(section.durationMs)}
+                    </span>
+                    <span className="timeline__clip-range">
+                      {start / 1000}s – {(start + section.durationMs) / 1000}s
+                    </span>
+                  </button>
+                );
+              }),
+            )}
 
+            {boundaries.map((positionMs, boundary) => {
               return (
                 <button
-                  aria-label={`${sections[boundary].label} 경계`}
-                  aria-valuemax={totalMs}
+                  aria-label={`${(sections[boundary] as Section).label} 경계`}
+                  aria-valuemax={cycleMs}
                   aria-valuemin={0}
                   aria-valuenow={Math.round(positionMs)}
                   aria-valuetext={formatSeconds(positionMs)}

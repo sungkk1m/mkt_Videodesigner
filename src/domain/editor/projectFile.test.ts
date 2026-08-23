@@ -16,6 +16,7 @@ import {
   serializeProjectFile,
 } from './projectFile';
 import {scenesOf, sourceOf} from '../../test/fixtures/project';
+import type {EditorProject, KvLoopSettings, Section} from './types';
 
 const projectWithSource = () =>
   applySourceToAllScenes(createProject(30), testMediaReference());
@@ -60,6 +61,49 @@ describe('serializeProjectFile', () => {
         status: 'missing',
       });
       expect(endCard.videoTrim).toEqual({inMs: 0, outMs: 3000});
+    }
+  });
+
+  it('round-trips a looping project, key visuals and title alike', () => {
+    const kv = (name: string) =>
+      testMediaReference({
+        id: name,
+        kind: 'image',
+        name: `${name}.png`,
+        mimeType: 'image/png',
+        durationMs: undefined,
+      });
+    const base = switchTemplate(createProject(15), 'kv-loop');
+    const settings = base.templateSettings as KvLoopSettings;
+    const project: EditorProject = {
+      ...base,
+      templateSettings: {
+        ...settings,
+        images: {ko: [kv('a'), kv('b'), null, null]},
+        title: {...settings.title, images: {ko: kv('title')}},
+      },
+    };
+    const result = parseProjectFile(serializeProjectFile(project));
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok && result.value.templateSettings.template === 'kv-loop') {
+      const restored = result.value.templateSettings;
+
+      // key-visual-looping — the key visuals are this template's sources, so
+      // they come back missing for the relink flow, and the title with them.
+      expect(restored.images.ko).toEqual([
+        {...kv('a'), status: 'missing'},
+        {...kv('b'), status: 'missing'},
+        null,
+        null,
+      ]);
+      expect(restored.title.images.ko).toEqual({
+        ...kv('title'),
+        status: 'missing',
+      });
+      expect(restored.slots).toEqual(settings.slots);
+      expect(restored.loopCount).toBe(settings.loopCount);
     }
   });
 
@@ -119,7 +163,7 @@ describe('parseProjectFile', () => {
 
   it('rejects a project whose scenes break the timeline invariant', () => {
     const project = createProject(15);
-    project.sections[0].durationMs = 9000;
+    (project.sections[0] as Section).durationMs = 9000;
 
     const result = parseProjectFile(
       serializeProjectFile(project),

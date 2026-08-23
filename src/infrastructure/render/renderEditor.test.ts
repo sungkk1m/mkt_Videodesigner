@@ -1,6 +1,7 @@
 import {describe, expect, it, vi} from 'vitest';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
+import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   applySourceToAllScenes,
@@ -11,6 +12,7 @@ import {
 } from '../../domain/editor/project';
 import type {EditorSnapshot, ThreeSceneProps} from '../../domain/editor/types';
 import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
+import {kvLoopProjectFixture} from '../../test/fixtures/project';
 import type {EditorRenderConfig} from '../../domain/render/types';
 import {
   createEditorRenderRequest,
@@ -51,6 +53,24 @@ const day1Snapshot = (ratio: EditorRenderConfig['ratio'] = '9:16') => {
     testUrlResolver(),
   );
 };
+
+/** A looping project with its key visuals filled. */
+const kvLoopSnapshot = () =>
+  buildEditorSnapshot(
+    kvLoopProjectFixture({
+      images: {
+        ko: [1, 2, 3, 4].map((index) =>
+          testMediaReference({
+            id: `media_kv_${index}`,
+            kind: 'image',
+            mimeType: 'image/png',
+            durationMs: undefined,
+          }),
+        ),
+      },
+    }),
+    testUrlResolver(),
+  );
 
 /** Narrows the union so a test can assert on three-scene props. */
 const threeSceneProps = (input: EditorSnapshot): ThreeSceneProps => {
@@ -139,6 +159,14 @@ describe('createEditorRenderRequest', () => {
     expect(request.composition.defaultProps).toBe(request.inputProps);
   });
 
+  it('routes a looping snapshot to KvLoopComposition', () => {
+    const request = createEditorRenderRequest(kvLoopSnapshot(), CONFIG);
+
+    expect(request.composition.id).toBe('kv-loop-editor');
+    expect(request.composition.component).toBe(KvLoopComposition);
+    expect(request.composition.defaultProps).toBe(request.inputProps);
+  });
+
   it('keeps encoding settings identical across templates', () => {
     const {composition: _three, ...threeScene} = createEditorRenderRequest(
       snapshot,
@@ -149,7 +177,16 @@ describe('createEditorRenderRequest', () => {
       CONFIG,
     );
 
+    const {composition: _kvLoop, ...kvLoop} = createEditorRenderRequest(
+      kvLoopSnapshot(),
+      CONFIG,
+    );
+
     expect({...day1, inputProps: null}).toEqual({
+      ...threeScene,
+      inputProps: null,
+    });
+    expect({...kvLoop, inputProps: null}).toEqual({
       ...threeScene,
       inputProps: null,
     });

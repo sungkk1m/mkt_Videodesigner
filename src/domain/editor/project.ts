@@ -8,6 +8,12 @@ import {
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
+import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
+import {
+  kvLoopCombination,
+  kvLoopCycleDurations,
+  kvLoopSegments,
+} from '../kvloop/cycle';
 import {DEFAULT_PROFILE, fpsForProfile, type FrameRate, type RenderProfile} from '../render/profile';
 import type {MediaReference} from '../media/reference';
 import {
@@ -31,11 +37,17 @@ import {
   DAY1_SECTION_LABELS,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
+  DEFAULT_KV_COUNT,
+  DEFAULT_KV_LOOPS,
+  DEFAULT_KV_TRANSITION_MS,
   DEFAULT_LOCALE,
   DEFAULT_RATIO,
   DEFAULT_SUBTITLE,
   DEFAULT_TRANSFORM,
   EDITOR_FPS,
+  KV_LOOP_MAX_LOOPS,
+  KV_LOOP_MIN_LOOPS,
+  KV_LOOP_RATIO,
   LOCALES,
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
@@ -43,17 +55,21 @@ import {
   MAX_LABEL_OUTLINE_WIDTH_PX,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
+  MAX_SECTION_COUNT,
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
   MIN_SCALE,
+  MIN_SECTION_COUNT,
   MIN_SUBTITLE_FONT_SIZE,
   MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
   SCENE_LABELS,
   SCENE_ORDER,
+  kvSectionId,
+  kvSectionLabel,
   type ActivePanel,
   type AspectRatio,
   type AudioRenderProps,
@@ -72,6 +88,10 @@ import {
   type EditorSnapshot,
   type HookSceneSettings,
   type IconAdjust,
+  type KvLoopProps,
+  type KvLoopSettings,
+  type KvSegment,
+  type KvSlotRenderProps,
   type Locale,
   type LocalizedCopy,
   type MediaStatus,
@@ -164,6 +184,29 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
 };
 
 /**
+ * key-visual-looping Design Ref: §3.2 — the documented starting values for a
+ * looping payload. Four key visuals repeated twice is the reference format
+ * (Plan §1.2), and the closing fade is on because both reference videos end on
+ * one (FR-L17).
+ */
+export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
+  template: 'kv-loop',
+  slots: Array.from({length: DEFAULT_KV_COUNT}, () => ({
+    transform: {...DEFAULT_TRANSFORM},
+    kenBurns: true,
+  })),
+  images: {},
+  loopCount: DEFAULT_KV_LOOPS,
+  kenBurnsIntensity: 0.5,
+  transitionMs: DEFAULT_KV_TRANSITION_MS,
+  // An overlay is artwork with its own margins, so it opens on `contain`:
+  // cropping a game logo is never what was meant. §5.3.
+  title: {images: {}, transform: {...DEFAULT_TRANSFORM, fit: 'contain'}},
+  disclaimer: {fontSize: 32, textColor: '#ffffff'},
+  fadeOutMs: DEFAULT_KV_TRANSITION_MS,
+};
+
+/**
  * Narrows a project to its three-scene payload, or null for any other template.
  *
  * Day1 Design Ref: §3.2 — this is the single place the `templateSettings`
@@ -182,6 +225,12 @@ export const threeSceneOf = (
 export const day1Of = (project: EditorProject): Day1Settings | null =>
   project.templateSettings.template === 'day1' ? project.templateSettings : null;
 
+/** The looping counterpart of `threeSceneOf`. */
+export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
+  project.templateSettings.template === 'kv-loop'
+    ? project.templateSettings
+    : null;
+
 /** Day1 Design Ref: §3.1 — the three-scene view of the shared time axis. */
 const buildSections = (preset: DurationPreset): Sections => {
   const durations = createSceneDurations(preset);
@@ -190,7 +239,7 @@ const buildSections = (preset: DurationPreset): Sections => {
     id: kind,
     label: SCENE_LABELS[kind],
     durationMs: durations[index] as number,
-  })) as Sections;
+  }));
 };
 
 const buildScenes = (): EditorScenes =>
@@ -329,7 +378,7 @@ const withSectionDurations = (
   sections: project.sections.map((section, index) => ({
     ...section,
     durationMs: durations[index] as number,
-  })) as Sections,
+  })),
 });
 
 const mapScene = (
@@ -419,11 +468,22 @@ export const applyDurationPreset = (
   project: EditorProject,
   preset: DurationPreset,
 ): EditorProject => {
+  const settingsBefore = project.templateSettings;
   const resized = withSectionDurations(
     {...project, durationPreset: preset},
-    project.templateSettings.template === 'day1'
+    settingsBefore.template === 'day1'
       ? day1SectionDurations(preset)
-      : createSceneDurations(preset),
+      : settingsBefore.template === 'kv-loop'
+        ? // The cycle is redivided evenly; the caller is expected to have
+          // cleared `kvLoopCombination` first, exactly as the template switch
+          // is expected to have been confirmed. Plan L8 forbids quietly
+          // correcting a combination that does not fit.
+          kvLoopCycleDurations(
+            preset,
+            settingsBefore.loopCount,
+            settingsBefore.slots.length,
+          )
+        : createSceneDurations(preset),
   );
   const settings = threeSceneOf(resized);
 
@@ -721,7 +781,13 @@ export const updateCtaSettings = (
     };
   });
 
-type CopyTextField = 'hook' | 'hookSubcopy' | 'ctaText' | 'ctaSubcopy';
+type CopyTextField =
+  | 'hook'
+  | 'hookSubcopy'
+  | 'ctaText'
+  | 'ctaSubcopy'
+  /** key-visual-looping FR-L11 — the looping bottom line, same shape. */
+  | 'kvLoopDisclaimer';
 
 export const setCopyField = (
   project: EditorProject,
@@ -816,8 +882,24 @@ const buildDay1Sections = (preset: DurationPreset): Sections => {
     id,
     label: DAY1_SECTION_LABELS[id],
     durationMs: durations[index] as number,
-  })) as Sections;
+  }));
 };
+
+/**
+ * key-visual-looping Design Ref: §3.1 — one section per key visual, holding an
+ * even share of a single cycle. Design D-02: the count comes from `slots`, so
+ * these two are built from the same number and cannot drift.
+ */
+const buildKvLoopSections = (
+  preset: DurationPreset,
+  loopCount: number,
+  kvCount: number,
+): Sections =>
+  kvLoopCycleDurations(preset, loopCount, kvCount).map((durationMs, index) => ({
+    id: kvSectionId(index),
+    label: kvSectionLabel(index),
+    durationMs,
+  }));
 
 /**
  * Day1 Design Ref: §6.1 — switching is destructive because per-scene settings and
@@ -835,21 +917,40 @@ export const switchTemplate = (
     return project;
   }
 
-  return template === 'day1'
-    ? {
-        ...project,
-        sections: buildDay1Sections(project.durationPreset),
-        templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
-      }
-    : {
-        ...project,
-        sections: buildSections(project.durationPreset),
-        templateSettings: {
-          template: 'three-scene',
-          source: null,
-          scenes: buildScenes(),
-        },
-      };
+  if (template === 'day1') {
+    return {
+      ...project,
+      sections: buildDay1Sections(project.durationPreset),
+      templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
+    };
+  }
+
+  // key-visual-looping FR-L14 / Design D-06 — the looping template renders 9:16
+  // only, so entering it forces the ratio rather than letting the schema reject
+  // a project the user cannot see is wrong. §6.1 has the dialog say so.
+  if (template === 'kv-loop') {
+    return {
+      ...project,
+      sections: buildKvLoopSections(
+        project.durationPreset,
+        DEFAULT_KV_LOOPS,
+        DEFAULT_KV_COUNT,
+      ),
+      templateSettings: structuredClone(DEFAULT_KV_LOOP_SETTINGS),
+      render: {...project.render, selectedRatios: [KV_LOOP_RATIO]},
+      selectedRatio: KV_LOOP_RATIO,
+    };
+  }
+
+  return {
+    ...project,
+    sections: buildSections(project.durationPreset),
+    templateSettings: {
+      template: 'three-scene',
+      source: null,
+      scenes: buildScenes(),
+    },
+  };
 };
 
 /** A new panel video restarts that panel's trim; the other panel is untouched. */
@@ -1175,6 +1276,335 @@ export const setDay1LabelText = (
 };
 
 /**
+ * key-visual-looping §6.2/§6.3 — the looping commands. Same contract as the
+ * Day1 ones: a command that does not apply to the current template returns the
+ * project unchanged rather than throwing.
+ */
+const mapKvLoop = (
+  project: EditorProject,
+  update: (settings: KvLoopSettings) => KvLoopSettings,
+): EditorProject => {
+  const settings = kvLoopOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const next = update(settings);
+
+  // An update that declines to change anything hands the settings straight back,
+  // and then so does this — a no-op edit must not re-render the editor.
+  return next === settings ? project : {...project, templateSettings: next};
+};
+
+const kvImagesAt = (
+  settings: KvLoopSettings,
+  locale: Locale,
+): (MediaReference | null)[] =>
+  Array.from(
+    {length: settings.slots.length},
+    (_, index) => settings.images[locale]?.[index] ?? null,
+  );
+
+/** FR-L03 — upload, replace, or clear one key visual of one locale's set. */
+export const setKvImage = (
+  project: EditorProject,
+  locale: Locale,
+  index: number,
+  reference: MediaReference | null,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    images: {
+      ...settings.images,
+      [locale]: kvImagesAt(settings, locale).map((current, slot) =>
+        slot === index ? reference : current,
+      ),
+    },
+  }));
+
+/** A key visual whose file went missing and came back. */
+export const setKvImageStatus = (
+  project: EditorProject,
+  locale: Locale,
+  index: number,
+  status: MediaStatus,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    images: {
+      ...settings.images,
+      [locale]: kvImagesAt(settings, locale).map((current, slot) =>
+        slot === index && current ? {...current, status} : current,
+      ),
+    },
+  }));
+
+/**
+ * FR-L03 — reorder. The framing travels with the key visual, and so does every
+ * locale's pixel, because a set is the same art in another language (D-04). The
+ * hold times belong to positions on the timeline, so they stay where they are.
+ */
+export const moveKvImage = (
+  project: EditorProject,
+  from: number,
+  to: number,
+): EditorProject =>
+  mapKvLoop(project, (settings) => {
+    const count = settings.slots.length;
+
+    if (from === to || from < 0 || to < 0 || from >= count || to >= count) {
+      return settings;
+    }
+
+    const reorder = <TItem>(items: readonly TItem[]): TItem[] => {
+      const next = [...items];
+      const [moved] = next.splice(from, 1);
+
+      next.splice(to, 0, moved as TItem);
+
+      return next;
+    };
+
+    return {
+      ...settings,
+      slots: reorder(settings.slots),
+      images: Object.fromEntries(
+        Object.keys(settings.images).map((locale) => [
+          locale,
+          reorder(kvImagesAt(settings, locale as Locale)),
+        ]),
+      ) as KvLoopSettings['images'],
+    };
+  });
+
+/**
+ * FR-L03/FR-L06 — the count of key visuals, or how often the cycle plays. Both
+ * redivide the cycle evenly, because the previous hold times were shares of a
+ * cycle that no longer exists.
+ *
+ * A combination that cannot hold a second per key visual is refused, not
+ * corrected: Plan L8 wants the reason shown, which `kvLoopCombination` words for
+ * the UI. Nothing is silently adjusted here, and no unsavable project is made.
+ */
+const withKvCycle = (
+  project: EditorProject,
+  loopCount: number,
+  kvCount: number,
+  settings: KvLoopSettings,
+): EditorProject => {
+  if (!kvLoopCombination(project.durationPreset, loopCount, kvCount).ok) {
+    return project;
+  }
+
+  const durations = kvLoopCycleDurations(
+    project.durationPreset,
+    loopCount,
+    kvCount,
+  );
+
+  return {
+    ...project,
+    sections: durations.map((durationMs, index) => ({
+      id: kvSectionId(index),
+      label: kvSectionLabel(index),
+      durationMs,
+    })),
+    templateSettings: {
+      ...settings,
+      loopCount,
+      slots: Array.from(
+        {length: kvCount},
+        (_, index) =>
+          settings.slots[index] ?? {
+            transform: {...DEFAULT_TRANSFORM},
+            kenBurns: true,
+          },
+      ),
+      images: Object.fromEntries(
+        Object.entries(settings.images).map(([locale, references]) => [
+          locale,
+          Array.from({length: kvCount}, (_, index) => references?.[index] ?? null),
+        ]),
+      ) as KvLoopSettings['images'],
+    },
+  };
+};
+
+export const setKvCount = (
+  project: EditorProject,
+  kvCount: number,
+): EditorProject => {
+  const settings = kvLoopOf(project);
+
+  return settings &&
+    kvCount >= MIN_SECTION_COUNT &&
+    kvCount <= MAX_SECTION_COUNT
+    ? withKvCycle(project, settings.loopCount, kvCount, settings)
+    : project;
+};
+
+export const setKvLoopCount = (
+  project: EditorProject,
+  loopCount: number,
+): EditorProject => {
+  const settings = kvLoopOf(project);
+
+  return settings &&
+    loopCount >= KV_LOOP_MIN_LOOPS &&
+    loopCount <= KV_LOOP_MAX_LOOPS
+    ? withKvCycle(project, loopCount, settings.slots.length, settings)
+    : project;
+};
+
+/** FR-L09/FR-L19 — one key visual's framing, including its `fit`. */
+export const updateKvSlotTransform = (
+  project: EditorProject,
+  index: number,
+  patch: Partial<MediaTransform>,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    slots: settings.slots.map((slot, slotIndex) =>
+      slotIndex === index
+        ? {
+            ...slot,
+            transform: {
+              ...slot.transform,
+              ...patch,
+              ...(patch.scale === undefined
+                ? {}
+                : {scale: clamp(patch.scale, MIN_SCALE, MAX_SCALE)}),
+              ...(patch.x === undefined
+                ? {}
+                : {x: clamp(patch.x, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT)}),
+              ...(patch.y === undefined
+                ? {}
+                : {y: clamp(patch.y, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT)}),
+            },
+          }
+        : slot,
+    ),
+  }));
+
+export const resetKvSlotTransform = (
+  project: EditorProject,
+  index: number,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    slots: settings.slots.map((slot, slotIndex) =>
+      slotIndex === index ? {...slot, transform: {...DEFAULT_TRANSFORM}} : slot,
+    ),
+  }));
+
+export const setKvKenBurns = (
+  project: EditorProject,
+  index: number,
+  enabled: boolean,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    slots: settings.slots.map((slot, slotIndex) =>
+      slotIndex === index ? {...slot, kenBurns: enabled} : slot,
+    ),
+  }));
+
+export type KvLoopPatch = Partial<{
+  kenBurnsIntensity: number;
+  transitionMs: number;
+  fadeOutMs: number;
+}>;
+
+/** FR-L08/FR-L09/FR-L17 — the loop-wide motion values. */
+export const updateKvLoopSettings = (
+  project: EditorProject,
+  patch: KvLoopPatch,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    ...(patch.kenBurnsIntensity === undefined
+      ? {}
+      : {kenBurnsIntensity: clamp(patch.kenBurnsIntensity, 0, 1)}),
+    ...(patch.transitionMs === undefined
+      ? {}
+      : {
+          transitionMs: clamp(
+            patch.transitionMs,
+            MIN_TRANSITION_MS,
+            MAX_TRANSITION_MS,
+          ),
+        }),
+    ...(patch.fadeOutMs === undefined
+      ? {}
+      : {fadeOutMs: clamp(patch.fadeOutMs, 0, MAX_TRANSITION_MS)}),
+  }));
+
+/** FR-L10 — the optional title, per locale. Clearing it is a normal edit. */
+export const setKvTitleImage = (
+  project: EditorProject,
+  locale: Locale,
+  reference: MediaReference | null,
+): EditorProject =>
+  mapKvLoop(project, (settings) => {
+    const images = {...settings.title.images};
+
+    if (reference) {
+      images[locale] = reference;
+    } else {
+      delete images[locale];
+    }
+
+    return {...settings, title: {...settings.title, images}};
+  });
+
+export const updateKvTitleTransform = (
+  project: EditorProject,
+  patch: Partial<MediaTransform>,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    title: {
+      ...settings.title,
+      transform: {
+        ...settings.title.transform,
+        ...patch,
+        ...(patch.scale === undefined
+          ? {}
+          : {scale: clamp(patch.scale, MIN_SCALE, MAX_SCALE)}),
+        ...(patch.x === undefined
+          ? {}
+          : {x: clamp(patch.x, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT)}),
+        ...(patch.y === undefined
+          ? {}
+          : {y: clamp(patch.y, -MAX_OFFSET_PERCENT, MAX_OFFSET_PERCENT)}),
+      },
+    },
+  }));
+
+/** FR-L11 — the disclaimer's styling; its wording lives in `copy`. */
+export const updateKvDisclaimerStyle = (
+  project: EditorProject,
+  patch: Partial<KvLoopSettings['disclaimer']>,
+): EditorProject =>
+  mapKvLoop(project, (settings) => ({
+    ...settings,
+    disclaimer: {
+      ...settings.disclaimer,
+      ...patch,
+      ...(patch.fontSize === undefined
+        ? {}
+        : {
+            fontSize: clamp(
+              patch.fontSize,
+              MIN_SUBTITLE_FONT_SIZE,
+              MAX_SUBTITLE_FONT_SIZE,
+            ),
+          }),
+    },
+  }));
+
+/**
  * FR-D03 — the panels still missing a video. A non-empty list blocks the render;
  * the end card banner is deliberately not part of it (Plan and Design require two
  * videos and nothing else), so a missing banner is only a warning in the UI.
@@ -1494,23 +1924,112 @@ export const buildDay1Props = (
 };
 
 /**
+ * key-visual-looping Design Ref: §5.1 — the looping render contract. Returns
+ * null for any other template, matching `buildDay1Props`.
+ *
+ * Everything the composition needs is resolved here: the flattened cycle, the
+ * locale's key visuals (or the set it inherits), the crossfade in frames, and
+ * the two overlays whose absence is a normal state (Plan L5).
+ */
+export const buildKvLoopProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): KvLoopProps | null => {
+  const settings = kvLoopOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const totalFrames = projectTotalFrames(project);
+  const segments = kvLoopSegments(
+    sectionDurationsOf(project.sections),
+    settings.loopCount,
+    totalFrames,
+  );
+  const {references} = resolveKvSet(
+    settings.images,
+    project.selectedLocale,
+    settings.slots.length,
+  );
+  const title = resolveKvTitle(settings.title.images, project.selectedLocale);
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+
+  // A crossfade lives inside the segment it fades into, so half of the shortest
+  // segment is the ceiling — the same "never longer than half its own section"
+  // rule the three-scene transitions follow.
+  const shortestFrames = segments.reduce(
+    (shortest, segment) => Math.min(shortest, segment.durationInFrames),
+    Number.POSITIVE_INFINITY,
+  );
+  const transitionInFrames = Number.isFinite(shortestFrames)
+    ? Math.min(
+        msToFrames(settings.transitionMs, project.fps),
+        Math.floor(shortestFrames / 2),
+      )
+    : 0;
+
+  const slots = settings.slots.map((slot, index) =>
+    Object.freeze({
+      url: resolveUrl(references[index]),
+      fit: slot.transform.fit,
+      scale: slot.transform.scale,
+      x: slot.transform.x,
+      y: slot.transform.y,
+      kenBurns: slot.kenBurns,
+    }),
+  );
+
+  return Object.freeze({
+    segments: Object.freeze(segments) as KvSegment[],
+    slots: Object.freeze(slots) as KvSlotRenderProps[],
+    kenBurnsIntensity: settings.kenBurnsIntensity,
+    transitionInFrames,
+    fadeOutFrames: msToFrames(settings.fadeOutMs, project.fps),
+    totalFrames,
+    title: Object.freeze({
+      url: resolveUrl(title.reference),
+      fit: settings.title.transform.fit,
+      scale: settings.title.transform.scale,
+      x: settings.title.transform.x,
+      y: settings.title.transform.y,
+    }),
+    disclaimer: Object.freeze({
+      text: copy.kvLoopDisclaimer ?? '',
+      fontSize: settings.disclaimer.fontSize,
+      textColor: settings.disclaimer.textColor,
+    }),
+    // Plan L9 — BGM only, so no scenes go in and the narration list comes back
+    // empty, the same call Day1 makes.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * The one place the template decides which snapshot a render job carries.
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
  *
- * Plan SC1: a Day1 job must reach `Day1Composition`, never a three-scene snapshot.
+ * Plan SC1: a Day1 job must reach `Day1Composition`, never a three-scene snapshot,
+ * and key-visual-looping SC1 asks the same of a looping job.
  */
 export const buildEditorSnapshot = (
   project: EditorProject,
   resolveUrl: (reference: MediaReference | null | undefined) => string | null,
 ): EditorSnapshot => {
-  // `buildDay1Props` returns non-null exactly for a Day1 payload, and
+  // Each builder returns non-null exactly for its own payload, and
   // `buildCompositionProps` already degrades a foreign template to an empty
   // three-scene snapshot. So this stays total without a cast.
   const day1Props = buildDay1Props(project, resolveUrl);
 
-  return day1Props
-    ? {template: 'day1', props: day1Props}
+  if (day1Props) {
+    return {template: 'day1', props: day1Props};
+  }
+
+  const kvLoopProps = buildKvLoopProps(project, resolveUrl);
+
+  return kvLoopProps
+    ? {template: 'kv-loop', props: kvLoopProps}
     : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
 };
 

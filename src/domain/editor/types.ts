@@ -5,6 +5,8 @@ import type {DuckingEnvelope} from '../audio/ducking';
 import type {IconAdjust, NormalizedRect} from '../day1/endCard';
 import type {SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
+// Type-only for the same reason as the Day1 imports above.
+import type {KvSegment} from '../kvloop/cycle';
 import type {
   DAY1_CARD_MOTIONS,
   DAY1_END_CARD_MODES,
@@ -20,6 +22,7 @@ import type {
 
 export * from './constants';
 export type {ActivePanel} from '../day1/playback';
+export type {KvSegment} from '../kvloop/cycle';
 export type {IconAdjust, NormalizedRect} from '../day1/endCard';
 export type {
   PanelRect,
@@ -46,6 +49,8 @@ export type {
   EditorScenes,
   HookMotionPreset,
   HookSceneSettings,
+  KvLoopSettings,
+  KvSlot,
   Locale,
   LocalizedCopy,
   MediaFit,
@@ -69,6 +74,12 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
   gameplay: 'Gameplay',
   cta: 'CTA',
 };
+
+/**
+ * key-visual-looping Design Ref: §3.1 — a looping clip is named by its position,
+ * because the section ids are generated from the key visual count.
+ */
+export const kvSectionLabel = (index: number) => `KV ${index + 1}`;
 
 /** Timeline clip names per Day1 section. Day1 Design Ref: §3.1. */
 export const DAY1_SECTION_LABELS = {
@@ -283,6 +294,56 @@ export type Day1Props = {
 };
 
 /**
+ * key-visual-looping Design Ref: §5.2 — one key visual's resolved pixels and the
+ * framing to draw them with. Flattened like `Day1PanelRenderProps` rather than
+ * carrying the stored `transform`, so the composition reads render inputs only.
+ */
+export interface KvSlotRenderProps {
+  url: string | null;
+  fit: MediaTransform['fit'];
+  scale: number;
+  x: number;
+  y: number;
+  kenBurns: boolean;
+}
+
+/** key-visual-looping Design Ref: §5.3 — absent is a normal state (Plan L5). */
+export interface KvOverlayRenderProps {
+  url: string | null;
+  fit: MediaTransform['fit'];
+  scale: number;
+  x: number;
+  y: number;
+}
+
+export interface KvDisclaimerRenderProps {
+  /** Empty hides the bar entirely — Plan L5 / SC5. */
+  text: string;
+  fontSize: number;
+  textColor: string;
+}
+
+export type KvLoopProps = {
+  /** The cycle flattened across repeats. key-visual-looping Design Ref: §4.1. */
+  segments: KvSegment[];
+  /** Indexed by `KvSegment.kvIndex`, so one entry per key visual in a cycle. */
+  slots: KvSlotRenderProps[];
+  kenBurnsIntensity: number;
+  /**
+   * Crossfade length in frames, already clamped so an overlap can never outrun
+   * the segment it fades into. Resolved here rather than in the composition so
+   * the clamp is unit-testable.
+   */
+  transitionInFrames: number;
+  /** FR-L17 — zero means no closing fade. */
+  fadeOutFrames: number;
+  totalFrames: number;
+  title: KvOverlayRenderProps;
+  disclaimer: KvDisclaimerRenderProps;
+  audio: AudioRenderProps;
+};
+
+/**
  * One render job's frozen input, tagged with the template that produced it.
  * Day1 Design Ref: §2.1 — the render path branches on the template exactly once,
  * where this tag is read. The tag mirrors `templateSettings.template` rather than
@@ -291,4 +352,5 @@ export type Day1Props = {
  */
 export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
-  | {template: 'day1'; props: Day1Props};
+  | {template: 'day1'; props: Day1Props}
+  | {template: 'kv-loop'; props: KvLoopProps};

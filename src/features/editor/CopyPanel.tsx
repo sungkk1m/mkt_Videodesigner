@@ -9,6 +9,13 @@ import {
   type SceneKind,
 } from '../../domain/editor/types';
 
+/**
+ * key-visual-looping FR-L11 — the bannerdesigner disclaimer policy: no wrapping,
+ * with a character-count hint once a line is long enough to be at risk. The
+ * reference line ("확률형 아이템 포함") is well inside this.
+ */
+const DISCLAIMER_HINT_LENGTH = 24;
+
 export const LOCALE_LABELS: Record<Locale, string> = {
   ko: '한국어',
   en: 'English',
@@ -26,6 +33,12 @@ export interface CopyPanelProps {
     value: string,
   ) => void;
   onSubtitle: (kind: SceneKind, value: string) => void;
+  /**
+   * key-visual-looping FR-L15 — present only for the looping template, where
+   * every other field on this panel is a three-scene concept. Its presence is
+   * what turns the panel into the single disclaimer field.
+   */
+  kvLoop?: {onDisclaimer: (value: string) => void};
 }
 
 export const CopyPanel = ({
@@ -35,6 +48,7 @@ export const CopyPanel = ({
   onLocale,
   onField,
   onSubtitle,
+  kvLoop,
 }: CopyPanelProps) => (
   <div className="copy">
     <div aria-label="언어" className="segmented" role="group">
@@ -54,6 +68,35 @@ export const CopyPanel = ({
       ))}
     </div>
 
+    {kvLoop ? (
+      <div className="panel__group">
+        <h3>하단 고지문구</h3>
+        <label className="field">
+          <span>고지문구 ({LOCALE_LABELS[locale]})</span>
+          <input
+            data-testid="copy-kv-disclaimer"
+            disabled={disabled}
+            onChange={(event) => kvLoop.onDisclaimer(event.target.value)}
+            type="text"
+            value={copy.kvLoopDisclaimer ?? ''}
+          />
+        </label>
+        {/* FR-L11 — the render never wraps this line, so a line that will not
+            fit is worth saying now rather than discovering in the output. */}
+        {(copy.kvLoopDisclaimer ?? '').length > DISCLAIMER_HINT_LENGTH ? (
+          <p className="panel__hint" data-testid="copy-kv-disclaimer-hint">
+            {DISCLAIMER_HINT_LENGTH}자를 넘으면 한 줄에 들어가지 않을 수 있습니다
+            (현재 {(copy.kvLoopDisclaimer ?? '').length}자). 줄바꿈 없이
+            출력됩니다.
+          </p>
+        ) : null}
+        <p className="panel__hint">
+          크기와 색은 오른쪽 인스펙터에서 조절합니다. 비워 두면 고지문구 없이
+          렌더됩니다.
+        </p>
+      </div>
+    ) : (
+      <>
     <div className="panel__group">
       <h3>Hook</h3>
       <label className="field">
@@ -117,5 +160,7 @@ export const CopyPanel = ({
         />
       </label>
     </div>
+      </>
+    )}
   </div>
 );

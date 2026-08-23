@@ -32,6 +32,12 @@ export interface AudioPanelProps {
   onNarrationGenerate: (kind: SceneKind) => void;
   onNarrationRemove: (kind: SceneKind) => void;
   onNarrationVolume: (kind: SceneKind, volume: number) => void;
+  /**
+   * key-visual-looping Plan L9 / FR-L15 — a still-image template has no original
+   * sound and no narration, so the loop shows BGM only. Off by default, which is
+   * every other template's behaviour unchanged.
+   */
+  bgmOnly?: boolean;
 }
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
@@ -49,6 +55,7 @@ export const AudioPanel = ({
   onNarrationGenerate,
   onNarrationRemove,
   onNarrationVolume,
+  bgmOnly = false,
 }: AudioPanelProps) => {
   const {audio, selectedLocale} = project;
   const localeSupported = (
@@ -122,6 +129,8 @@ export const AudioPanel = ({
         ) : null}
       </div>
 
+      {bgmOnly ? null : (
+        <>
       <div className="panel__group">
         <h3>자동 더킹</h3>
         <label className="field field--toggle">
@@ -265,6 +274,8 @@ export const AudioPanel = ({
           );
         })}
       </div>
+        </>
+      )}
     </div>
   );
 };
