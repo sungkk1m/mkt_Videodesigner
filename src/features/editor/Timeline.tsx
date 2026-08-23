@@ -351,7 +351,9 @@ export const Timeline = ({
 
                 return (
                   <button
-                    aria-hidden={ghost}
+                    // Emitted only for a ghost: `aria-hidden={false}` would put
+                    // a new attribute on every clip of the other templates.
+                    aria-hidden={ghost || undefined}
                     className={`timeline__clip${
                       !ghost && section.id === selectedId
                         ? ' timeline__clip--active'
@@ -362,7 +364,7 @@ export const Timeline = ({
                         ? `timeline-clip-${section.id}-repeat-${cycle}`
                         : `timeline-clip-${section.id}`
                     }
-                    disabled={ghost}
+                    disabled={ghost || undefined}
                     key={`${cycle}-${section.id}`}
                     onClick={(event) => {
                       onSelect(section.id);
