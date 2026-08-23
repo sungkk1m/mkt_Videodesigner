@@ -315,6 +315,7 @@ export const EditorWorkspace = ({
     : null;
   const kvAssets = useKvLoopAssets({
     resolver: mediaResolver,
+    handleStore: mediaHandleStore,
     session,
     project,
     references: kvSet?.references ?? [],
@@ -910,6 +911,7 @@ export const EditorWorkspace = ({
                 : null
             }
             busy={kvAssets.busy}
+            canGrantPermission={kvAssets.canGrantPermission}
             disabled={isRendering}
             imageUrl={kvAssets.imageUrl}
             inheritedFrom={kvSet?.inheritedFrom ?? null}
@@ -917,13 +919,18 @@ export const EditorWorkspace = ({
             missingImages={missingKvImages}
             onCount={(count) => store().setKvCount(count)}
             onFit={(index, fit) => store().setKvTransform(index, {fit})}
+            onGrantPermission={(mediaId) =>
+              void kvAssets.grantPermission(mediaId)
+            }
             onLocale={(locale) => store().setLocale(locale)}
             onLoopCount={(loopCount) => store().setKvLoopCount(loopCount)}
             onMove={(from, to) => store().moveKvImage(from, to)}
+            onPickFile={(index) => void kvAssets.pickAndUploadImage(index)}
             onUpload={(index, file) => void kvAssets.uploadImage(index, file)}
             preset={project.durationPreset}
             references={kvSet?.references ?? []}
             settings={kvLoop}
+            supportsFilePicker={kvAssets.supportsFilePicker}
             uploadError={kvAssets.uploadError}
           />
         ) : activeTab === 'hook' ? (
@@ -1237,11 +1244,19 @@ export const EditorWorkspace = ({
             store().setKvKenBurns(selectedKvIndex, enabled)
           }
           onLoop={(patch) => store().setKvLoop(patch)}
+          onPickTitle={() => void kvAssets.pickAndUploadTitle()}
           onResetTransform={() => store().resetKvTransform(selectedKvIndex)}
+          onTitleGrantPermission={(mediaId) =>
+            void kvAssets.grantPermission(mediaId)
+          }
           onTitleImage={(file) => void kvAssets.uploadTitle(file)}
           onTitleTransform={(patch) => store().setKvTitleTransform(patch)}
           onTransform={(patch) => store().setKvTransform(selectedKvIndex, patch)}
           settings={kvLoop}
+          supportsFilePicker={kvAssets.supportsFilePicker}
+          titleCanGrantPermission={kvAssets.canGrantPermission(
+            kvTitle?.reference ?? null,
+          )}
           titleInheritedFrom={kvTitle?.inheritedFrom ?? null}
           titleReference={kvTitle?.reference ?? null}
           titleUrl={kvAssets.titleUrl()}

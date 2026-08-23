@@ -184,6 +184,21 @@ test.describe('looping editor — controls', () => {
     await expect(page.getByTestId('kv-slot-1-reupload')).toContainText('kv-2.png');
     await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('2장');
 
+    // A dropzone upload leaves no file handle, so the silent restore lands on
+    // `missing` rather than on a permission grant.
+    await expect(page.getByTestId('kv-slot-0-reupload')).toContainText(
+      '이미지를 다시 올려주세요',
+    );
+    await expect(page.getByTestId('kv-slot-0-grant')).toHaveCount(0);
+
+    // The way out of that for next time is on screen for every slot and for the
+    // title. Driving it is not: a stored handle needs the OS file picker, which
+    // Playwright cannot open — the same gap `day1-template.spec.ts` records for
+    // the identical Day1 panel path.
+    await expect(page.getByTestId('kv-slot-0-picker')).toBeVisible();
+    await expect(page.getByTestId('kv-slot-1-picker')).toBeVisible();
+    await expect(page.getByTestId('kv-title-picker')).toBeVisible();
+
     // Putting one back clears its own notice and leaves the other standing.
     await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
     await expect(page.getByTestId('kv-slot-0-reupload')).toHaveCount(0);

@@ -9,6 +9,7 @@ import type {KvLoopSettings, MediaReference} from '../editor/types';
 import {
   KV_FALLBACK_LOCALE,
   kvLoopMissingImages,
+  kvLoopRestoreTargets,
   resolveKvSet,
   resolveKvTitle,
 } from './assets';
@@ -108,6 +109,96 @@ describe('resolveKvTitle', () => {
       reference: null,
       inheritedFrom: null,
     });
+  });
+});
+
+describe('kvLoopRestoreTargets', () => {
+  const settingsOf = (patch: Partial<KvLoopSettings>): KvLoopSettings =>
+    kvLoopProjectFixture(patch).templateSettings as KvLoopSettings;
+  const nothingResolved = () => false;
+
+  it('asks for every locale, so switching the tab after a reload needs nothing', () => {
+    const settings = settingsOf({
+      images: {ko: set('ko-1', 'ko-2'), en: set('en-1')},
+    });
+
+    expect(
+      kvLoopRestoreTargets(settings, nothingResolved).map(
+        ({locale, slot, reference}) => [locale, slot, reference.id],
+      ),
+    ).toEqual([
+      ['ko', 0, 'media_ko-1'],
+      ['ko', 1, 'media_ko-2'],
+      ['en', 0, 'media_en-1'],
+    ]);
+  });
+
+  it('carries the owning locale, never the selected one — D-05', () => {
+    // `ja` shows this set through inheritance. A status written against `ja`
+    // would give it a set of its own and end the inheritance silently, so the
+    // target has to name `en`.
+    const settings = settingsOf({images: {en: set('en-1', 'en-2')}});
+
+    expect(
+      kvLoopRestoreTargets(settings, nothingResolved).map(
+        ({locale}) => locale,
+      ),
+    ).toEqual(['en', 'en']);
+  });
+
+  it('skips what the session can already play', () => {
+    const settings = settingsOf({images: {ko: set('ko-1', 'ko-2')}});
+
+    expect(
+      kvLoopRestoreTargets(
+        settings,
+        (mediaId) => mediaId === 'media_ko-1',
+      ).map(({reference}) => reference.id),
+    ).toEqual(['media_ko-2']);
+  });
+
+  it('includes the title overlay, which is stored per locale too', () => {
+    const settings = settingsOf({
+      images: {ko: set('ko-1')},
+      title: {
+        images: {ko: image('title-ko'), en: image('title-en')},
+        transform: {fit: 'contain', scale: 1, x: 0, y: 0},
+      },
+    });
+
+    expect(
+      kvLoopRestoreTargets(settings, nothingResolved).map(
+        ({locale, slot}) => [locale, slot],
+      ),
+    ).toEqual([
+      ['ko', 0],
+      ['ko', 'title'],
+      ['en', 'title'],
+    ]);
+  });
+
+  it('ignores slots past the key visual count, which a write would truncate', () => {
+    // The default fixture is four key visuals; a fifth entry is left over from a
+    // higher count. `setKvImage` sizes the array back down to `slots.length`, so
+    // a restore that touched slot 4 would drop it rather than recover it.
+    const settings = settingsOf({
+      images: {ko: set('ko-1', 'ko-2', 'ko-3', 'ko-4', 'ko-5')},
+    });
+
+    expect(
+      kvLoopRestoreTargets(settings, nothingResolved).map(
+        ({reference}) => reference.id,
+      ),
+    ).toEqual([
+      'media_ko-1',
+      'media_ko-2',
+      'media_ko-3',
+      'media_ko-4',
+    ]);
+  });
+
+  it('has nothing to ask for when no locale holds an image', () => {
+    expect(kvLoopRestoreTargets(settingsOf({}), nothingResolved)).toEqual([]);
   });
 });
 

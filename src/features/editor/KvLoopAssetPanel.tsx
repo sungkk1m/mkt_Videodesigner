@@ -47,9 +47,13 @@ export interface KvLoopAssetPanelProps {
   busy: boolean;
   uploadError: AppError | null;
   autosaveError: AppError | null;
+  supportsFilePicker: boolean;
   imageUrl: (index: number) => string | null;
+  canGrantPermission: (reference: MediaReference | null) => boolean;
   onLocale: (locale: Locale) => void;
   onUpload: (index: number, file: File | null) => void;
+  onPickFile: (index: number) => void;
+  onGrantPermission: (mediaId: string) => void;
   onMove: (from: number, to: number) => void;
   onCount: (count: number) => void;
   onLoopCount: (loopCount: number) => void;
@@ -67,9 +71,13 @@ export const KvLoopAssetPanel = ({
   busy,
   uploadError,
   autosaveError,
+  supportsFilePicker,
   imageUrl,
+  canGrantPermission,
   onLocale,
   onUpload,
+  onPickFile,
+  onGrantPermission,
   onMove,
   onCount,
   onLoopCount,
@@ -161,17 +169,45 @@ export const KvLoopAssetPanel = ({
                 prompt={`KV ${index + 1} 이미지`}
               />
 
-              {/* A reference with no session URL is a restored project: the
-                  metadata came back from IndexedDB and the pixels did not. An
-                  image slot keeps no file handle, so the same file has to be
-                  uploaded again — say which one, the way `SourceRepair` does. */}
-              {reference && url === null ? (
-                <p
-                  className="notice notice--warning"
-                  data-testid={`kv-slot-${index}-reupload`}
+              {/* Only the picker hands back a file handle, so only an image
+                  chosen through it can restore itself next session. */}
+              {supportsFilePicker ? (
+                <button
+                  className="button button--secondary"
+                  data-testid={`kv-slot-${index}-picker`}
+                  disabled={disabled}
+                  onClick={() => onPickFile(index)}
+                  type="button"
                 >
-                  이미지를 다시 올려주세요. 기대 파일: {reference.name}
-                </p>
+                  파일 선택 (다음 실행에서도 복구)
+                </button>
+              ) : null}
+
+              {/* A reference with no session URL is a restored project whose
+                  silent handle lookup did not bring the pixels back: either
+                  there was no handle (a dropzone upload) or it needs a fresh
+                  permission grant. Name the file the way `SourceRepair` does. */}
+              {reference && url === null ? (
+                <div data-testid={`kv-slot-${index}-reupload`}>
+                  <p className="notice notice--warning">
+                    {canGrantPermission(reference)
+                      ? '저장된 파일 접근 권한이 만료되었습니다. 권한을 허용하거나 같은 파일을 다시 올려주세요.'
+                      : '이미지를 다시 올려주세요.'}{' '}
+                    기대 파일: {reference.name}
+                  </p>
+
+                  {canGrantPermission(reference) ? (
+                    <button
+                      className="button button--secondary"
+                      data-testid={`kv-slot-${index}-grant`}
+                      disabled={disabled || busy}
+                      onClick={() => onGrantPermission(reference.id)}
+                      type="button"
+                    >
+                      저장된 파일 권한 허용
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
 
               {/* FR-L19 — the way out of a cropped landscape key visual is the
@@ -274,6 +310,13 @@ export const KvLoopAssetPanel = ({
           그대로 되풀이합니다.
         </p>
       </div>
+
+      {supportsFilePicker ? (
+        <p className="panel__hint">
+          “파일 선택”으로 올린 이미지는 파일 접근 권한이 저장되어 새로고침 후에도
+          다시 연결됩니다. 끌어다 놓은 이미지는 권한이 없어 다시 올려야 합니다.
+        </p>
+      ) : null}
 
       {busy ? <p className="panel__hint">확인 중…</p> : null}
 
