@@ -160,6 +160,37 @@ test.describe('looping editor — controls', () => {
     await expect(placeholder).toHaveCount(0);
   });
 
+  // A reload keeps the project and loses the pixels: references come back from
+  // IndexedDB, session object URLs do not, and an image slot stores no file
+  // handle to recover from. `kv-images-blocker` counts references, so it stays
+  // silent through all of that — which is how a restored project came to look
+  // ready, show its file names, and refuse to render without saying why.
+  test('names the key visuals it needs back after a reload', async ({page}) => {
+    await page.goto('/');
+    await selectKvLoop(page);
+
+    await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
+    await page.getByTestId('kv-slot-1-input').setInputFiles(KV_FILES[1] as string);
+    await expect(page.getByTestId('kv-scene-image').first()).toBeVisible();
+
+    // Autosave is debounced, so the reload has to wait for it to land.
+    await expect(page.getByTestId('editor-save-state')).toContainText('저장됨');
+
+    await page.reload();
+    await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');
+
+    // The project survived — and every slot says which file it is missing.
+    await expect(page.getByTestId('kv-slot-0-reupload')).toContainText('kv-1.png');
+    await expect(page.getByTestId('kv-slot-1-reupload')).toContainText('kv-2.png');
+    await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('2장');
+
+    // Putting one back clears its own notice and leaves the other standing.
+    await page.getByTestId('kv-slot-0-input').setInputFiles(KV_FILES[0] as string);
+    await expect(page.getByTestId('kv-slot-0-reupload')).toHaveCount(0);
+    await expect(page.getByTestId('kv-slot-1-reupload')).toBeVisible();
+    await expect(page.getByTestId('kv-unresolved-blocker')).toContainText('1장');
+  });
+
   test('shows one editable cycle and the repeats as ghosts (FR-L06/§6.4)', async ({
     page,
   }) => {

@@ -161,6 +161,19 @@ export const KvLoopAssetPanel = ({
                 prompt={`KV ${index + 1} 이미지`}
               />
 
+              {/* A reference with no session URL is a restored project: the
+                  metadata came back from IndexedDB and the pixels did not. An
+                  image slot keeps no file handle, so the same file has to be
+                  uploaded again — say which one, the way `SourceRepair` does. */}
+              {reference && url === null ? (
+                <p
+                  className="notice notice--warning"
+                  data-testid={`kv-slot-${index}-reupload`}
+                >
+                  이미지를 다시 올려주세요. 기대 파일: {reference.name}
+                </p>
+              ) : null}
+
               {/* FR-L19 — the way out of a cropped landscape key visual is the
                   same one a Day1 panel has: keep it whole over a blurred copy. */}
               {isPortrait(reference) ? null : (

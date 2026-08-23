@@ -199,6 +199,18 @@ export const KvLoopInspector = ({
           </p>
         ) : null}
 
+        {/* The same restored-project gap the key visual slots have. A warning
+            rather than a blocker: Plan L5 keeps the overlays optional, so a
+            title nobody re-uploads must not stop the render. */}
+        {titleReference && titleUrl === null ? (
+          <p
+            className="notice notice--warning"
+            data-testid="kv-title-reupload"
+          >
+            타이틀 이미지를 다시 올려주세요. 기대 파일: {titleReference.name}
+          </p>
+        ) : null}
+
         <PercentField
           disabled={disabled}
           label="타이틀 크기"

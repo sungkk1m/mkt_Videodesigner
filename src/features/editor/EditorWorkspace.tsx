@@ -423,13 +423,19 @@ export const EditorWorkspace = ({
   // key-visual-looping FR-L13 — two key visuals is the floor, and each of them
   // has to have decoded. Overlays are not part of either count (Plan L5).
   const missingKvImages = kvLoopMissingImages(project);
-  const unresolvedKvImages = (kvSet?.references ?? []).filter(
-    (reference, index) => reference !== null && kvAssets.imageUrl(index) === null,
-  ).length;
+  // Which slots hold a reference the session cannot play. A restored project is
+  // exactly that state: the references persist, the object URLs do not, and an
+  // image slot stores no file handle to recover from — so the operator has to
+  // put the same file back. The indexes, not just the count, because the asset
+  // panel names the file each one is still waiting for.
+  const unresolvedKvImages = (kvSet?.references ?? []).flatMap(
+    (reference, index) =>
+      reference !== null && kvAssets.imageUrl(index) === null ? [index] : [],
+  );
   const renderableSource = day1
     ? unresolvedPanels.length === 0
     : kvLoop
-      ? missingKvImages === 0 && unresolvedKvImages === 0
+      ? missingKvImages === 0 && unresolvedKvImages.length === 0
       : source.sourceUrl !== null;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
@@ -749,6 +755,14 @@ export const EditorWorkspace = ({
           {kvLoop && missingKvImages > 0 ? (
             <span className="editor__blocker" data-testid="kv-render-blocker">
               키비주얼 {missingKvImages}장이 더 필요합니다
+            </span>
+          ) : null}
+          {/* `kv-render-blocker` counts references, which a reload keeps. This
+              counts the ones the session can actually play, so a restored
+              project stops refusing to render without saying why. */}
+          {kvLoop && unresolvedKvImages.length > 0 ? (
+            <span className="editor__blocker" data-testid="kv-unresolved-blocker">
+              키비주얼 {unresolvedKvImages.length}장을 다시 올려야 합니다
             </span>
           ) : null}
           {shortPanels.length > 0 ? (
