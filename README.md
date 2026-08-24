@@ -89,7 +89,7 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 
 ## Status
 
-**day1-quad (Day1 4 video) 구현 완료 — 배포 전 실측 대기.** 모듈 M0~M7, 유닛 570개
+**day1-quad (Day1 4 video) 구현 완료 — 배포 전 실측 대기.** 모듈 M0~M7, 유닛 575개
 통과. 4분할 렌더가 Day1 대비 1.15배로 성능 게이트를 통과했으나, 그 실측은 H.264가
 없는 원격 컨테이너에서 VP9로 대체 측정한 값입니다
 ([근거와 한계](docs/03-analysis/day1-quad.m0-perf-gate.md) §6). **실제 Chrome에서의

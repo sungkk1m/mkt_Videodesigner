@@ -8,7 +8,7 @@
 
 ## 지금 상태
 
-- 브랜치 `claude/day1-4-video-template-x2wrir`, `main` 대비 커밋 40+. 전부 푸시됨.
+- 브랜치 `claude/day1-4-video-template-x2wrir`, `main` 대비 커밋 20개. 전부 푸시됨.
 - PDCA: Plan·Design 완료, Do M0~M7 완료, **Check 완료 — PR 작성 대기**.
 - 유닛 **575/575**, `tsc -b` + `vite build` 통과.
 - E2E 전량 1회 실행 완료(2026-08-24, 20.2분): **31 통과 / 49 실패 / 2 스킵**.

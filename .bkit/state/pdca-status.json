@@ -614,7 +614,7 @@
           "notVerified": "every E2E that renders an MP4 - this container has no H.264 encoder or decoder"
         },
         "verification": {
-          "unitTests": "570 passed (cycle started at 529)",
+          "unitTests": "575 passed (cycle started at 529)",
           "build": "tsc -b across three configs + vite build clean",
           "geometry": "quadLayout exhaustive: 3 ratios x divider 0-24px",
           "perfGate": "panel count 2->4 = 1.15x, under the 1.5x limit (VP9 substitute measurement)",
