@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T06:00:00.000Z",
+  "lastUpdated": "2026-08-24T07:00:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -486,8 +486,8 @@
       }
     },
     "day1-quad": {
-      "phase": "plan",
-      "phaseNumber": 1,
+      "phase": "design",
+      "phaseNumber": 2,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -511,11 +511,12 @@
       ],
       "documents": {
         "plan": "docs/01-plan/features/day1-quad.plan.md",
-        "m0PerfGate": "docs/03-analysis/day1-quad.m0-perf-gate.md"
+        "m0PerfGate": "docs/03-analysis/day1-quad.m0-perf-gate.md",
+        "design": "docs/02-design/features/day1-quad.design.md"
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T06:00:00.000Z"
+        "lastUpdated": "2026-08-24T07:00:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -559,7 +560,7 @@
           "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
         ],
         "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
-        "nextStep": "write docs/02-design/features/day1-quad.design.md",
+        "nextStep": "Do M1 - shared path only, zero day1-quad code: end-card length, filename segment, selector dropdown + e2e helper",
         "m0Result": {
           "ranAt": "2026-08-24T05:30:00.000Z",
           "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
@@ -579,12 +580,24 @@
         "bakedBackdropDecision": "out of scope for this cycle (2026-08-24). The 2.13x contain cost is day1 pre-existing, day1-quad already passes the gate at 1.15x, and the fix can change output pixels so it needs its own visual-equivalence verification. Follows the day1-render-speed precedent: a separate PDCA cycle. Evidence recorded in plan 2.12 and the M0 analysis 5.",
         "followUpCycleCandidates": [
           "baked blurred backdrop - recovers 0.48x on day1 and 0.52x on day1-quad; needs pixel-equivalence verification against CSS blur()"
+        ],
+        "designDecisions": {
+          "D-0": "panels stored as named keys panelA..panelD, not an array - lets the existing 15 day1 commands serve both templates and makes one panel-to-section mapping valid for both",
+          "D-1": "Panel keeps `live: boolean`; a state union adds nothing while Q2 fixes the states at two",
+          "D-2": "template dropdown stays a controlled <select value={current}>, so cancelling needs no restore logic - React reverts it on re-render",
+          "D-3": "end-card actual length is prop-drilled next to panelDurationsMs; the clamp reads the last section off the project it already receives",
+          "D-4": "allowed presets live in a domain constant read by both the preset UI and switchTemplate, and are enforced by a schema refine mirroring kv-loop ratio narrowing"
+        },
+        "designApprovedAt": null,
+        "designRiskNotes": [
+          "extracting day1EndCardSchema must not drop a single .default() - those defaults ARE the migration story for stored day1 documents",
+          "Panel extraction must be a pure move; SplitFrame markup unchanged and data-testid=\"day1-split-line\" preserved"
         ]
       }
     }
   },
   "pipeline": {
-    "currentPhase": "plan",
+    "currentPhase": "design",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -726,13 +739,19 @@
         "from": null,
         "to": "plan",
         "at": "2026-08-24T00:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-24T07:00:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T06:00:00.000Z"
+    "lastActivity": "2026-08-24T07:00:00.000Z"
   },
   "history": [
     {
@@ -1029,6 +1048,12 @@
       "feature": "day1-quad",
       "phase": "plan",
       "action": "baked-backdrop-moved-out-of-scope-to-own-cycle"
+    },
+    {
+      "timestamp": "2026-08-24T07:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "design",
+      "action": "created"
     }
   ],
   "stateMachine": {

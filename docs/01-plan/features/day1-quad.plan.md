@@ -11,7 +11,7 @@
 > M0 결과: **패널 개수 2→4 = 1.15배로 게이트 통과.** 비싼 것은 `contain` 블러 배경
 > (2.13배)이고 그것은 Day1의 기존 비용이다 — [M0 분석](../../03-analysis/day1-quad.m0-perf-gate.md).
 > 배경 굽기는 **이번 사이클 범위 밖 — 후속 독립 사이클 후보**로 내렸다 (§2.12).
-> 다음 단계: Design 문서 작성.
+> 다음 단계: **Design 완료** — [day1-quad.design.md](../../02-design/features/day1-quad.design.md). Do M1 착수 대기.
 
 ---
 
@@ -568,9 +568,17 @@ Design 단계에서 판단할 항목(제품 결정이 아니라 설계 세부):
 
 ## 9. Plan 단계에서 코드를 만지지 않은 이유
 
-이 문서는 조사와 설계안까지다. `git diff`는 이 파일과 `.bkit/state/pdca-status.json`
-두 개뿐이다. §8이 전건 확정됐으므로 다음 단계는
-Design 문서(`docs/02-design/features/day1-quad.design.md`) 작성 → M0 게이트 실행이다.
+이 문서는 조사와 설계안까지다. Plan 단계의 `git diff`는 이 파일과
+`.bkit/state/pdca-status.json` 두 개뿐이었다.
+
+그 뒤 진행 상황:
+
+| 단계 | 상태 |
+|---|---|
+| §8 결정 15건 | 전건 확정 (2026-08-24) |
+| M0 성능 게이트 | **완료 · 통과** — [M0 분석](../../03-analysis/day1-quad.m0-perf-gate.md). `src/` 무변경, 스파이크는 `artifacts/m0/` |
+| Design | **완료** — [day1-quad.design.md](../../02-design/features/day1-quad.design.md). 설계 결정 D-0~D-4 |
+| Do M1 | 착수 대기 |
 
 조사 단계에서 코드를 읽어 확인한 것 중 문서에 반영된 사실:
 
