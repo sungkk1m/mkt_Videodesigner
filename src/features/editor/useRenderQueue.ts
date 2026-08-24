@@ -67,6 +67,8 @@ const toAppError = (error: unknown): AppError =>
 const DAY1_PANEL_LABEL: Record<Day1PanelKey, string> = {
   panelA: 'A',
   panelB: 'B',
+  panelC: 'C',
+  panelD: 'D',
 };
 
 /**

@@ -21,7 +21,9 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1PanelAt,
   day1PanelsShorterThanSection,
+  panelKeysOf,
   hasRatioOverride,
   kvLoopOf,
   outputDimensions,
@@ -948,7 +950,8 @@ export const EditorWorkspace = ({
             onUpload={(panel, file) => void day1Assets.uploadPanel(panel, file)}
             panelUrl={day1Assets.panelUrl}
             relinkVerdict={day1Assets.relinkVerdict}
-            settings={day1}
+            panelSource={(panel) => day1PanelAt(project, panel)?.source ?? null}
+            panels={panelKeysOf(project.templateSettings)}
             supportsFilePicker={day1Assets.supportsFilePicker}
             uploadError={day1Assets.uploadError}
           />
@@ -1333,13 +1336,19 @@ export const EditorWorkspace = ({
       ) : day1 ? (
         <Day1Inspector
           activeTransformOf={(panel) =>
-            activeTransform(day1[panel], project.selectedRatio)
+            activeTransform(
+              day1PanelAt(project, panel) ?? day1.panelA,
+              project.selectedRatio,
+            )
           }
           copy={project.copy}
           disabled={isRendering}
           frameSampler={frameSampler}
           hasRatioOverride={(panel) =>
-            hasRatioOverride(day1[panel], project.selectedRatio)
+            hasRatioOverride(
+              day1PanelAt(project, panel) ?? day1.panelA,
+              project.selectedRatio,
+            )
           }
           onEndCard={(patch) => store().setDay1EndCard(patch)}
           onEndCardAsset={(slot, file) =>
@@ -1363,10 +1372,17 @@ export const EditorWorkspace = ({
             // length is whatever the boundary drag left it at.
             project.sections[project.sections.length - 1]?.durationMs ?? 0
           }
-          panelDurationsMs={{
-            panelA: project.sections[0]?.durationMs ?? 0,
-            panelB: project.sections[1]?.durationMs ?? 0,
-          }}
+          panelDurationsMs={
+            // day1-quad Design §7.1 — one entry per panel the template has.
+            Object.fromEntries(
+              panelKeysOf(project.templateSettings).map((panel, index) => [
+                panel,
+                project.sections[index]?.durationMs ?? 0,
+              ]),
+            ) as Record<Day1PanelKey, number>
+          }
+          panelKeys={panelKeysOf(project.templateSettings)}
+          panelOf={(panel) => day1PanelAt(project, panel)}
           ratio={project.selectedRatio}
           resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}
           resolvePanelUrl={(panel) => day1Assets.panelUrl(panel)}

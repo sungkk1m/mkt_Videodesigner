@@ -81,7 +81,9 @@ import {
   type CtaRenderProps,
   type CtaSceneSettings,
   type Day1Panel,
+  type Day1PanelSlot,
   type Day1QuadSettings,
+  type TemplateSettings,
   type Day1EndCardRenderProps,
   type Day1PanelRenderProps,
   type Day1Props,
@@ -892,26 +894,103 @@ export const setSceneSubtitleText = (
 // Each one no-ops on a foreign template, matching the three-scene commands above.
 // ---------------------------------------------------------------------------
 
-export type Day1PanelKey = 'panelA' | 'panelB';
+/**
+ * day1-quad Design §5.5 / D-0 — widened from the two Day1 keys so the fifteen
+ * commands below serve both templates. A command asked for a key the current
+ * payload does not have no-ops, which is the same contract a command aimed at a
+ * foreign template already had.
+ */
+export type Day1PanelKey = 'panelA' | 'panelB' | 'panelC' | 'panelD';
 
-/** Panel A owns section 0, panel B section 1. Day1 Design Ref: §1.2. */
-const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1> = {panelA: 0, panelB: 1};
+const DAY1_PANEL_KEYS = ['panelA', 'panelB'] as const;
+const DAY1_QUAD_PANEL_KEYS = [
+  'panelA',
+  'panelB',
+  'panelC',
+  'panelD',
+] as const;
+
+/**
+ * The panel keys a template actually has, in order. Empty for the templates
+ * with no panels, so callers holding a plain `TemplateSettings` need no
+ * narrowing. UI, proxies, and the render preflight all read this.
+ */
+export const panelKeysOf = (
+  settings: TemplateSettings,
+): readonly Day1PanelKey[] =>
+  settings.template === 'day1'
+    ? DAY1_PANEL_KEYS
+    : settings.template === 'day1-quad'
+      ? DAY1_QUAD_PANEL_KEYS
+      : [];
+
+/**
+ * Panel to section index. Day1 Design Ref: §1.2 — panel A owns section 0 and
+ * panel B section 1; day1-quad Design §5.5 — C and D continue that, so one
+ * mapping is correct for both templates.
+ */
+const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1 | 2 | 3> = {
+  panelA: 0,
+  panelB: 1,
+  panelC: 2,
+  panelD: 3,
+};
 
 const withDay1 = (
   project: EditorProject,
-  settings: Day1Settings,
+  settings: Day1Settings | Day1QuadSettings,
 ): EditorProject => ({...project, templateSettings: settings});
+
+/**
+ * day1-quad Design §5.5 — either panelled payload. The commands below read only
+ * fields the two arms share, so they do not care which one they were handed.
+ */
+export const day1PanelsOf = (
+  project: EditorProject,
+): Day1Settings | Day1QuadSettings | null =>
+  day1Of(project) ?? day1QuadOf(project);
+
+/**
+ * One panel off a project, or null when the template has no such panel.
+ *
+ * Exported because the feature layer used to reach in as `day1Of(project)?.[key]`,
+ * which stops type-checking the moment `Day1PanelKey` covers keys a Day1 payload
+ * does not have. conventions §3.1 — narrow through a helper, never index
+ * `templateSettings` directly.
+ */
+export const day1PanelAt = (
+  project: EditorProject,
+  key: Day1PanelKey,
+): Day1Panel | null => {
+  const settings = day1PanelsOf(project);
+
+  return settings ? panelAt(settings, key) : null;
+};
+
+/** One panel off either payload, or null when that key is not in it. */
+const panelAt = (
+  settings: Day1Settings | Day1QuadSettings,
+  key: Day1PanelKey,
+): Day1Panel | null =>
+  key in settings ? (settings[key as keyof typeof settings] as Day1Panel) : null;
 
 const mapDay1Panel = (
   project: EditorProject,
   key: Day1PanelKey,
   update: (panel: Day1Panel) => Day1Panel,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
-  return settings
-    ? withDay1(project, {...settings, [key]: update(settings[key])})
-    : project;
+  // A Day1 payload has no `panelC`. Asking it to change one is a no-op, not a
+  // crash — the same contract as a command aimed at a foreign template.
+  if (!settings || !(key in settings)) {
+    return project;
+  }
+
+  return withDay1(project, {
+    ...settings,
+    [key]: update(panelAt(settings, key) as Day1Panel),
+  });
 };
 
 const day1SectionMs = (project: EditorProject, key: Day1PanelKey) =>
@@ -919,24 +998,33 @@ const day1SectionMs = (project: EditorProject, key: Day1PanelKey) =>
 
 /** Day1 Design Ref: §3.5 — a panel trim window never outgrows its section. */
 const reconcileDay1Trims = (project: EditorProject): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
   }
 
-  const trimOf = (key: Day1PanelKey) =>
-    reconcileTrim(
-      settings[key].trim,
-      settings[key].source?.durationMs ?? 0,
-      day1SectionMs(project, key),
-    );
+  // day1-quad Design §5.5 — driven by the payload's own key list, so the two
+  // and four panel templates share one reconciliation.
+  const reconciled = Object.fromEntries(
+    panelKeysOf(settings).map((key) => {
+      const panel = panelAt(settings, key) as Day1Panel;
 
-  return withDay1(project, {
-    ...settings,
-    panelA: {...settings.panelA, trim: trimOf('panelA')},
-    panelB: {...settings.panelB, trim: trimOf('panelB')},
-  });
+      return [
+        key,
+        {
+          ...panel,
+          trim: reconcileTrim(
+            panel.trim,
+            panel.source?.durationMs ?? 0,
+            day1SectionMs(project, key),
+          ),
+        },
+      ];
+    }),
+  );
+
+  return withDay1(project, {...settings, ...reconciled});
 };
 
 /** Day1 Design Ref: §3.1 — the Day1 view of the shared time axis. */
@@ -1100,13 +1188,14 @@ export const setDay1TrimInMs = (
   key: Day1PanelKey,
   inMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
+  const panel = settings && panelAt(settings, key);
 
-  if (!settings) {
+  if (!panel) {
     return project;
   }
 
-  const sourceMs = settings[key].source?.durationMs ?? 0;
+  const sourceMs = panel.source?.durationMs ?? 0;
 
   return mapDay1Panel(project, key, (panel) => ({
     ...panel,
@@ -1124,17 +1213,15 @@ export const setDay1TrimOutMs = (
   key: Day1PanelKey,
   outMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
+  const panel = settings && panelAt(settings, key);
 
-  if (!settings) {
+  if (!panel) {
     return project;
   }
 
   const sectionMs = day1SectionMs(project, key);
-  const windowMs = Math.min(
-    sectionMs,
-    settings[key].source?.durationMs ?? sectionMs,
-  );
+  const windowMs = Math.min(sectionMs, panel.source?.durationMs ?? sectionMs);
 
   return setDay1TrimInMs(project, key, outMs - windowMs);
 };
@@ -1386,7 +1473,9 @@ export const setDay1EndCardTrimLengthMs = (
 export const setDay1LabelText = (
   project: EditorProject,
   locale: Locale,
-  panel: ActivePanel,
+  // day1-quad Design §5.3 — widened from `ActivePanel`, because the quad
+  // template has slots `c` and `d` too.
+  panel: Day1PanelSlot,
   value: string,
 ): EditorProject => {
   const current = project.copy[locale] as LocalizedCopy;
@@ -1748,11 +1837,13 @@ export const updateKvDisclaimerStyle = (
 export const day1MissingPanels = (
   project: EditorProject,
 ): Day1PanelKey[] => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
+  // day1-quad Plan Q6 — all four are required, which needs no new rule: the key
+  // list is simply four long.
   return settings
-    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter(
-        (key) => settings[key].source === null,
+    ? panelKeysOf(settings).filter(
+        (key) => panelAt(settings, key)?.source == null,
       )
     : [];
 };
@@ -1768,15 +1859,13 @@ export const day1MissingPanels = (
 export const day1PanelsShorterThanSection = (
   project: EditorProject,
 ): Day1PanelKey[] => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   return settings
-    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter((key, index) => {
-        const sourceMs = settings[key].source?.durationMs ?? 0;
+    ? panelKeysOf(settings).filter((key) => {
+        const sourceMs = panelAt(settings, key)?.source?.durationMs ?? 0;
 
-        return (
-          sourceMs > 0 && sourceMs < (project.sections[index]?.durationMs ?? 0)
-        );
+        return sourceMs > 0 && sourceMs < day1SectionMs(project, key);
       })
     : [];
 };

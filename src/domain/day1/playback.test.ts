@@ -4,6 +4,7 @@ import {describe, expect, it} from 'vitest';
 import {DURATION_PRESETS} from '../editor/types';
 import {
   DAY1_END_CARD_MS,
+  activePanelForQuadSection,
   activePanelForSection,
   day1QuadSectionDurations,
   day1SectionDurations,
@@ -15,6 +16,19 @@ describe('activePanelForSection', () => {
     expect(activePanelForSection(0)).toBe('a');
     expect(activePanelForSection(1)).toBe('b');
     expect(activePanelForSection(2)).toBeNull();
+  });
+});
+
+describe('activePanelForQuadSection', () => {
+  it('maps the four panels in reading order and the end card to none', () => {
+    expect([0, 1, 2, 3].map(activePanelForQuadSection)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+    ]);
+    expect(activePanelForQuadSection(4)).toBeNull();
+    expect(activePanelForQuadSection(-1)).toBeNull();
   });
 });
 

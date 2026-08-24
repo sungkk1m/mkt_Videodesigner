@@ -1,7 +1,8 @@
 // Day1 Design Ref: §4.2 Playback — which panel is live in each section, and how
 // a duration preset is split across the three sections.
 import type {SceneDurationsMs} from '../timeline/timeline';
-import type {DurationPreset} from '../editor/types';
+import {DAY1_PANEL_SLOTS} from '../editor/constants';
+import type {Day1PanelSlot, DurationPreset} from '../editor/types';
 
 export type ActivePanel = 'a' | 'b';
 
@@ -12,6 +13,17 @@ export type ActivePanel = 'a' | 'b';
  */
 export const activePanelForSection = (index: 0 | 1 | 2): ActivePanel | null =>
   index === 0 ? 'a' : index === 1 ? 'b' : null;
+
+/**
+ * day1-quad Design §6.1 — the live slot for a section index. Sections 0-3 are
+ * the four panels in reading order; 4 is the end card, which has no panel.
+ */
+export const activePanelForQuadSection = (
+  index: number,
+): Day1PanelSlot | null =>
+  index >= 0 && index < DAY1_PANEL_SLOTS.length
+    ? (DAY1_PANEL_SLOTS[index] as Day1PanelSlot)
+    : null;
 
 /** Day1 Design Ref: §4.2 — the end card opens at a fixed three seconds. */
 export const DAY1_END_CARD_MS = 3000;

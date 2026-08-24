@@ -7,7 +7,9 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1PanelAt,
   day1QuadOf,
+  panelKeysOf,
   day1PanelsShorterThanSection,
   hasRatioOverride,
   moveTimelineBoundary,
@@ -35,7 +37,12 @@ import {
   DAY1_QUAD_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
 } from './types';
-import {day1ProjectFixture, day1SettingsOf} from '../../test/fixtures/project';
+import {
+  day1ProjectFixture,
+  day1QuadProjectFixture,
+  day1QuadSettingsOf,
+  day1SettingsOf,
+} from '../../test/fixtures/project';
 import type {EditorProject, LocalizedCopy} from './types';
 
 const day1 = (project: EditorProject) => day1SettingsOf(project);
@@ -705,5 +712,118 @@ describe('switchTemplate to day1-quad', () => {
     expect(
       (day1Project.copy.ko as LocalizedCopy).day1Labels,
     ).toBeUndefined();
+  });
+});
+
+// day1-quad Design §5.5 — one command set for both templates, keyed by panel.
+describe('Day1 commands over four panels', () => {
+  const quadWithPanels = (): EditorProject =>
+    panelKeysOf(day1QuadProjectFixture().templateSettings).reduce(
+      (project, key, index) =>
+        setDay1PanelSource(
+          project,
+          key,
+          testMediaReference({id: `media_${index}`, durationMs: 12_000}),
+        ),
+      day1QuadProjectFixture(),
+    );
+
+  it('sets each of the four panels independently', () => {
+    const project = quadWithPanels();
+    const settings = day1QuadSettingsOf(project);
+
+    expect([
+      settings.panelA.source?.id,
+      settings.panelB.source?.id,
+      settings.panelC.source?.id,
+      settings.panelD.source?.id,
+    ]).toEqual(['media_0', 'media_1', 'media_2', 'media_3']);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('clamps each panel trim to its own section', () => {
+    // 15s quad: every panel section is 3s, so a 12s source yields a 3s window.
+    const project = quadWithPanels();
+
+    panelKeysOf(project.templateSettings).forEach((key) => {
+      expect(day1PanelAt(project, key)?.trim).toEqual({inMs: 0, outMs: 3000});
+    });
+  });
+
+  it('reports all four as missing until each is uploaded (Q6)', () => {
+    const empty = day1QuadProjectFixture();
+
+    expect(day1MissingPanels(empty)).toEqual([
+      'panelA',
+      'panelB',
+      'panelC',
+      'panelD',
+    ]);
+    expect(day1MissingPanels(quadWithPanels())).toEqual([]);
+  });
+
+  it('reports a quad panel whose source cannot fill its section', () => {
+    const short = setDay1PanelSource(
+      quadWithPanels(),
+      'panelC',
+      testMediaReference({id: 'short', durationMs: 1500}),
+    );
+
+    expect(day1PanelsShorterThanSection(short)).toEqual(['panelC']);
+  });
+
+  // The no-op contract: a Day1 payload simply has no panelC.
+  it('no-ops a panelC command on a two-panel Day1 project', () => {
+    const day1Project = day1ProjectFixture();
+    const after = setDay1PanelSource(
+      day1Project,
+      'panelC',
+      testMediaReference({id: 'ignored', durationMs: 9000}),
+    );
+
+    // `setDay1PanelSource` still runs the reconcilers, so this is value
+    // equality rather than reference equality — nothing about the project moved.
+    expect(after).toEqual(day1Project);
+    expect(day1PanelAt(day1Project, 'panelC')).toBeNull();
+    expect(panelKeysOf(day1Project.templateSettings)).toEqual([
+      'panelA',
+      'panelB',
+    ]);
+  });
+
+  it('returns no panel keys for templates that have none', () => {
+    expect(panelKeysOf(createProject().templateSettings)).toEqual([]);
+  });
+
+  it('moves a quad panel trim and reframes it like a Day1 panel', () => {
+    const project = setDay1TrimInMs(quadWithPanels(), 'panelD', 2000);
+
+    expect(day1PanelAt(project, 'panelD')?.trim).toEqual({
+      inMs: 2000,
+      outMs: 5000,
+    });
+
+    const framed = updateDay1Transform(project, 'panelD', '9:16', {scale: 1.4});
+
+    expect(day1PanelAt(framed, 'panelD')?.transforms.base.scale).toBe(1.4);
+    expect(day1PanelAt(framed, 'panelA')?.transforms.base.scale).toBe(1);
+    expect(parseProject(framed).ok).toBe(true);
+  });
+
+  it('writes labels into the c and d slots', () => {
+    const project = setDay1LabelText(
+      day1QuadProjectFixture(),
+      'ko',
+      'd',
+      'DAY 30',
+    );
+
+    expect((project.copy.ko as LocalizedCopy).day1Labels).toEqual({
+      a: 'Day1',
+      b: 'Day2',
+      c: 'Day3',
+      d: 'DAY 30',
+    });
+    expect(parseProject(project).ok).toBe(true);
   });
 });

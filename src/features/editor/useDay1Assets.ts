@@ -6,7 +6,12 @@
 // permission prompt, and only then a relink.
 import {useCallback, useEffect, useRef, useState} from 'react';
 
-import {day1Of, type Day1PanelKey} from '../../domain/editor/project';
+import {
+  day1PanelAt,
+  day1PanelsOf,
+  panelKeysOf,
+  type Day1PanelKey,
+} from '../../domain/editor/project';
 import type {
   Day1Panel,
   EditorProject,
@@ -69,18 +74,18 @@ export const useDay1Assets = ({
   const [uploadError, setUploadError] = useState<AppError | null>(null);
   const [relinkVerdict, setRelinkVerdict] = useState<RelinkVerdict | null>(null);
 
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
   const commandsRef = useRef(commands);
   const restoreAttempts = useRef(new Set<string>());
 
   commandsRef.current = commands;
 
   const panelOf = (panel: Day1PanelKey): Day1Panel | null =>
-    settings ? settings[panel] : null;
+    day1PanelAt(project, panel);
 
   const panelUrl = useCallback(
     (panel: Day1PanelKey) =>
-      session.urlFor(day1Of(project)?.[panel].source?.id),
+      session.urlFor(day1PanelAt(project, panel)?.source?.id),
     [project, session],
   );
 
@@ -90,7 +95,7 @@ export const useDay1Assets = ({
   const canGrantPermission = useCallback(
     (panel: Day1PanelKey) =>
       handleStore !== null &&
-      day1Of(project)?.[panel].source?.status === 'permission-required',
+      day1PanelAt(project, panel)?.source?.status === 'permission-required',
     [handleStore, project],
   );
 
@@ -152,8 +157,8 @@ export const useDay1Assets = ({
       return;
     }
 
-    for (const panel of ['panelA', 'panelB'] as Day1PanelKey[]) {
-      const source = settings[panel].source;
+    for (const panel of panelKeysOf(settings)) {
+      const source = day1PanelAt(project, panel)?.source;
 
       if (
         !source ||
@@ -262,7 +267,7 @@ export const useDay1Assets = ({
 
   const grantPanelPermission = useCallback(
     async (panel: Day1PanelKey) => {
-      const source = day1Of(project)?.[panel].source;
+      const source = day1PanelAt(project, panel)?.source;
 
       if (!source) {
         return;

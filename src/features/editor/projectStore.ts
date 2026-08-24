@@ -76,6 +76,7 @@ import type {
   AudioMix,
   AudioTrack,
   CtaSceneSettings,
+  Day1PanelSlot,
   Day1Settings,
   DurationPreset,
   KvLoopSettings,
@@ -176,7 +177,7 @@ export interface ProjectStore {
    * Label wording takes an explicit locale: the Day1 inspector edits all four at
    * once rather than following the header. Day1 Design Ref: §6.3.
    */
-  setDay1LabelAt: (locale: Locale, panel: ActivePanel, value: string) => void;
+  setDay1LabelAt: (locale: Locale, panel: Day1PanelSlot, value: string) => void;
   /** key-visual-looping commands. Design Ref: §6.2, §6.3. */
   setKvImage: (index: number, reference: MediaReference | null) => void;
   setKvImageAt: (

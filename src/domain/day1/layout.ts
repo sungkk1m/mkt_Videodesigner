@@ -70,3 +70,56 @@ export const splitLayout = (
     b: {x: bStart, y: 0, width: bSize, height},
   };
 };
+
+/**
+ * day1-quad Design §5.1 — the four cells and the cross divider.
+ *
+ * Named after the reading order the panels play in (Plan Q3): A top-left,
+ * B top-right, C bottom-left, D bottom-right.
+ */
+export interface QuadLayout {
+  cells: readonly [PanelRect, PanelRect, PanelRect, PanelRect];
+  /** `[vertical, horizontal]` — the two bars of the cross. */
+  lines: readonly [PanelRect, PanelRect];
+}
+
+/**
+ * Cell rectangles for one output ratio, in a 2x2 grid.
+ *
+ * Unlike `splitLayout` there is no per-ratio orientation: 2x2 is 2x2 at every
+ * ratio, and that is exactly what makes each cell carry the output's own aspect
+ * ratio (9:16 → 537x957, 1:1 → 537x537, 16:9 → 957x537, all within 0.25% of the
+ * frame's). A source shaped like the output therefore fills a cell without a
+ * crop, which the two-panel split could never offer.
+ *
+ * Same remainder rule as `splitLayout`: the odd pixel goes to the far cell so
+ * `near + line + far` lands exactly on the output size. A one-pixel gap would
+ * show as a seam in the render.
+ */
+export const quadLayout = (
+  ratio: AspectRatio,
+  lineWidthPx: number,
+): QuadLayout => {
+  const {width, height} = RATIO_DIMENSIONS[ratio];
+  // Both axes must keep two cells alive even at an absurd divider width.
+  const line = clamp(Math.round(lineWidthPx), 0, Math.min(width, height) - 2);
+  const col0 = Math.floor((width - line) / 2);
+  const col1Start = col0 + line;
+  const col1 = width - col1Start;
+  const row0 = Math.floor((height - line) / 2);
+  const row1Start = row0 + line;
+  const row1 = height - row1Start;
+
+  return {
+    cells: [
+      {x: 0, y: 0, width: col0, height: row0},
+      {x: col1Start, y: 0, width: col1, height: row0},
+      {x: 0, y: row1Start, width: col0, height: row1},
+      {x: col1Start, y: row1Start, width: col1, height: row1},
+    ],
+    lines: [
+      {x: col0, y: 0, width: line, height},
+      {x: 0, y: row0, width, height: line},
+    ],
+  };
+};

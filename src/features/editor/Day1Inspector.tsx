@@ -25,16 +25,20 @@ import {
   type Day1CardMotion,
   type Day1EndCardMode,
   type Day1IconAnimation,
+  type Day1Panel,
+  type Day1PanelSlot,
+  type Day1QuadSettings,
   type Day1Settings,
   type Locale,
   type LocalizedCopy,
   type MediaFit,
   type MediaReference,
   type MediaTransform,
+  type PanelRect,
   type SubtitleStyle,
 } from '../../domain/editor/types';
 import {MIN_END_CARD_TRIM_MS} from '../../domain/day1/playback';
-import {splitLayout} from '../../domain/day1/layout';
+import {quadLayout, splitLayout} from '../../domain/day1/layout';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
@@ -52,12 +56,30 @@ import {
 const PANEL_TITLES: Record<Day1PanelKey, string> = {
   panelA: '패널 A',
   panelB: '패널 B',
+  panelC: '패널 C',
+  panelD: '패널 D',
 };
 
-/** Narrowed to the `SplitLayout` keys so a panel can look its own rect up. */
-const PANEL_TEST_KEY: Record<Day1PanelKey, 'a' | 'b'> = {
+/** The panel's letter, used for test ids and for the copy block's label keys. */
+const PANEL_TEST_KEY: Record<Day1PanelKey, Day1PanelSlot> = {
   panelA: 'a',
   panelB: 'b',
+  panelC: 'c',
+  panelD: 'd',
+};
+
+/** day1-quad Design §5.1 — a panel's own slot in the output, for the trim preview. */
+const PANEL_RECT = (
+  panels: readonly Day1PanelKey[],
+  key: Day1PanelKey,
+  ratio: AspectRatio,
+  lineWidthPx: number,
+): PanelRect => {
+  const index = panels.indexOf(key);
+
+  return panels.length > 2
+    ? (quadLayout(ratio, lineWidthPx).cells[index] as PanelRect)
+    : (splitLayout(ratio, lineWidthPx)[index === 0 ? 'a' : 'b'] as PanelRect);
 };
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -104,7 +126,12 @@ const END_CARD_MODE_LABELS: Record<Day1EndCardMode, string> = {
 };
 
 export interface Day1InspectorProps {
-  settings: Day1Settings;
+  /** day1-quad Design §7.1 — either panelled payload; the fields read here are shared. */
+  settings: Day1Settings | Day1QuadSettings;
+  /** The panel keys this template has, in order: two for Day1, four for the quad. */
+  panelKeys: readonly Day1PanelKey[];
+  /** Resolves a panel without indexing the payload (conventions §3.1). */
+  panelOf: (panel: Day1PanelKey) => Day1Panel | null;
   copy: Record<Locale, LocalizedCopy>;
   ratio: AspectRatio;
   /** Section length for each panel, from the shared axis. Day1 Design Ref: §3.1. */
@@ -129,7 +156,7 @@ export interface Day1InspectorProps {
   onToggleRatioOverride: (panel: Day1PanelKey, enabled: boolean) => void;
   onSplit: (patch: Partial<Day1Settings['split']>) => void;
   onLabelStyle: (patch: Partial<Day1Settings['labelStyle']>) => void;
-  onLabelText: (locale: Locale, panel: ActivePanel, value: string) => void;
+  onLabelText: (locale: Locale, panel: Day1PanelSlot, value: string) => void;
   onEndCard: (patch: Day1EndCardPatch) => void;
   onEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => void;
   /** Endcard-Video FR-07 — trim moves only through the reconciling command. */
@@ -145,8 +172,10 @@ const PanelSection = ({
   frameSampler,
   hasOverride,
   panel,
+  panelData,
+  panelKeys,
+  lineWidthPx,
   ratio,
-  settings,
   transform,
   url,
   onResetTransform,
@@ -159,8 +188,10 @@ const PanelSection = ({
   frameSampler: FrameSampler;
   hasOverride: boolean;
   panel: Day1PanelKey;
+  panelData: Day1Panel;
+  panelKeys: readonly Day1PanelKey[];
+  lineWidthPx: number;
   ratio: AspectRatio;
-  settings: Day1Settings;
   transform: MediaTransform;
   /** Session URL of this panel's video, or null while it is unresolved. */
   url: string | null;
@@ -170,12 +201,13 @@ const PanelSection = ({
   onTrimIn: (ms: number) => void;
 }) => {
   const key = PANEL_TEST_KEY[panel];
-  const {source, trim} = settings[panel];
+  const {source, trim} = panelData;
   // day1-video — the panel's own slot in the output, so the strip's preview can
   // show the crop the render will make instead of the whole source. Half of a
   // 9:16 frame is landscape, which is why letterboxing a portrait source into a
-  // 16:9 box left most of the box black.
-  const rect = splitLayout(ratio, settings.split.lineWidthPx)[key];
+  // 16:9 box left most of the box black. A quad cell is a quarter, and carries
+  // the output's own aspect ratio (day1-quad Design §5.1).
+  const rect = PANEL_RECT(panelKeys, panel, ratio, lineWidthPx);
   const sourceMs = source?.durationMs ?? 0;
   const controlsDisabled = disabled || sourceMs <= 0;
   // FR-S02. Mirrors `day1PanelsShorterThanSection`, which the render gate uses.
@@ -352,6 +384,8 @@ export const Day1Inspector = ({
   onEndCardTrimLength,
   resolveEndCardUrl,
   endCardDurationMs,
+  panelKeys,
+  panelOf,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
   // day1-trim-preview FR-05 — the chosen window length; {0,0} (no video yet)
@@ -373,31 +407,37 @@ export const Day1Inspector = ({
       <div className="inspector__head">
         <h2>Day1 속성</h2>
         <span className="inspector__scene" data-testid="inspector-template">
-          Day1 비교
+          {panelKeys.length > 2 ? 'Day1(4 video)' : 'Day1 비교'}
         </span>
       </div>
 
       <div className="inspector__body">
-        {(['panelA', 'panelB'] as Day1PanelKey[]).map((panel) => (
-          <PanelSection
-            disabled={disabled}
-            durationMs={panelDurationsMs[panel]}
-            frameSampler={frameSampler}
-            hasOverride={hasRatioOverride(panel)}
-            key={panel}
-            onResetTransform={() => onResetTransform(panel)}
-            onToggleRatioOverride={(enabled) =>
-              onToggleRatioOverride(panel, enabled)
-            }
-            onTransform={(patch) => onTransform(panel, patch)}
-            onTrimIn={(ms) => onTrimIn(panel, ms)}
-            panel={panel}
-            ratio={ratio}
-            settings={settings}
-            transform={activeTransformOf(panel)}
-            url={resolvePanelUrl(panel)}
-          />
-        ))}
+        {panelKeys.map((panel) => {
+          const panelData = panelOf(panel);
+
+          return panelData ? (
+            <PanelSection
+              disabled={disabled}
+              durationMs={panelDurationsMs[panel]}
+              frameSampler={frameSampler}
+              hasOverride={hasRatioOverride(panel)}
+              key={panel}
+              lineWidthPx={split.lineWidthPx}
+              onResetTransform={() => onResetTransform(panel)}
+              onToggleRatioOverride={(enabled) =>
+                onToggleRatioOverride(panel, enabled)
+              }
+              onTransform={(patch) => onTransform(panel, patch)}
+              onTrimIn={(ms) => onTrimIn(panel, ms)}
+              panel={panel}
+              panelData={panelData}
+              panelKeys={panelKeys}
+              ratio={ratio}
+              transform={activeTransformOf(panel)}
+              url={resolvePanelUrl(panel)}
+            />
+          ) : null;
+        })}
 
         <InspectorSection
           badge={`${split.lineWidthPx}px`}
