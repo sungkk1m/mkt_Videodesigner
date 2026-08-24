@@ -1,12 +1,13 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-22T15:30:00.000Z",
+  "lastUpdated": "2026-08-24T00:00:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
-    "key-visual-looping"
+    "key-visual-looping",
+    "day1-quad"
   ],
-  "primaryFeature": null,
+  "primaryFeature": "day1-quad",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -483,10 +484,66 @@
           "add the uneven-hold e2e once SC2 passes at even holds"
         ]
       }
+    },
+    "day1-quad": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "day1-quad-template-arm",
+        "four-video-panels",
+        "2x2-grid-layout",
+        "five-section-axis",
+        "sequential-active-panel",
+        "cross-divider",
+        "four-panel-labels-4-locales",
+        "reuse-day1-endcard",
+        "panel-proxy-4-panels",
+        "no-schema-version-bump"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/day1-quad.plan.md"
+      },
+      "timestamps": {
+        "started": "2026-08-24T00:00:00.000Z",
+        "lastUpdated": "2026-08-24T00:00:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "basedOn": "day1-template (PDCA complete) + key-visual-looping variable sections",
+        "planRecommendations": {
+          "P1": "separate template arm day1-quad, shared internals extracted; day1 behaviour unchanged",
+          "P2": "2x2 grid - cell aspect equals output aspect in all three ratios (error <= 0.25%)",
+          "P3": "sections = [panel-a, panel-b, panel-c, panel-d, endcard], 5 <= MAX_SECTION_COUNT",
+          "P4": "one live panel, the other three frozen at trim-in in greyscale (keeps decode at one stream)",
+          "P5": "Day1PanelKey widened to panelA..panelD so the existing 15 commands serve both templates",
+          "P6": "copy.day1Labels gains optional c/d - no migration, PROJECT_SCHEMA_VERSION stays 2",
+          "P7": "label default fontSize 72 -> 44 because the cell is half as wide",
+          "P8": "module 0 is a render perf gate: <= 1.5x the Day1 baseline"
+        },
+        "openQuestions": [
+          "Q1 layout",
+          "Q2 idle-panel rule",
+          "Q3 play order",
+          "Q4 default fit",
+          "Q5 style scope",
+          "Q6 required panel count",
+          "Q7 endcard reuse",
+          "Q8 default preset",
+          "Q9 label defaults",
+          "Q10 code structure",
+          "Q11 template name",
+          "Q12 output filename",
+          "Q13 perf gate policy",
+          "Q14 proxy memory"
+        ],
+        "codeChanged": false
+      }
     }
   },
   "pipeline": {
-    "currentPhase": "archived",
+    "currentPhase": "plan",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -622,13 +679,19 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-19T07:25:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-24T00:00:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-19T09:45:00.000Z"
+    "lastActivity": "2026-08-24T00:00:00.000Z"
   },
   "history": [
     {
@@ -895,6 +958,12 @@
       "feature": "day1-video",
       "phase": "act",
       "action": "iterated"
+    },
+    {
+      "timestamp": "2026-08-24T00:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "created"
     }
   ],
   "stateMachine": {
