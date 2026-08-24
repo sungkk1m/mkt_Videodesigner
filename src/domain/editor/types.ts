@@ -3,7 +3,7 @@
 import type {DuckingEnvelope} from '../audio/ducking';
 // Type-only, so the value-level cycle through `domain/day1` never forms.
 import type {IconAdjust, NormalizedRect} from '../day1/endCard';
-import type {SplitLayout} from '../day1/layout';
+import type {QuadLayout, SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
 // Type-only for the same reason as the Day1 imports above.
 import type {KvSegment} from '../kvloop/cycle';
@@ -29,6 +29,7 @@ export type {KvSegment} from '../kvloop/cycle';
 export type {IconAdjust, NormalizedRect} from '../day1/endCard';
 export type {
   PanelRect,
+  QuadLayout,
   SplitLayout,
   SplitOrientation,
 } from '../day1/layout';
@@ -270,13 +271,20 @@ export interface Day1LabelStyle {
   position: SubtitleStyle['position'];
 }
 
-/** Day1 Design Ref: §1.2 — one entry per section of the shared time axis. */
-export interface Day1SectionRenderProps {
+/**
+ * Day1 Design Ref: §1.2 — one entry per section of the shared time axis.
+ *
+ * day1-quad Design §5.6 — generic over the slot type, because there are two
+ * consumers now: Day1 sections are live on `'a' | 'b'`, quad sections on
+ * `'a' | 'b' | 'c' | 'd'`. The default keeps `Day1Props` written exactly as it
+ * was, and stops `SplitFrame` from ever being handed a `'c'`.
+ */
+export interface Day1SectionRenderProps<TPanel = ActivePanel> {
   id: string;
   fromFrame: number;
   durationInFrames: number;
   /** null on the end card, which has no video panel. */
-  activePanel: ActivePanel | null;
+  activePanel: TPanel | null;
 }
 
 export type Day1IconAnimation = (typeof DAY1_ICON_ANIMATIONS)[number];
@@ -323,6 +331,26 @@ export type Day1Props = {
   labelStyle: Day1LabelStyle;
   endCard: Day1EndCardRenderProps;
   sections: Day1SectionRenderProps[];
+  audio: AudioRenderProps;
+};
+
+/**
+ * day1-quad Design §5.6 — the four-panel render contract. Same shape as
+ * `Day1Props` with the two named panels replaced by a fixed four-tuple and the
+ * split geometry replaced by the grid.
+ */
+export type Day1QuadProps = {
+  layout: QuadLayout;
+  lineColor: string;
+  panels: readonly [
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+  ];
+  labelStyle: Day1LabelStyle;
+  endCard: Day1EndCardRenderProps;
+  sections: Day1SectionRenderProps<Day1PanelSlot>[];
   audio: AudioRenderProps;
 };
 
@@ -400,4 +428,5 @@ export type KvLoopProps = {
 export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
   | {template: 'day1'; props: Day1Props}
+  | {template: 'day1-quad'; props: Day1QuadProps}
   | {template: 'kv-loop'; props: KvLoopProps};

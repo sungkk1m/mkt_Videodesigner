@@ -1,9 +1,10 @@
 // Design Ref: §10.2 — project state changes only through pure command functions.
 import {DEFAULT_AUDIO_MIX} from '../audio/mix';
 import {appIconRect} from '../day1/endCard';
-import {splitLayout} from '../day1/layout';
+import {quadLayout, splitLayout} from '../day1/layout';
 import {
   DAY1_END_CARD_MS,
+  activePanelForQuadSection,
   day1QuadSectionDurations,
   MIN_END_CARD_TRIM_MS,
   activePanelForSection,
@@ -82,6 +83,7 @@ import {
   type CtaSceneSettings,
   type Day1Panel,
   type Day1PanelSlot,
+  type Day1QuadProps,
   type Day1QuadSettings,
   type TemplateSettings,
   type Day1EndCardRenderProps,
@@ -2149,6 +2151,88 @@ export const buildDay1Props = (
 };
 
 /**
+ * day1-quad Design §6.4 — the Day1 prop builder over four panels. Returns null
+ * for any other template, matching `buildDay1Props`.
+ *
+ * Everything the composition needs is resolved here: the grid geometry, the
+ * per-section frame layout, the four panels with their locale-resolved labels,
+ * and the end card — which is `buildEndCardProps` unchanged, because Plan Q7
+ * reuses the Day1 card whole.
+ */
+export const buildDay1QuadProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): Day1QuadProps | null => {
+  const settings = day1QuadOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const frames = allocateSceneFrames(
+    sectionDurationsOf(project.sections),
+    project.durationPreset,
+    project.fps,
+  );
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+  let cursor = 0;
+
+  const sections = project.sections.map((section, index) => {
+    const durationInFrames = frames[index] as number;
+    const props: Day1SectionRenderProps<Day1PanelSlot> = {
+      id: section.id,
+      fromFrame: cursor,
+      durationInFrames,
+      activePanel: activePanelForQuadSection(index),
+    };
+
+    cursor += durationInFrames;
+
+    return Object.freeze(props);
+  });
+
+  const panelProps = (panel: Day1Panel, label: string): Day1PanelRenderProps => {
+    const transform = activeTransform(panel, project.selectedRatio);
+    const trimBeforeFrames = msToFrames(panel.trim.inMs, project.fps);
+
+    return Object.freeze({
+      url: resolveUrl(panel.source),
+      trimBeforeFrames,
+      trimAfterFrames: Math.max(
+        trimBeforeFrames + 1,
+        msToFrames(panel.trim.outMs, project.fps),
+      ),
+      fit: transform.fit,
+      scale: transform.scale,
+      x: transform.x,
+      y: transform.y,
+      label,
+    });
+  };
+
+  const labels = copy.day1Labels;
+
+  return Object.freeze({
+    layout: Object.freeze(
+      quadLayout(project.selectedRatio, settings.split.lineWidthPx),
+    ),
+    lineColor: settings.split.lineColor,
+    panels: Object.freeze([
+      panelProps(settings.panelA, labels?.a ?? ''),
+      panelProps(settings.panelB, labels?.b ?? ''),
+      panelProps(settings.panelC, labels?.c ?? ''),
+      panelProps(settings.panelD, labels?.d ?? ''),
+    ]) as Day1QuadProps['panels'],
+    labelStyle: Object.freeze({...settings.labelStyle}),
+    endCard: buildEndCardProps(settings.endCard, project, resolveUrl),
+    sections: Object.freeze(sections) as Day1SectionRenderProps<Day1PanelSlot>[],
+    // Plan §3.2 keeps narration and TTS out of the quad template too, so passing
+    // no scenes yields an empty narration list: only BGM and the live panel.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * key-visual-looping Design Ref: §5.1 — the looping render contract. Returns
  * null for any other template, matching `buildDay1Props`.
  *
@@ -2256,6 +2340,12 @@ export const buildEditorSnapshot = (
 
   if (day1Props) {
     return {template: 'day1', props: day1Props};
+  }
+
+  const day1QuadProps = buildDay1QuadProps(project, resolveUrl);
+
+  if (day1QuadProps) {
+    return {template: 'day1-quad', props: day1QuadProps};
   }
 
   const kvLoopProps = buildKvLoopProps(project, resolveUrl);

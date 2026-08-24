@@ -3,11 +3,13 @@
 import {renderMediaOnWeb} from '@remotion/web-renderer';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
+import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {outputDimensions} from '../../domain/editor/project';
 import type {
   Day1Props,
+  Day1QuadProps,
   EditorSnapshot,
   KvLoopProps,
   ThreeSceneProps,
@@ -31,6 +33,7 @@ export type {EditorRenderConfig, EditorRenderMetrics};
 export type EditorRenderRequest =
   | WebRenderRequest<ThreeSceneProps>
   | WebRenderRequest<Day1Props>
+  | WebRenderRequest<Day1QuadProps>
   | WebRenderRequest<KvLoopProps>;
 
 export type EditorRenderMediaAdapter = (
@@ -74,6 +77,19 @@ export const createEditorRenderRequest = (
       composition: {
         id: 'day1-editor',
         component: Day1Composition,
+        ...timing,
+        defaultProps: snapshot.props,
+      },
+      inputProps: snapshot.props,
+      ...encoding,
+    };
+  }
+
+  if (snapshot.template === 'day1-quad') {
+    return {
+      composition: {
+        id: 'day1-quad-editor',
+        component: Day1QuadComposition,
         ...timing,
         defaultProps: snapshot.props,
       },

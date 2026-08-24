@@ -1,10 +1,9 @@
 // Day1 Design Ref: §5.2 SplitFrame — the live panel plays while the other holds
 // its own trim-in frame in greyscale, with the divider drawn between them.
 //
-// Plan SC2: the greyscale must survive into the MP4, which is why it is a CSS
-// filter on the video element rather than a preview-only overlay.
-import {Video} from '@remotion/media';
-import {AbsoluteFill, Freeze} from 'remotion';
+// day1-quad Design §6.2 — the panel itself moved to `Panel.tsx` so the quad grid
+// draws the same one. This file kept the two-panel arrangement and the divider.
+import {AbsoluteFill} from 'remotion';
 
 import {duckedVolumeAt, type NarrationWindow} from '../../domain/audio/ducking';
 import type {
@@ -12,157 +11,10 @@ import type {
   AudioRenderProps,
   Day1LabelStyle,
   Day1PanelRenderProps,
-  PanelRect,
   SplitLayout,
 } from '../../domain/editor/types';
 import {CANVAS_COLOR} from '../shared/SceneVideo';
-
-const JUSTIFY = {
-  top: 'flex-start',
-  center: 'center',
-  bottom: 'flex-end',
-} as const;
-
-/**
- * Day1 Design Ref: §5.2 — heavy outlined text. `paintOrder: 'stroke'` draws the
- * stroke behind the glyph so a thick outline never eats into the letter shape,
- * which is what the reference GIF's lettering does.
- */
-const PanelLabel = ({
-  label,
-  style,
-}: {
-  label: string;
-  style: Day1LabelStyle;
-}) => (
-  <AbsoluteFill
-    style={{
-      alignItems: 'center',
-      justifyContent: JUSTIFY[style.position],
-      padding: '6%',
-    }}
-  >
-    <span
-      style={{
-        color: style.textColor,
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: style.fontSize,
-        fontWeight: 900,
-        letterSpacing: '0.02em',
-        lineHeight: 1.2,
-        paintOrder: 'stroke',
-        textAlign: 'center',
-        WebkitTextStroke: `${style.outlineWidthPx}px ${style.outlineColor}`,
-        whiteSpace: 'pre-wrap',
-      }}
-    >
-      {label}
-    </span>
-  </AbsoluteFill>
-);
-
-/**
- * day1-video — the blurred backdrop `contain` draws behind the source, so the
- * space `contain` leaves reads as part of the shot instead of dead canvas.
- *
- * Sized as a fraction of the panel so it looks the same at every output ratio.
- * The blur fades an element out at its own edges, so the backdrop is overscanned
- * far enough that the faded rim lands outside the panel's clip.
- */
-const BACKDROP_BLUR_RATIO = 0.05;
-const BACKDROP_OVERSCAN = 1.2;
-
-const Panel = ({
-  labelStyle,
-  live,
-  liveVolume,
-  panel,
-  rect,
-}: {
-  labelStyle: Day1LabelStyle;
-  live: boolean;
-  liveVolume: (panelFrame: number) => number;
-  panel: Day1PanelRenderProps;
-  rect: PanelRect;
-}) => {
-  const framing = {
-    height: '100%',
-    width: '100%',
-    transform: `translate(${panel.x}%, ${panel.y}%) scale(${panel.scale})`,
-  };
-
-  return (
-    <div
-      style={{
-        backgroundColor: CANVAS_COLOR,
-        height: rect.height,
-        left: rect.x,
-        overflow: 'hidden',
-        position: 'absolute',
-        top: rect.y,
-        width: rect.width,
-      }}
-    >
-      {/* One frame, held for the section — the same Freeze trick the idle panel
-          below uses, so the backdrop costs a single decode rather than a second
-          video stream. Deliberately ignores the panel's own framing: it exists to
-          fill the panel edge to edge whatever the foreground does. */}
-      {panel.fit === 'contain' && panel.url !== null ? (
-        // AbsoluteFill takes the backdrop out of flow. In normal flow its 100%
-        // height would consume the panel and push the source below the clip.
-        <AbsoluteFill>
-          <Freeze frame={0}>
-            <Video
-              muted
-              objectFit="cover"
-              src={panel.url}
-              style={{
-                // Plan SC2 — the idle panel is greyscale, so its backdrop has to
-                // be too, or a colour halo gives the desaturation away.
-                filter:
-                  `blur(${BACKDROP_BLUR_RATIO * rect.width}px)` +
-                  (live ? '' : ' grayscale(1)'),
-                height: '100%',
-                transform: `scale(${BACKDROP_OVERSCAN})`,
-                width: '100%',
-              }}
-              trimAfter={panel.trimBeforeFrames + 1}
-              trimBefore={panel.trimBeforeFrames}
-            />
-          </Freeze>
-        </AbsoluteFill>
-      ) : null}
-
-      {panel.url === null ? null : live ? (
-        <Video
-          objectFit={panel.fit}
-          src={panel.url}
-          style={framing}
-          trimAfter={panel.trimAfterFrames}
-          trimBefore={panel.trimBeforeFrames}
-          // Plan D7 / Design §5.2: the live panel carries the original sound
-          // through the same ducking curve the three-scene path uses.
-          volume={liveVolume}
-        />
-      ) : (
-        // Freeze pins its children to frame 0, so `trimBefore` alone chooses
-        // which source frame is held — the panel's own trim-in (Design D11).
-        <Freeze frame={0}>
-          <Video
-            muted
-            objectFit={panel.fit}
-            src={panel.url}
-            style={{...framing, filter: 'grayscale(1)'}}
-            trimAfter={panel.trimBeforeFrames + 1}
-            trimBefore={panel.trimBeforeFrames}
-          />
-        </Freeze>
-      )}
-
-      {panel.label ? <PanelLabel label={panel.label} style={labelStyle} /> : null}
-    </div>
-  );
-};
+import {Panel} from './Panel';
 
 export interface SplitFrameProps {
   active: ActivePanel;
