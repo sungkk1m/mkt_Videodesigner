@@ -30,3 +30,6 @@ artifacts/m0/results.json
 .bkit/state/session-history.json
 .bkit/state/memory.json
 .bkit/runtime/
+artifacts/m0/
+artifacts/m1/*.png
+artifacts/m1/*.raw

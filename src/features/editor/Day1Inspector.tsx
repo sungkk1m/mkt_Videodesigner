@@ -68,6 +68,13 @@ const PANEL_TEST_KEY: Record<Day1PanelKey, Day1PanelSlot> = {
   panelD: 'd',
 };
 
+const LABEL_PLACEHOLDERS: Record<Day1PanelSlot, string> = {
+  a: 'DAY 1',
+  b: 'DAY 30',
+  c: 'DAY 3',
+  d: 'DAY 7',
+};
+
 /** day1-quad Design §5.1 — a panel's own slot in the output, for the trim preview. */
 const PANEL_RECT = (
   panels: readonly Day1PanelKey[],
@@ -474,25 +481,36 @@ export const Day1Inspector = ({
             <div className="field field--pair" key={locale}>
               <span>{LOCALE_LABELS[locale]}</span>
               <div className="pair-row">
-                {(['a', 'b'] as ActivePanel[]).map((panel) => (
-                  <input
-                    aria-label={`${LOCALE_LABELS[locale]} 패널 ${panel.toUpperCase()} 라벨`}
-                    data-testid={`day1-label-${locale}-${panel}`}
-                    disabled={disabled}
-                    key={panel}
-                    onChange={(event) =>
-                      onLabelText(locale, panel, event.target.value)
-                    }
-                    placeholder={panel === 'a' ? 'DAY 1' : 'DAY 30'}
-                    type="text"
-                    value={(copy[locale] as LocalizedCopy).day1Labels?.[panel] ?? ''}
-                  />
-                ))}
+                {/* day1-quad Design §7.2 — one input per panel the template
+                    has: two for Day1, four for the quad. */}
+                {panelKeys.map((key) => {
+                  const panel = PANEL_TEST_KEY[key];
+
+                  return (
+                    <input
+                      aria-label={`${LOCALE_LABELS[locale]} 패널 ${panel.toUpperCase()} 라벨`}
+                      data-testid={`day1-label-${locale}-${panel}`}
+                      disabled={disabled}
+                      key={panel}
+                      onChange={(event) =>
+                        onLabelText(locale, panel, event.target.value)
+                      }
+                      placeholder={LABEL_PLACEHOLDERS[panel]}
+                      type="text"
+                      value={
+                        (copy[locale] as LocalizedCopy).day1Labels?.[panel] ?? ''
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}
           <p className="panel__hint">
-            왼쪽이 패널 A, 오른쪽이 패널 B입니다. 렌더에는 헤더에서 고른 언어의
+            {panelKeys.length > 2
+              ? '왼쪽부터 패널 A·B·C·D입니다.'
+              : '왼쪽이 패널 A, 오른쪽이 패널 B입니다.'}{' '}
+            렌더에는 헤더에서 고른 언어의
             문구가 들어갑니다.
           </p>
 

@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
+import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
@@ -17,11 +18,14 @@ import {
   buildCompositionProps,
   buildEditorSnapshot,
   buildDay1Props,
+  buildDay1QuadProps,
   buildKvLoopProps,
   createProject,
   day1MissingPanels,
   day1Of,
   day1PanelAt,
+  day1PanelsOf,
+  day1QuadOf,
   day1PanelsShorterThanSection,
   panelKeysOf,
   hasRatioOverride,
@@ -34,7 +38,7 @@ import {
 import {
   ASPECT_RATIOS,
   DEFAULT_TRANSFORM,
-  DURATION_PRESETS,
+  durationPresetsForTemplate,
   KV_LOOP_RATIO,
   kvSectionId,
   type DurationPreset,
@@ -288,6 +292,13 @@ export const EditorWorkspace = ({
   // editor. Everything below narrows through `threeScene` or `day1`.
   const threeScene = threeSceneOf(project);
   const day1 = day1Of(project);
+  const day1Quad = day1QuadOf(project);
+  /**
+   * day1-quad Design §7.1 — either panelled payload. Everything the left rail,
+   * the inspector, and the render gate read is shared between the two arms, so
+   * they branch on this rather than on `day1`.
+   */
+  const panelled = day1PanelsOf(project);
   const kvLoop = kvLoopOf(project);
   const selectedIndex = sceneIndexOf(selectedKind);
   const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
@@ -381,11 +392,16 @@ export const EditorWorkspace = ({
     ctaAssets?.logo?.id,
     ctaAssets?.storeBadge?.id,
     // Day1 Design Ref: §6.2 — panel and end card media are retained the same way.
-    day1?.panelA.source?.id,
-    day1?.panelB.source?.id,
-    day1?.endCard.banner?.id,
-    day1?.endCard.appIcon?.id,
-    day1?.endCard.video?.id,
+    // day1-quad Design §7.1 — driven by the payload's own key list, so the quad
+    // template's panels C and D are retained too. Listing only A and B here made
+    // `retain` revoke every object URL past the second upload, and all four
+    // panels fell back to the relink prompt.
+    ...panelKeysOf(project.templateSettings).map(
+      (panel) => day1PanelAt(project, panel)?.source?.id,
+    ),
+    panelled?.endCard.banner?.id,
+    panelled?.endCard.appIcon?.id,
+    panelled?.endCard.video?.id,
     // key-visual-looping Design Ref: §6.2 — every locale's key visuals, not just
     // the selected set. A locale tab holds its own pixels and an untranslated one
     // previews from `en` (FR-L04), so retaining only the visible set would revoke
@@ -421,6 +437,10 @@ export const EditorWorkspace = ({
     [project, resolveUrl],
   );
 
+  const day1QuadProps = useMemo(
+    () => buildDay1QuadProps(project, resolveUrl),
+    [project, resolveUrl],
+  );
   const kvLoopProps = useMemo(
     () => buildKvLoopProps(project, resolveUrl),
     [project, resolveUrl],
@@ -723,7 +743,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene && !day1 && !kvLoop) {
+  if (!threeScene && !panelled && !kvLoop) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -734,7 +754,7 @@ export const EditorWorkspace = ({
     );
   }
 
-  const allowedTabs = day1
+  const allowedTabs = panelled
     ? DAY1_LEFT_TABS
     : kvLoop
       ? KV_LOOP_LEFT_TABS
@@ -777,6 +797,7 @@ export const EditorWorkspace = ({
           {/* Day1 Design Ref: §6.1 — template choice sits next to the identity. */}
           <TemplateSelector
             current={project.templateSettings.template}
+            currentPreset={project.durationPreset}
             disabled={isRendering}
             onSwitch={(template) => {
               store().switchTemplate(template);
@@ -799,7 +820,7 @@ export const EditorWorkspace = ({
               나레이션 {narrationTooLong.length}개가 장면보다 깁니다
             </span>
           ) : null}
-          {day1 && missingPanels.length > 0 ? (
+          {panelled && missingPanels.length > 0 ? (
             <span className="editor__blocker" data-testid="day1-render-blocker">
               영상 {missingPanels.length}개가 더 필요합니다
             </span>
@@ -931,7 +952,7 @@ export const EditorWorkspace = ({
         </div>
 
         <div className="panel__body">
-        {day1 && activeTab === 'assets' ? (
+        {panelled && activeTab === 'assets' ? (
           <Day1AssetPanel
             autosaveError={
               persistence.saveState.status === 'failed'
@@ -1197,7 +1218,7 @@ export const EditorWorkspace = ({
           ) : null}
           <span className="stage__divider" />
           <div aria-label="전체 길이" className="segmented" role="group">
-            {DURATION_PRESETS.map((preset) => (
+            {durationPresetsForTemplate(project.templateSettings.template).map((preset) => (
               <button
                 aria-pressed={project.durationPreset === preset}
                 className={`segmented__item${
@@ -1256,6 +1277,18 @@ export const EditorWorkspace = ({
               durationInFrames={totalFrames}
               fps={project.fps}
               inputProps={kvLoopProps}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          ) : day1Quad && day1QuadProps ? (
+            <Player
+              acknowledgeRemotionLicense
+              component={Day1QuadComposition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={day1QuadProps}
               ref={playerRef}
               style={{height: '100%', width: '100%'}}
             />
@@ -1333,11 +1366,11 @@ export const EditorWorkspace = ({
           titleReference={kvTitle?.reference ?? null}
           titleUrl={kvAssets.titleUrl()}
         />
-      ) : day1 ? (
+      ) : panelled ? (
         <Day1Inspector
           activeTransformOf={(panel) =>
             activeTransform(
-              day1PanelAt(project, panel) ?? day1.panelA,
+              day1PanelAt(project, panel) ?? panelled.panelA,
               project.selectedRatio,
             )
           }
@@ -1346,7 +1379,7 @@ export const EditorWorkspace = ({
           frameSampler={frameSampler}
           hasRatioOverride={(panel) =>
             hasRatioOverride(
-              day1PanelAt(project, panel) ?? day1.panelA,
+              day1PanelAt(project, panel) ?? panelled.panelA,
               project.selectedRatio,
             )
           }
@@ -1384,9 +1417,9 @@ export const EditorWorkspace = ({
           panelKeys={panelKeysOf(project.templateSettings)}
           panelOf={(panel) => day1PanelAt(project, panel)}
           ratio={project.selectedRatio}
-          resolveEndCardUrl={(slot) => resolveUrl(day1.endCard[slot])}
+          resolveEndCardUrl={(slot) => resolveUrl(panelled.endCard[slot])}
           resolvePanelUrl={(panel) => day1Assets.panelUrl(panel)}
-          settings={day1}
+          settings={panelled}
         />
       ) : selectedScene ? (
       <SceneInspector

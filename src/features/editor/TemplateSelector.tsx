@@ -7,7 +7,9 @@
 import {useState} from 'react';
 
 import {
+  DAY1_QUAD_DURATION_PRESETS,
   TEMPLATE_KINDS,
+  type DurationPreset,
   type TemplateKind,
 } from '../../domain/editor/types';
 
@@ -19,22 +21,6 @@ const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   'kv-loop': '키비주얼 루핑',
 };
 
-/**
- * Templates `EditorWorkspace` can actually draw.
- *
- * `day1-quad` is in the schema and the domain from M2 on, but the workspace only
- * learns to render it in M5. Until then it would land the operator on the
- * `template-unsupported` notice, which has no way back — and autosave would keep
- * them there across a reload. TEMPLATE_KINDS stays the schema's truth; this is
- * the narrower "offerable" set.
- *
- * day1-quad Design §7.1 — delete this and map `TEMPLATE_KINDS` directly once the
- * quad inspector lands.
- */
-const SELECTABLE_TEMPLATES: readonly TemplateKind[] = TEMPLATE_KINDS.filter(
-  (template) => template !== 'day1-quad',
-);
-
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   'three-scene': '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
   day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
@@ -44,16 +30,20 @@ const TEMPLATE_LOSS: Record<TemplateKind, string> = {
 
 export interface TemplateSelectorProps {
   current: TemplateKind;
+  /** The project's length preset, so the dialog can warn before coercing it. */
+  currentPreset: DurationPreset;
   disabled: boolean;
   onSwitch: (template: TemplateKind) => void;
 }
 
 export const TemplateSelector = ({
   current,
+  currentPreset,
   disabled,
   onSwitch,
 }: TemplateSelectorProps) => {
   const [pending, setPending] = useState<TemplateKind | null>(null);
+  const quadPresets = DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[];
 
   return (
     <>
@@ -79,7 +69,7 @@ export const TemplateSelector = ({
         }}
         value={current}
       >
-        {SELECTABLE_TEMPLATES.map((template) => (
+        {TEMPLATE_KINDS.map((template) => (
           <option key={template} value={template}>
             {TEMPLATE_LABELS[template]}
           </option>
@@ -97,6 +87,18 @@ export const TemplateSelector = ({
               시작합니다. 프로젝트 이름·카피·오디오·렌더 설정은 그대로
               유지됩니다.
             </p>
+            {/* Plan Q8a / Design §4.4 — the quad template offers 15s and 30s, so
+                a 60s project is coerced on the way in. Say so before it happens,
+                the same contract the looping template's ratio note has. */}
+            {pending === 'day1-quad' && !quadPresets.includes(currentPreset) ? (
+              <p
+                className="panel__hint"
+                data-testid="template-switch-preset-note"
+              >
+                4분할은 15초·30초만 지원합니다. 현재 {currentPreset}초 프로젝트는
+                30초로 바뀝니다.
+              </p>
+            ) : null}
             {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way
                 in, so the dialog says so before it happens. */}
             {pending === 'kv-loop' ? (
