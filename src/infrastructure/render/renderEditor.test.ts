@@ -25,6 +25,7 @@ const CONFIG: EditorRenderConfig = {
   fps: 60,
   ratio: '9:16',
   locale: 'ko',
+  template: 'three-scene',
   outputTarget: 'web-fs',
 };
 

@@ -1,10 +1,22 @@
 // Design Ref: §4.5 Output Naming —
-// `{project}_{locale}_{ratio}_{duration}s_{fps}fps.mp4`. This ordering supersedes
-// the provisional ordering in Plan FR-22.
-import {RATIO_FILE_SEGMENT} from '../editor/types';
+// `{project}_{template}_{locale}_{ratio}_{duration}s_{fps}fps.mp4`. This ordering
+// supersedes the provisional ordering in Plan FR-22.
+//
+// day1-quad Design §4.2 added the template segment: Day1 and Day1-quad produce
+// the same resolutions and locales, so without it two runs of the same project
+// name were indistinguishable on disk. It sits right after the project name
+// because the template is a higher-level split than ratio or locale.
+import {RATIO_FILE_SEGMENT, type TemplateKind} from '../editor/types';
 import type {EditorRenderConfig} from './types';
 
 const FALLBACK_PROJECT_NAME = 'ua-video';
+
+/** Short, filename-safe tag per template. day1-quad Design §4.2. */
+export const TEMPLATE_FILE_SEGMENT: Record<TemplateKind, string> = {
+  'three-scene': '3scene',
+  day1: 'day1',
+  'kv-loop': 'kvloop',
+};
 
 export const sanitizeProjectName = (projectName: string) =>
   projectName
@@ -21,6 +33,7 @@ export const buildOutputFileName = (
 ) => {
   const segments = [
     sanitizeProjectName(projectName),
+    TEMPLATE_FILE_SEGMENT[config.template],
     config.locale,
     RATIO_FILE_SEGMENT[config.ratio],
     `${config.durationPreset}s`,

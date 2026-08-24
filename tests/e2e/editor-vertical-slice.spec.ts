@@ -243,7 +243,7 @@ test.describe('module-3a editor vertical slice', () => {
     await page.getByRole('button', {name: '다운로드'}).click();
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toBe('ua-video_ko_9x16_15s_30fps.mp4');
+    expect(download.suggestedFilename()).toBe('ua-video_3scene_ko_9x16_15s_30fps.mp4');
 
     await mkdir(outputDirectory, {recursive: true});
     const outputPath = resolve(outputDirectory, 'editor-vertical-slice.mp4');

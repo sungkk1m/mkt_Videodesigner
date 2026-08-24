@@ -561,6 +561,7 @@ export const EditorWorkspace = ({
       // day1-render-fps FR-05/D-05 — without this the single render always fell
       // back to the Standard bitrate, whatever profile the project had chosen.
       profile: project.render.profile,
+      template: project.templateSettings.template,
       outputTarget: capabilities.preferredOutputTarget,
     };
     const fileName = buildOutputFileName(project.name, config);
@@ -1357,6 +1358,11 @@ export const EditorWorkspace = ({
           }
           onTransform={(panel, patch) => store().setDay1Transform(panel, patch)}
           onTrimIn={(panel, ms) => store().setDay1TrimIn(panel, ms)}
+          endCardDurationMs={
+            // day1-quad Design §4.1 — the end card is the last section, and its
+            // length is whatever the boundary drag left it at.
+            project.sections[project.sections.length - 1]?.durationMs ?? 0
+          }
           panelDurationsMs={{
             panelA: project.sections[0]?.durationMs ?? 0,
             panelB: project.sections[1]?.durationMs ?? 0,

@@ -1191,20 +1191,33 @@ export const setDay1EndCardVideo = (
       videoTrim: reconcileTrim(
         {inMs: 0, outMs: 0},
         reference?.durationMs ?? 0,
-        DAY1_END_CARD_MS,
+        endCardSectionMs(project),
       ),
     },
   });
 };
 
 /**
- * day1-trim-preview FR-05 — the length the user chose, surviving moves. {0,0}
- * (no video picked yet) falls back to the full 3s card.
+ * day1-quad Design §4.1 — the end card's own section length, not the 3s
+ * constant. `DAY1_END_CARD_MS` is only the value the section *starts* at; the
+ * timeline boundary has always been draggable past it, and `EndCardScene`
+ * already renders whatever length the section holds. The end card is the last
+ * section in both Day1 and Day1-quad, so "last" is the rule.
  */
-const endCardWindowMs = (endCard: Day1Settings['endCard']): number => {
+const endCardSectionMs = (project: EditorProject): number =>
+  project.sections[project.sections.length - 1]?.durationMs ?? DAY1_END_CARD_MS;
+
+/**
+ * day1-trim-preview FR-05 — the length the user chose, surviving moves. {0,0}
+ * (no video picked yet) falls back to the whole card.
+ */
+const endCardWindowMs = (
+  endCard: Day1Settings['endCard'],
+  sectionMs: number,
+): number => {
   const lengthMs = endCard.videoTrim.outMs - endCard.videoTrim.inMs;
 
-  return lengthMs > 0 ? lengthMs : DAY1_END_CARD_MS;
+  return lengthMs > 0 ? lengthMs : sectionMs;
 };
 
 /** Endcard-Video FR-07 — mirrors `setDay1TrimInMs` at the chosen window length. */
@@ -1225,16 +1238,21 @@ export const setDay1EndCardTrimInMs = (
       videoTrim: reconcileTrim(
         {inMs, outMs: inMs},
         settings.endCard.video?.durationMs ?? 0,
-        endCardWindowMs(settings.endCard),
+        endCardWindowMs(settings.endCard, endCardSectionMs(project)),
       ),
     },
   });
 };
 
 /**
- * day1-trim-preview FR-05 — window length 0.5s..3s, capped by the source, so a
- * single cut can loop the 3s card. `reconcileTrim` slides the in point back
- * when the longer window would leave the source.
+ * day1-trim-preview FR-05 — window length from 0.5s up to the end card's own
+ * length, capped by the source, so a single cut can loop the card.
+ * `reconcileTrim` slides the in point back when the longer window would leave
+ * the source.
+ *
+ * day1-quad Design §4.1 — the upper bound used to be the 3s constant, which
+ * meant dragging the end card longer left the extra time unreachable: the
+ * operator could only pick a 3s window and the rest was filled by looping.
  */
 export const setDay1EndCardTrimLengthMs = (
   project: EditorProject,
@@ -1255,7 +1273,11 @@ export const setDay1EndCardTrimLengthMs = (
       videoTrim: reconcileTrim(
         {inMs: videoTrim.inMs, outMs: videoTrim.inMs},
         settings.endCard.video?.durationMs ?? 0,
-        clamp(Math.round(lengthMs), MIN_END_CARD_TRIM_MS, DAY1_END_CARD_MS),
+        clamp(
+          Math.round(lengthMs),
+          MIN_END_CARD_TRIM_MS,
+          endCardSectionMs(project),
+        ),
       ),
     },
   });

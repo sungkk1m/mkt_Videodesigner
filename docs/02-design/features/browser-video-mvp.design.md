@@ -538,6 +538,17 @@ The confirmed pattern is:
 
 Unsafe characters are replaced with `-`, repeated separators collapse, and empty project names become `ua-video`. Ratio uses `9x16`, `1x1`, or `16x9` in filenames. A timestamp suffix is added only when a collision is detected. This Design ordering supersedes the provisional ordering in Plan FR-22.
 
+> **Superseded (2026-08-24, day1-quad Design §4.2).** A template segment now sits
+> right after the project name:
+>
+> ```text
+> {project}_{template}_{locale}_{ratio}_{duration}s_{fps}fps.mp4
+> ```
+>
+> Segments are `3scene` · `day1` · `kvloop` (`TEMPLATE_FILE_SEGMENT` in
+> `domain/render/fileName.ts`). Templates that share resolutions and locales were
+> otherwise indistinguishable on disk.
+
 ---
 
 ## 5. UI/UX Design

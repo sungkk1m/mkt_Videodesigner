@@ -118,12 +118,12 @@ test.describe('module-7 batch render', () => {
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toContainText('완료');
     await expect(rows.nth(1)).toContainText('완료');
-    await expect(rows.nth(0)).toContainText('배치-테스트_ko_9x16_15s_30fps.mp4');
-    await expect(rows.nth(1)).toContainText('배치-테스트_ko_1x1_15s_30fps.mp4');
+    await expect(rows.nth(0)).toContainText('배치-테스트_3scene_ko_9x16_15s_30fps.mp4');
+    await expect(rows.nth(1)).toContainText('배치-테스트_3scene_ko_1x1_15s_30fps.mp4');
 
     expect(downloads).toEqual([
-      '배치-테스트_ko_9x16_15s_30fps.mp4',
-      '배치-테스트_ko_1x1_15s_30fps.mp4',
+      '배치-테스트_3scene_ko_9x16_15s_30fps.mp4',
+      '배치-테스트_3scene_ko_1x1_15s_30fps.mp4',
     ]);
   });
 });

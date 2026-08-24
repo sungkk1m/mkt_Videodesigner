@@ -235,6 +235,7 @@ export const useRenderQueue = ({
           ratio: job.ratio,
           locale: job.locale,
           profile: job.profile,
+          template: project.templateSettings.template,
           outputTarget: 'web-fs',
         };
 

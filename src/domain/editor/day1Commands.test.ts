@@ -482,6 +482,45 @@ describe('Day1 split, labels, and end card', () => {
     expect(parseProject(setDay1EndCardTrimLengthMs(base, 2000)).ok).toBe(true);
   });
 
+  // day1-quad Design §4.1 — the window used to be capped at the 3s constant, so
+  // dragging the end card longer left the extra time unreachable: the operator
+  // could only pick 3s and the rest was filled by looping. The cap is the end
+  // card section's own length now.
+  it('caps the end-card window at the section length, not at 3s', () => {
+    const video = testMediaReference({id: 'ec', durationMs: 12_000});
+    // 15s preset opens as [6000, 6000, 3000]; boundary 1 sits at 12_000ms.
+    // Dragging it to 9000 leaves the end card 6s long.
+    const longCard = setDay1EndCardVideo(
+      moveTimelineBoundary(withPanels(), 1, 9000),
+      video,
+    );
+
+    expect(longCard.sections.map((section) => section.durationMs)).toEqual([
+      6000, 3000, 6000,
+    ]);
+    // Picking the video opens the window at the whole card, not 3s.
+    expect(day1(longCard).endCard.videoTrim).toEqual({inMs: 0, outMs: 6000});
+    // A 6s window is now reachable, and 9s still clamps — to the card, not to 3s.
+    expect(
+      day1(setDay1EndCardTrimLengthMs(longCard, 6000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 6000});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(longCard, 9000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 6000});
+    expect(parseProject(longCard).ok).toBe(true);
+
+    // Shrinking the card shrinks the cap the same way.
+    const shortCard = setDay1EndCardVideo(
+      moveTimelineBoundary(withPanels(), 1, 13_000),
+      video,
+    );
+
+    expect(shortCard.sections[2]?.durationMs).toBe(2000);
+    expect(
+      day1(setDay1EndCardTrimLengthMs(shortCard, 3000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 2000});
+  });
+
   it('keeps the in point on length changes and the length on moves (FR-05)', () => {
     const base = setDay1EndCardVideo(
       withPanels(),

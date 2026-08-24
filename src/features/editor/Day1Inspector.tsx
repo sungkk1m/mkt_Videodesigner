@@ -33,10 +33,7 @@ import {
   type MediaTransform,
   type SubtitleStyle,
 } from '../../domain/editor/types';
-import {
-  DAY1_END_CARD_MS,
-  MIN_END_CARD_TRIM_MS,
-} from '../../domain/day1/playback';
+import {MIN_END_CARD_TRIM_MS} from '../../domain/day1/playback';
 import {splitLayout} from '../../domain/day1/layout';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
@@ -112,6 +109,12 @@ export interface Day1InspectorProps {
   ratio: AspectRatio;
   /** Section length for each panel, from the shared axis. Day1 Design Ref: §3.1. */
   panelDurationsMs: Record<Day1PanelKey, number>;
+  /**
+   * The end card section's own length. day1-quad Design §4.1 — this used to be
+   * the `DAY1_END_CARD_MS` constant, which made the trim slot disagree with a
+   * card the operator had dragged longer.
+   */
+  endCardDurationMs: number;
   activeTransformOf: (panel: Day1PanelKey) => MediaTransform;
   hasRatioOverride: (panel: Day1PanelKey) => boolean;
   disabled: boolean;
@@ -348,12 +351,13 @@ export const Day1Inspector = ({
   onEndCardTrimIn,
   onEndCardTrimLength,
   resolveEndCardUrl,
+  endCardDurationMs,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
   // day1-trim-preview FR-05 — the chosen window length; {0,0} (no video yet)
-  // reads as the full 3s card, mirroring the domain fallback.
+  // reads as the whole card, mirroring the domain fallback.
   const endCardTrimLenMs =
-    endCard.videoTrim.outMs - endCard.videoTrim.inMs || DAY1_END_CARD_MS;
+    endCard.videoTrim.outMs - endCard.videoTrim.inMs || endCardDurationMs;
   // Endcard-Video §5.5 — the badge counts the active treatment's assets only.
   const endCardAssetBadge =
     endCard.mode === 'video'
@@ -602,11 +606,11 @@ export const Day1Inspector = ({
               <TrimStrip
                 disabled={disabled}
                 inMs={endCard.videoTrim.inMs}
-                maxLengthMs={DAY1_END_CARD_MS}
+                maxLengthMs={endCardDurationMs}
                 minLengthMs={MIN_END_CARD_TRIM_MS}
                 onCommit={onEndCardTrimIn}
                 onCommitLength={onEndCardTrimLength}
-                playbackSlotMs={DAY1_END_CARD_MS}
+                playbackSlotMs={endCardDurationMs}
                 sampler={frameSampler}
                 sectionDurationMs={endCardTrimLenMs}
                 sourceDurationMs={endCard.video?.durationMs ?? 0}
@@ -620,7 +624,7 @@ export const Day1Inspector = ({
                   소스 구간 {formatSeconds(endCard.videoTrim.inMs)}s –{' '}
                   {formatSeconds(endCard.videoTrim.outMs)}s · 구간{' '}
                   {formatSeconds(endCardTrimLenMs)}s · 슬롯{' '}
-                  {formatSeconds(DAY1_END_CARD_MS)}s
+                  {formatSeconds(endCardDurationMs)}s
                 </p>
               ) : null}
 
@@ -654,15 +658,17 @@ export const Day1Inspector = ({
               />
 
               {/* day1-trim-preview FR-06 — a window shorter than the card loops
-                  to fill it; the bar shows exactly how the 3s slot is covered. */}
-              {endCard.video && endCardTrimLenMs < DAY1_END_CARD_MS ? (
+                  to fill it; the bar shows exactly how the slot is covered. */}
+              {endCard.video && endCardTrimLenMs < endCardDurationMs ? (
                 <>
                   <p
                     className="panel__hint"
                     data-testid="day1-endcard-loop-note"
                   >
-                    선택 구간 {formatSeconds(endCardTrimLenMs)}s가 3초보다 짧아
-                    3초를 채울 때까지 반복 재생됩니다.
+                    선택 구간 {formatSeconds(endCardTrimLenMs)}s가 엔드카드{' '}
+                    {formatSeconds(endCardDurationMs)}s보다 짧아{' '}
+                    {formatSeconds(endCardDurationMs)}s를 채울 때까지 반복
+                    재생됩니다.
                   </p>
                   <div
                     aria-hidden
@@ -678,10 +684,10 @@ export const Day1Inspector = ({
                     <span
                       className="loopfill__rest"
                       style={{
-                        flexGrow: DAY1_END_CARD_MS - endCardTrimLenMs,
+                        flexGrow: endCardDurationMs - endCardTrimLenMs,
                       }}
                     >
-                      루프 {formatSeconds(DAY1_END_CARD_MS - endCardTrimLenMs)}s
+                      루프 {formatSeconds(endCardDurationMs - endCardTrimLenMs)}s
                     </span>
                   </div>
                 </>
