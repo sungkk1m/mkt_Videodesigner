@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T13:10:00.000Z",
+  "lastUpdated": "2026-08-24T13:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -517,7 +517,7 @@
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T13:10:00.000Z"
+        "lastUpdated": "2026-08-24T13:45:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -627,7 +627,28 @@
           "SC1 three-ratio output, SC4 divider pixels in the render",
           "the 1.15x gate in absolute terms - needs a re-run on real Chrome"
         ],
-        "bugFoundInBrowser": "useMediaSession.retain listed only panelA/panelB, so uploading the third quad panel revoked the first two object URLs and all four fell back to the relink prompt. Not reachable by unit tests; surfaced only by running day1 and day1-quad side by side."
+        "bugFoundInBrowser": "useMediaSession.retain listed only panelA/panelB, so uploading the third quad panel revoked the first two object URLs and all four fell back to the relink prompt. Not reachable by unit tests; surfaced only by running day1 and day1-quad side by side.",
+        "e2eRun": {
+          "ranAt": "2026-08-24T13:45:00.000Z",
+          "config": "artifacts/m1/playwright.container.ts - container Chromium, H.264 fixtures built with ffmpeg-static",
+          "result": "31 passed, 49 failed, 2 skipped of 82 (day1-longform excluded), 20.2 minutes",
+          "failureAnalysis": "47 blocked by the missing H.264 decoder (every one fails at the post-upload metadata or below it); 2 are missing fixtures (codec-av1.mp4, codec-vp8.webm - ffmpeg-static has no libsvtav1). No code defect among them.",
+          "nowVerified": [
+            "template dropdown + switchTemplate e2e helper: 20+ tests across timeline-axis, kv-loop, kv-motion, debug-report switch templates through it and pass",
+            "day1-quad UI: five-section axis, presets narrowed to 15/30, 60s coercion note, four inspector sections, 16 label inputs",
+            "day1 (two panels) unchanged; three-template axis and three-way switching",
+            "codec rejection path"
+          ],
+          "stillUnverified": [
+            "every MP4 render: SC1 three ratios, SC3 greyscale in the output, SC4 divider pixels",
+            "the eight filename assertions - each sits behind an upload",
+            "the 1.15x gate in absolute terms"
+          ]
+        },
+        "defectsFoundByE2E": [
+          "render preflight gated on template === day1, so day1-quad had none at all (fixed, 5 regression tests)",
+          "blocker copy hardcoded to \"영상 2개\" while listing four panels (fixed)"
+        ]
       }
     }
   },
@@ -799,7 +820,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T13:10:00.000Z"
+    "lastActivity": "2026-08-24T13:45:00.000Z"
   },
   "history": [
     {
@@ -1114,6 +1135,12 @@
       "feature": "day1-quad",
       "phase": "check",
       "action": "modules-complete"
+    },
+    {
+      "timestamp": "2026-08-24T13:45:00.000Z",
+      "feature": "day1-quad",
+      "phase": "check",
+      "action": "e2e-full-run-31-pass-49-codec-blocked"
     }
   ],
   "stateMachine": {
