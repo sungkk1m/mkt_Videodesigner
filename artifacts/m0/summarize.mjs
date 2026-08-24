@@ -1,17 +1,19 @@
-// Reads artifacts/m0/results.json and prints the gate table.
+// Reads artifacts/m0/results.json and prints the gate tables.
 //
-// The headline ratio deliberately EXCLUDES addSample: this container encodes VP9
-// in software while the reference machine encodes H.264 in hardware, so that
-// bucket is the one number that cannot travel. createFrame is codec-independent.
+// IMPORTANT: the web-renderer's four timing buckets do NOT sum to the render's
+// wall clock here — coverage ranges from 27% to 76% depending on the variant, so
+// the buckets cannot be used to attribute cost. `totalMs` (wall clock around
+// renderMediaOnWeb) is the only figure compared below. Bucket coverage is
+// printed so that unreliability stays visible rather than being assumed away.
 import {readFile} from 'node:fs/promises';
 
 const rows = JSON.parse(await readFile('artifacts/m0/results.json', 'utf8'));
-const key = (r) => `${r.variant}-${r.fit}`;
 const groups = new Map();
 for (const r of rows) {
-  if (r.error) { console.log(`ERROR ${key(r)} run ${r.run}: ${r.error}`); continue; }
-  if (!groups.has(key(r))) groups.set(key(r), []);
-  groups.get(key(r)).push(r);
+  if (r.error) { console.log(`ERROR ${r.variant}-${r.fit} run ${r.run}: ${r.error}`); continue; }
+  const key = `${r.variant}-${r.fit}`;
+  if (!groups.has(key)) groups.set(key, []);
+  groups.get(key).push(r);
 }
 
 const median = (xs) => {
@@ -19,6 +21,8 @@ const median = (xs) => {
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 };
+const bucketSum = (r) =>
+  r.waitForReadyMs + r.createFrameMs + r.addSampleMs + r.audioMixingMs;
 
 const stat = (name) => {
   const g = groups.get(name);
@@ -27,42 +31,51 @@ const stat = (name) => {
     name,
     runs: g.length,
     frames: g[0].frames,
-    waitForReady: median(g.map((r) => r.waitForReadyMs)),
-    createFrame: median(g.map((r) => r.createFrameMs)),
-    addSample: median(g.map((r) => r.addSampleMs)),
     total: median(g.map((r) => r.totalMs)),
     spread: Math.max(...g.map((r) => r.totalMs)) - Math.min(...g.map((r) => r.totalMs)),
+    decode: median(g.map((r) => r.waitForReadyMs)),
+    composite: median(g.map((r) => r.createFrameMs)),
+    encode: median(g.map((r) => r.addSampleMs)),
+    coverage: median(g.map((r) => (100 * bucketSum(r)) / r.totalMs)),
   };
 };
 
-const names = ['day1-contain', 'quad-contain', 'day1-cover', 'quad-cover'];
-const stats = names.map(stat).filter(Boolean);
+const ORDER = [
+  'day1-cover', 'quad-cover',
+  'day1-contain', 'quad-contain',
+  'day1-baked-contain', 'quad-baked-contain',
+];
+const stats = ORDER.map(stat).filter(Boolean);
+const f = (n) => Math.round(n).toLocaleString();
 
-const f = (n) => (n === null || n === undefined ? '—' : Math.round(n).toLocaleString());
-console.log('\n| 구성 | runs | frames | waitForReady(decode) | createFrame(composite) | addSample(encode) | total | run 간 편차 |');
-console.log('|---|---:|---:|---:|---:|---:|---:|---:|');
+console.log('\n### 측정치 (450프레임 · 1080x1920 · 30fps · vp9/webm · run 중앙값)\n');
+console.log('| 구성 | runs | total | run 간 편차 | ms/프레임 | 버킷 커버리지 | decode | composite | encode |');
+console.log('|---|---:|---:|---:|---:|---:|---:|---:|---:|');
 for (const s of stats) {
-  console.log(`| ${s.name} | ${s.runs} | ${s.frames} | ${f(s.waitForReady)}ms | ${f(s.createFrame)}ms | ${f(s.addSample)}ms | ${f(s.total)}ms | ${f(s.spread)}ms |`);
+  console.log(
+    `| ${s.name} | ${s.runs} | **${f(s.total)}ms** | ${f(s.spread)}ms | ${(s.total / s.frames).toFixed(1)}ms | ${s.coverage.toFixed(0)}% | ${f(s.decode)}ms | ${f(s.composite)}ms | ${f(s.encode)}ms |`,
+  );
 }
 
-const ratio = (a, b, field) => {
-  const A = stat(a), B = stat(b);
-  if (!A || !B) return null;
-  return B[field] / A[field];
-};
-
-console.log('\n| 비교 | decode | composite | total | total − encode |');
-console.log('|---|---:|---:|---:|---:|');
-for (const [a, b, label] of [
-  ['day1-contain', 'quad-contain', 'contain: 2패널 → 4패널'],
-  ['day1-cover', 'quad-cover', 'cover: 2패널 → 4패널'],
-  ['day1-cover', 'day1-contain', 'day1: cover → contain'],
-  ['quad-cover', 'quad-contain', 'quad: cover → contain'],
-]) {
+console.log('\n### 비율 (total 기준)\n');
+console.log('| 비교 | 배수 | 판정 |');
+console.log('|---|---:|---|');
+const PAIRS = [
+  ['day1-cover', 'quad-cover', '패널 개수 2→4 (cover)', 1.5],
+  ['day1-contain', 'quad-contain', '패널 개수 2→4 (contain)', 1.5],
+  ['day1-cover', 'day1-contain', 'day1: cover → contain', null],
+  ['quad-cover', 'quad-contain', 'quad: cover → contain', null],
+  ['day1-contain', 'day1-baked-contain', 'day1: contain → 배경 굽기', null],
+  ['quad-contain', 'quad-baked-contain', 'quad: contain → 배경 굽기', null],
+  ['day1-contain', 'quad-baked-contain', 'day1 현재 → quad 배경 굽기', 1.5],
+];
+for (const [a, b, label, gate] of PAIRS) {
   const A = stat(a), B = stat(b);
   if (!A || !B) continue;
-  const netA = A.total - A.addSample;
-  const netB = B.total - B.addSample;
-  console.log(`| ${label} | ${ratio(a,b,'waitForReady').toFixed(2)}x | ${ratio(a,b,'createFrame').toFixed(2)}x | ${ratio(a,b,'total').toFixed(2)}x | **${(netB/netA).toFixed(2)}x** |`);
+  const ratio = B.total / A.total;
+  const verdict = gate === null
+    ? ''
+    : ratio <= gate ? `게이트 ${gate}배 이내 통과` : `게이트 ${gate}배 초과`;
+  console.log(`| ${label} | **${ratio.toFixed(2)}x** | ${verdict} |`);
 }
 console.log('');

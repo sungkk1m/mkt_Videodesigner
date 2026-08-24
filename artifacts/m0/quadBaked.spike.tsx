@@ -60,7 +60,7 @@ export interface BakedPanel extends Day1PanelRenderProps {
   backdropGreyUrl: string;
 }
 
-const PanelBaked = ({
+export const PanelBaked = ({
   labelStyle,
   live,
   liveVolume,
