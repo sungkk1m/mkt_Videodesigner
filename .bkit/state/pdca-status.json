@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T07:00:00.000Z",
+  "lastUpdated": "2026-08-24T08:00:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -486,8 +486,8 @@
       }
     },
     "day1-quad": {
-      "phase": "design",
-      "phaseNumber": 2,
+      "phase": "do",
+      "phaseNumber": 3,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -516,7 +516,7 @@
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T07:00:00.000Z"
+        "lastUpdated": "2026-08-24T08:00:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -592,12 +592,25 @@
         "designRiskNotes": [
           "extracting day1EndCardSchema must not drop a single .default() - those defaults ARE the migration story for stored day1 documents",
           "Panel extraction must be a pure move; SplitFrame markup unchanged and data-testid=\"day1-split-line\" preserved"
-        ]
+        ],
+        "currentScope": "module-1",
+        "completedModules": [
+          "module-0-perf-gate",
+          "module-1-shared-path"
+        ],
+        "m1Result": {
+          "day1QuadCodeWritten": "zero lines, as designed - the existing suite was the only gate",
+          "endCardLength": "three call sites, not the two the plan listed: setDay1EndCardVideo also seeded the initial window from the 3s constant",
+          "filenameAssertions": "eight, not the six the plan listed - queue.test.ts and pages-subpath.spec.ts were missed in the survey",
+          "selectorCallSites": "12 sites across 10 spec files, replaced by tests/e2e/helpers/template.ts",
+          "verified": "unit 531/531 (baseline 529 + 2 new), tsc -b + vite build clean, dropdown and end-card slot confirmed in a real browser via artifacts/m1/",
+          "notVerified": "every E2E that renders an MP4 - this container has no H.264 encoder or decoder"
+        }
       }
     }
   },
   "pipeline": {
-    "currentPhase": "design",
+    "currentPhase": "do",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -745,13 +758,20 @@
         "from": "plan",
         "to": "design",
         "at": "2026-08-24T07:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "design",
+        "to": "do",
+        "scope": "module-1",
+        "at": "2026-08-24T08:00:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T07:00:00.000Z"
+    "lastActivity": "2026-08-24T08:00:00.000Z"
   },
   "history": [
     {
@@ -1054,6 +1074,12 @@
       "feature": "day1-quad",
       "phase": "design",
       "action": "created"
+    },
+    {
+      "timestamp": "2026-08-24T08:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "do",
+      "action": "module-1-complete"
     }
   ],
   "stateMachine": {
