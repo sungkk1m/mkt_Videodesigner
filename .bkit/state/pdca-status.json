@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T02:00:00.000Z",
+  "lastUpdated": "2026-08-24T05:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -510,11 +510,12 @@
         "no-schema-version-bump"
       ],
       "documents": {
-        "plan": "docs/01-plan/features/day1-quad.plan.md"
+        "plan": "docs/01-plan/features/day1-quad.plan.md",
+        "m0PerfGate": "docs/03-analysis/day1-quad.m0-perf-gate.md"
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T02:00:00.000Z"
+        "lastUpdated": "2026-08-24T05:30:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -529,7 +530,9 @@
           "P7": "label default fontSize 72 -> 44 because the cell is half as wide",
           "P8": "module 0 is a render perf gate: <= 1.5x the Day1 baseline"
         },
-        "openQuestions": [],
+        "openQuestions": [
+          "M1 item 4 - bake the blurred backdrop in shared code including day1 (recommended, awaiting decision)"
+        ],
         "codeChanged": false,
         "confirmedDecisions": {
           "Q1": "2x2 grid layout",
@@ -558,7 +561,23 @@
           "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
         ],
         "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
-        "nextStep": "write docs/02-design/features/day1-quad.design.md, then run the M0 perf gate with the contain 4-panel worst case"
+        "nextStep": "decide on M1 item 4 (baked backdrop), then write docs/02-design/features/day1-quad.design.md",
+        "m0Result": {
+          "ranAt": "2026-08-24T05:30:00.000Z",
+          "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
+          "config": "450 frames, 1080x1920, 30fps, vp9/webm, all-panel sections (no end card), 4 distinct VP9 sources, 2 repeats per config",
+          "panelCount2to4": "1.15x on total wall clock, identical under cover and contain - GATE PASSED (limit 1.5x)",
+          "coverToContain": "2.13x day1 / 2.14x quad - a fixed cost independent of panel count, already paid by day1 today",
+          "bakedBackdrop": "0.48x day1 / 0.52x quad; day1 baked is within 2.9% of cover",
+          "quadBakedVsTodayDay1": "0.60x - a 4-panel quad with baked backdrops renders faster than today 2-panel day1",
+          "bucketsUnusable": "the four web-renderer timing buckets cover only 28-81% of wall clock depending on variant, so cost cannot be attributed to them; all comparisons use wall clock",
+          "rejectedRisks": [
+            "R1 composition cost",
+            "R2 frozen panels re-decoding per frame"
+          ],
+          "newRisk": "R11 - contain blurred backdrop costs 2.13x, pre-existing in day1",
+          "unverified": "absolute numbers are NOT comparable to the documented 17.0s baseline; the real gate must be re-run on the user Chrome. The baked backdrop used ffmpeg gblur, so pixel equivalence with CSS blur() is unverified"
+        }
       }
     }
   },
@@ -711,7 +730,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T02:00:00.000Z"
+    "lastActivity": "2026-08-24T05:30:00.000Z"
   },
   "history": [
     {
@@ -996,6 +1015,12 @@
       "feature": "day1-quad",
       "phase": "plan",
       "action": "all-14-decisions-confirmed"
+    },
+    {
+      "timestamp": "2026-08-24T05:30:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "m0-perf-gate-passed-1.15x"
     }
   ],
   "stateMachine": {
