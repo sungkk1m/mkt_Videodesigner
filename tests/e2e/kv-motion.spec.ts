@@ -7,14 +7,14 @@ import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {expect, test, type Page} from '@playwright/test';
+import {switchTemplate} from './helpers/template';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
 
 const openLoopWithThreeKeyVisuals = async (page: Page) => {
   await page.goto('/');
-  await page.getByTestId('template-kv-loop').click();
-  await page.getByTestId('template-switch-confirm').click();
+  await switchTemplate(page, 'kv-loop');
   await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');
   await page.getByTestId('kv-count').selectOption('3');
 

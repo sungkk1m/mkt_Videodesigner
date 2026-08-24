@@ -10,6 +10,7 @@ import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 
 import {expect, test, type Page} from '@playwright/test';
+import {switchTemplate} from './helpers/template';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -24,8 +25,7 @@ const ENDCARD_SOURCE = fixture('day1-panel-b.mp4');
 const RENDER_TIMEOUT = 10 * 60 * 1000;
 
 const selectDay1 = async (page: Page) => {
-  await page.getByTestId('template-day1').click();
-  await page.getByTestId('template-switch-confirm').click();
+  await switchTemplate(page, 'day1');
   await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 };
 

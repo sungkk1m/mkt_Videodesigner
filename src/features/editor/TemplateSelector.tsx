@@ -1,4 +1,6 @@
-// Day1 Design Ref: §6.1 Template Selector — a segmented control in the header.
+// Day1 Design Ref: §6.1 Template Selector — a dropdown in the header
+// (day1-quad Design §4.3; it was a segmented control until four templates made
+// the button row too wide).
 // Switching is destructive: per-scene settings and panel settings cannot be
 // carried across, so the confirmation dialog is part of the control rather than
 // something the caller is trusted to remember.
@@ -36,32 +38,34 @@ export const TemplateSelector = ({
 
   return (
     <>
-      <div
+      {/*
+        day1-quad Design §4.3 — a dropdown rather than one button per template:
+        four buttons already crowd the header and the list is meant to grow.
+
+        Deliberately controlled on `current`. Choosing an option only opens the
+        dialog, so React re-renders with `value={current}` and the select snaps
+        back on its own — cancelling needs no restore logic at all (D-2).
+      */}
+      <select
         aria-label="템플릿"
-        className="segmented"
+        className="template-select"
         data-testid="template-selector"
-        role="group"
+        disabled={disabled}
+        onChange={(event) => {
+          const next = event.target.value as TemplateKind;
+
+          if (next !== current) {
+            setPending(next);
+          }
+        }}
+        value={current}
       >
         {TEMPLATE_KINDS.map((template) => (
-          <button
-            aria-pressed={current === template}
-            className={`segmented__item${
-              current === template ? ' segmented__item--on' : ''
-            }`}
-            data-testid={`template-${template}`}
-            disabled={disabled}
-            key={template}
-            onClick={() => {
-              if (template !== current) {
-                setPending(template);
-              }
-            }}
-            type="button"
-          >
+          <option key={template} value={template}>
             {TEMPLATE_LABELS[template]}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
 
       {pending ? (
         <div className="dialog" data-testid="template-switch-dialog" role="dialog">
