@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T05:30:00.000Z",
+  "lastUpdated": "2026-08-24T06:00:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -515,7 +515,7 @@
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T05:30:00.000Z"
+        "lastUpdated": "2026-08-24T06:00:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -530,9 +530,7 @@
           "P7": "label default fontSize 72 -> 44 because the cell is half as wide",
           "P8": "module 0 is a render perf gate: <= 1.5x the Day1 baseline"
         },
-        "openQuestions": [
-          "M1 item 4 - bake the blurred backdrop in shared code including day1 (recommended, awaiting decision)"
-        ],
+        "openQuestions": [],
         "codeChanged": false,
         "confirmedDecisions": {
           "Q1": "2x2 grid layout",
@@ -561,7 +559,7 @@
           "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
         ],
         "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
-        "nextStep": "decide on M1 item 4 (baked backdrop), then write docs/02-design/features/day1-quad.design.md",
+        "nextStep": "write docs/02-design/features/day1-quad.design.md",
         "m0Result": {
           "ranAt": "2026-08-24T05:30:00.000Z",
           "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
@@ -577,7 +575,11 @@
           ],
           "newRisk": "R11 - contain blurred backdrop costs 2.13x, pre-existing in day1",
           "unverified": "absolute numbers are NOT comparable to the documented 17.0s baseline; the real gate must be re-run on the user Chrome. The baked backdrop used ffmpeg gblur, so pixel equivalence with CSS blur() is unverified"
-        }
+        },
+        "bakedBackdropDecision": "out of scope for this cycle (2026-08-24). The 2.13x contain cost is day1 pre-existing, day1-quad already passes the gate at 1.15x, and the fix can change output pixels so it needs its own visual-equivalence verification. Follows the day1-render-speed precedent: a separate PDCA cycle. Evidence recorded in plan 2.12 and the M0 analysis 5.",
+        "followUpCycleCandidates": [
+          "baked blurred backdrop - recovers 0.48x on day1 and 0.52x on day1-quad; needs pixel-equivalence verification against CSS blur()"
+        ]
       }
     }
   },
@@ -730,7 +732,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T05:30:00.000Z"
+    "lastActivity": "2026-08-24T06:00:00.000Z"
   },
   "history": [
     {
@@ -1021,6 +1023,12 @@
       "feature": "day1-quad",
       "phase": "plan",
       "action": "m0-perf-gate-passed-1.15x"
+    },
+    {
+      "timestamp": "2026-08-24T06:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "baked-backdrop-moved-out-of-scope-to-own-cycle"
     }
   ],
   "stateMachine": {
