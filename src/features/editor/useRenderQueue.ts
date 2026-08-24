@@ -7,6 +7,7 @@ import {
   buildEditorSnapshot,
   day1MissingPanels,
   day1PanelsShorterThanSection,
+  panelKeysOf,
   threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
@@ -88,13 +89,19 @@ export const preflightIssues = (
 ): string[] => {
   const issues: string[] = [];
 
-  if (project.templateSettings.template === 'day1') {
-    // FR-D03 — both panels are required, and each must also be decodable.
+  // day1-quad Design §7.4 — both panelled templates gate the same way. This
+  // used to read `=== 'day1'`, which silently gave the four-panel template no
+  // render preflight at all: a quad project could start a render with panels
+  // missing, unresolved, or too short.
+  const panelCount = panelKeysOf(project.templateSettings).length;
+
+  if (panelCount > 0) {
+    // FR-D03 / FR-Q02 — every panel is required, and each must be decodable.
     const missingPanels = day1MissingPanels(project);
 
     if (missingPanels.length > 0) {
       issues.push(
-        `영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: ${missingPanels
+        `영상 ${panelCount}개를 모두 올려야 렌더할 수 있습니다. 남은 패널: ${missingPanels
           .map((panel) => DAY1_PANEL_LABEL[panel])
           .join(' · ')}`,
       );

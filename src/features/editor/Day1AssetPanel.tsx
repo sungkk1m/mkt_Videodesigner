@@ -165,7 +165,7 @@ export const Day1AssetPanel = ({
   <>
     {missingPanels.length > 0 ? (
       <p className="notice notice--warning" data-testid="day1-panels-blocker">
-        영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널:{' '}
+        영상 {panels.length}개를 모두 올려야 렌더할 수 있습니다. 남은 패널:{' '}
         {missingPanels.map((panel) => PANEL_TEST_KEY[panel].toUpperCase()).join(' · ')}
       </p>
     ) : null}
