@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T08:00:00.000Z",
+  "lastUpdated": "2026-08-24T13:10:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -486,8 +486,8 @@
       }
     },
     "day1-quad": {
-      "phase": "do",
-      "phaseNumber": 3,
+      "phase": "check",
+      "phaseNumber": 4,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -512,11 +512,12 @@
       "documents": {
         "plan": "docs/01-plan/features/day1-quad.plan.md",
         "m0PerfGate": "docs/03-analysis/day1-quad.m0-perf-gate.md",
-        "design": "docs/02-design/features/day1-quad.design.md"
+        "design": "docs/02-design/features/day1-quad.design.md",
+        "report": "docs/04-report/day1-quad.report.md"
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T08:00:00.000Z"
+        "lastUpdated": "2026-08-24T13:10:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -560,7 +561,7 @@
           "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
         ],
         "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
-        "nextStep": "Do M1 - shared path only, zero day1-quad code: end-card length, filename segment, selector dropdown + e2e helper",
+        "nextStep": "run the full E2E suite on real Chrome, then merge to main to deploy",
         "m0Result": {
           "ranAt": "2026-08-24T05:30:00.000Z",
           "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
@@ -593,10 +594,16 @@
           "extracting day1EndCardSchema must not drop a single .default() - those defaults ARE the migration story for stored day1 documents",
           "Panel extraction must be a pure move; SplitFrame markup unchanged and data-testid=\"day1-split-line\" preserved"
         ],
-        "currentScope": "module-1",
+        "currentScope": "module-7",
         "completedModules": [
           "module-0-perf-gate",
-          "module-1-shared-path"
+          "module-1-shared-path",
+          "module-2-schema",
+          "module-3-domain",
+          "module-4-composition",
+          "module-5-ui",
+          "module-6-render-proxy",
+          "module-7-e2e-docs"
         ],
         "m1Result": {
           "day1QuadCodeWritten": "zero lines, as designed - the existing suite was the only gate",
@@ -605,12 +612,27 @@
           "selectorCallSites": "12 sites across 10 spec files, replaced by tests/e2e/helpers/template.ts",
           "verified": "unit 531/531 (baseline 529 + 2 new), tsc -b + vite build clean, dropdown and end-card slot confirmed in a real browser via artifacts/m1/",
           "notVerified": "every E2E that renders an MP4 - this container has no H.264 encoder or decoder"
-        }
+        },
+        "verification": {
+          "unitTests": "570 passed (cycle started at 529)",
+          "build": "tsc -b across three configs + vite build clean",
+          "geometry": "quadLayout exhaustive: 3 ratios x divider 0-24px",
+          "perfGate": "panel count 2->4 = 1.15x, under the 1.5x limit (VP9 substitute measurement)",
+          "panelExtraction": "byte-identical: 1454 + 2945 chars",
+          "previewPixels": "panel A saturation 1.000, B/C/D 0.000",
+          "browserFlow": "12 checks in artifacts/m1/verify-quad-ui.mjs"
+        },
+        "notVerified": [
+          "every MP4 render: this container has no H.264 encoder or decoder",
+          "SC1 three-ratio output, SC4 divider pixels in the render",
+          "the 1.15x gate in absolute terms - needs a re-run on real Chrome"
+        ],
+        "bugFoundInBrowser": "useMediaSession.retain listed only panelA/panelB, so uploading the third quad panel revoked the first two object URLs and all four fell back to the relink prompt. Not reachable by unit tests; surfaced only by running day1 and day1-quad side by side."
       }
     }
   },
   "pipeline": {
-    "currentPhase": "do",
+    "currentPhase": "check",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -765,13 +787,19 @@
         "to": "do",
         "scope": "module-1",
         "at": "2026-08-24T08:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-24T13:10:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T08:00:00.000Z"
+    "lastActivity": "2026-08-24T13:10:00.000Z"
   },
   "history": [
     {
@@ -1080,6 +1108,12 @@
       "feature": "day1-quad",
       "phase": "do",
       "action": "module-1-complete"
+    },
+    {
+      "timestamp": "2026-08-24T13:10:00.000Z",
+      "feature": "day1-quad",
+      "phase": "check",
+      "action": "modules-complete"
     }
   ],
   "stateMachine": {

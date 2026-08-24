@@ -92,7 +92,6 @@ interface Slot {
   prepared: Prepared;
 }
 
-const PANEL_KEYS = ['panelA', 'panelB'] as const;
 
 export const createPanelProxies = ({
   builder,
@@ -286,8 +285,12 @@ export const createPanelProxies = ({
         return {project, resolveUrl};
       }
 
+      // day1-quad Design §7.4 — the template's own key list, so the quad's
+      // panels C and D get proxies too. This was a two-element constant, which
+      // silently left half a quad render on its original sources.
+      const keys = panelKeysOf(settings);
       const panels = await Promise.all(
-        PANEL_KEYS.map((key) => preparePanel(request, key)),
+        keys.map((key) => preparePanel(request, key)),
       );
 
       if (panels.every((panel) => panel === null)) {
@@ -301,11 +304,15 @@ export const createPanelProxies = ({
       );
       const patched = {...settings};
 
-      PANEL_KEYS.forEach((key, index) => {
+      keys.forEach((key, index) => {
         const prepared = panels[index];
 
         if (prepared) {
-          patched[key] = {...prepared.panel, source: prepared.source};
+          // The key came from this payload's own list, so it is a field of it.
+          (patched as Record<string, unknown>)[key] = {
+            ...prepared.panel,
+            source: prepared.source,
+          };
         }
       });
 
