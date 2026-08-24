@@ -17,6 +17,11 @@ tests/fixtures/*.webm
 tests/fixtures/*.m4a
 artifacts/media-codec-compat/
 artifacts/day1-trim-ux/
+# day1-quad M0 spike. The scripts are committed; their output is regenerable
+# media (12MB of VP9 sources) and one results file.
+artifacts/m0/sources/
+artifacts/m0/backdrops/
+artifacts/m0/results.json
 *.tsbuildinfo
 
 # bkit local session state. `pdca-status.json` is kept as project state; audit
