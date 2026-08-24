@@ -3,6 +3,7 @@
 // these helpers instead of repeating the discriminant check.
 import {createProject, switchTemplate} from '../../domain/editor/project';
 import {
+  type Day1QuadSettings,
   type Day1Settings,
   type DurationPreset,
   type EditorProject,
@@ -36,6 +37,23 @@ export const day1ProjectFixture = (
   return {
     ...base,
     templateSettings: {...day1SettingsOf(base), ...settings},
+  };
+};
+
+export const day1QuadSettingsOf = (
+  project: EditorProject,
+): Day1QuadSettings => project.templateSettings as Day1QuadSettings;
+
+/** day1-quad Design §9.1 — built through the real command, like the Day1 one. */
+export const day1QuadProjectFixture = (
+  settings: Partial<Day1QuadSettings> = {},
+  preset: DurationPreset = 15,
+): EditorProject => {
+  const base = switchTemplate(createProject(preset), 'day1-quad');
+
+  return {
+    ...base,
+    templateSettings: {...day1QuadSettingsOf(base), ...settings},
   };
 };
 

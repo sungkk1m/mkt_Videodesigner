@@ -1,8 +1,19 @@
 import {describe, expect, it} from 'vitest';
 
 import {testMediaReference} from '../../test/fixtures/media';
-import {createProject, kvLoopOf, parseProject, threeSceneOf} from './project';
-import {kvLoopProjectFixture} from '../../test/fixtures/project';
+import {
+  createProject,
+  day1QuadOf,
+  kvLoopOf,
+  parseProject,
+  switchTemplate,
+  threeSceneOf,
+} from './project';
+import {
+  day1ProjectFixture,
+  day1QuadProjectFixture,
+  kvLoopProjectFixture,
+} from '../../test/fixtures/project';
 import type {EditorProject, Section, ThreeSceneSettings} from './types';
 
 const valid = (): EditorProject => createProject(15);
@@ -316,6 +327,103 @@ describe('parseProject — Day1 payload', () => {
   });
 });
 
+
+// day1-quad Design §5.2 — a fourth arm on the discriminated union, five sections
+// on the shared axis, and one rule Day1 does not have (the narrowed preset).
+describe('parseProject — Day1-quad payload', () => {
+  it('accepts the four-panel payload on a five-section axis', () => {
+    const project = day1QuadProjectFixture();
+    const result = parseProject(project);
+
+    expect(result.ok).toBe(true);
+    expect(project.sections.map((section) => section.id)).toEqual([
+      'panel-a',
+      'panel-b',
+      'panel-c',
+      'panel-d',
+      'endcard',
+    ]);
+    expect(day1QuadOf(project)).not.toBeNull();
+  });
+
+  it('rejects a section count or order that is not the quad axis', () => {
+    const dropped = day1QuadProjectFixture();
+    // Four sections cannot total the preset either, so both issues surface.
+    expect(
+      issuePaths({...dropped, sections: dropped.sections.slice(0, 4)}),
+    ).toContain('sections');
+
+    const reordered = day1QuadProjectFixture();
+    const swapped = [...reordered.sections];
+    const [c, d] = [swapped[2], swapped[3]];
+    swapped[2] = d as Section;
+    swapped[3] = c as Section;
+
+    expect(issuePaths({...reordered, sections: swapped})).toContain(
+      'sections.2.id',
+    );
+  });
+
+  // Plan Q8a — `switchTemplate` coerces, so the editor never produces this; an
+  // imported JSON can, and it must not silently render at 60s.
+  it('rejects the 60s preset', () => {
+    const sixty = day1QuadProjectFixture();
+    const at60: EditorProject = {
+      ...sixty,
+      durationPreset: 60,
+      sections: sixty.sections.map((section, index) => ({
+        ...section,
+        durationMs: index === 4 ? 3000 : 14_250,
+      })),
+    };
+
+    expect(issuePaths(at60)).toContain('durationPreset');
+    // 15s and 30s are accepted.
+    expect(parseProject(day1QuadProjectFixture({}, 15)).ok).toBe(true);
+    expect(parseProject(day1QuadProjectFixture({}, 30)).ok).toBe(true);
+  });
+
+  it('bounds a panel trim window inside its source, like Day1', () => {
+    const project = day1QuadProjectFixture();
+    const settings = day1QuadOf(project);
+
+    expect(
+      issuePaths({
+        ...project,
+        templateSettings: {
+          ...settings,
+          panelC: {
+            ...settings?.panelC,
+            source: testMediaReference({durationMs: 4000}),
+            trim: {inMs: 0, outMs: 9000},
+          },
+        },
+      }),
+    ).toContain('templateSettings.panelC.trim.outMs');
+  });
+
+  // Design §5.3 — `c`/`d` are optional so a stored Day1 copy block, which only
+  // ever had `a` and `b`, parses with no migration.
+  it('parses a Day1 copy block that has no c/d labels', () => {
+    const day1 = switchTemplate(day1ProjectFixture(), 'day1');
+    const legacyCopy = {
+      ...day1,
+      copy: {
+        ...day1.copy,
+        ko: {...day1.copy.ko, day1Labels: {a: 'DAY 1', b: 'DAY 30'}},
+      },
+    };
+    const result = parseProject(legacyCopy);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.copy.ko?.day1Labels).toEqual({
+        a: 'DAY 1',
+        b: 'DAY 30',
+      });
+    }
+  });
+});
 
 describe('parseProject — motion migration (kv-motion-effects §3.2)', () => {
   /** A stored looping document, as it was written before `motion` existed. */

@@ -9,6 +9,7 @@ import type {ActivePanel} from '../day1/playback';
 import type {KvSegment} from '../kvloop/cycle';
 import type {
   DAY1_CARD_MOTIONS,
+  DAY1_PANEL_SLOTS,
   DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
 } from './constants';
@@ -44,6 +45,7 @@ export type {
   AudioTrack,
   CtaSceneSettings,
   Day1Panel,
+  Day1QuadSettings,
   Day1Settings,
   DurationPreset,
   EditorProject,
@@ -103,6 +105,21 @@ export const DAY1_SECTION_LABELS = {
   'panel-b': '패널 B',
   endcard: '엔드카드',
 } as const;
+
+/** day1-quad Design §5.2 — the same names over four panels. */
+export const DAY1_QUAD_SECTION_LABELS = {
+  'panel-a': '패널 A',
+  'panel-b': '패널 B',
+  'panel-c': '패널 C',
+  'panel-d': '패널 D',
+  endcard: '엔드카드',
+} as const;
+
+/**
+ * day1-quad Design §5.3 — a panel letter. `ActivePanel` stays the Day1-only
+ * `'a' | 'b'`, because `SplitFrame` must not be handed a `'c'`.
+ */
+export type Day1PanelSlot = (typeof DAY1_PANEL_SLOTS)[number];
 
 export const DEFAULT_TRANSFORM: MediaTransform = {
   fit: 'cover',

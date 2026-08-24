@@ -7,6 +7,7 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1QuadOf,
   day1PanelsShorterThanSection,
   hasRatioOverride,
   moveTimelineBoundary,
@@ -30,6 +31,10 @@ import {
   updateDay1Transform,
 } from './project';
 import {testMediaReference} from '../../test/fixtures/media';
+import {
+  DAY1_QUAD_SECTION_ORDER,
+  DEFAULT_DAY1_PANEL_TRANSFORM,
+} from './types';
 import {day1ProjectFixture, day1SettingsOf} from '../../test/fixtures/project';
 import type {EditorProject, LocalizedCopy} from './types';
 
@@ -629,5 +634,76 @@ describe('template isolation', () => {
 
     expect(threeSceneOf(project)).toBeNull();
     expect(day1Of(project)).not.toBeNull();
+  });
+});
+
+// day1-quad Design §5.4, §4.4 — the switch into the four-panel template.
+describe('switchTemplate to day1-quad', () => {
+  it('builds the five-section axis and the four-panel payload', () => {
+    const project = switchTemplate(createProject(), 'day1-quad');
+
+    expect(project.sections.map((section) => section.id)).toEqual([
+      ...DAY1_QUAD_SECTION_ORDER,
+    ]);
+    expect(project.sections.map((section) => section.durationMs)).toEqual([
+      3000, 3000, 3000, 3000, 3000,
+    ]);
+
+    const settings = day1QuadOf(project);
+
+    expect(settings).not.toBeNull();
+    expect(day1Of(project)).toBeNull();
+    // Plan Q6 — four panels, all of them empty until the operator uploads.
+    expect([
+      settings?.panelA.source,
+      settings?.panelB.source,
+      settings?.panelC.source,
+      settings?.panelD.source,
+    ]).toEqual([null, null, null, null]);
+    // Plan Q4 — uploads still start lossless, exactly as Day1 does.
+    expect(settings?.panelA.transforms.base).toEqual(
+      DEFAULT_DAY1_PANEL_TRANSFORM,
+    );
+    // Design §5.4 — the one value that differs from Day1: a quad cell is half
+    // as wide, so 72px would overflow it.
+    expect(settings?.labelStyle.fontSize).toBe(44);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('fills the panel labels in every locale (Q9)', () => {
+    const project = switchTemplate(createProject(), 'day1-quad');
+
+    for (const locale of ['ko', 'en', 'ja', 'zh-TW'] as const) {
+      expect((project.copy[locale] as LocalizedCopy).day1Labels).toEqual({
+        a: 'Day1',
+        b: 'Day2',
+        c: 'Day3',
+        d: 'Day7',
+      });
+    }
+  });
+
+  // Plan Q8a — 60s over four panels is 14.25s each, so the template does not
+  // offer it and a 60s project is coerced rather than left invalid.
+  it('coerces a 60s project to 30s on the way in', () => {
+    const sixty = switchTemplate(createProject(60), 'day1-quad');
+
+    expect(sixty.durationPreset).toBe(30);
+    expect(sixty.sections.map((section) => section.durationMs)).toEqual([
+      6750, 6750, 6750, 6750, 3000,
+    ]);
+    expect(parseProject(sixty).ok).toBe(true);
+
+    // 15s and 30s pass through untouched.
+    expect(switchTemplate(createProject(15), 'day1-quad').durationPreset).toBe(15);
+    expect(switchTemplate(createProject(30), 'day1-quad').durationPreset).toBe(30);
+  });
+
+  it('leaves Day1 labels empty — Q10 keeps the two-panel template unchanged', () => {
+    const day1Project = switchTemplate(createProject(), 'day1');
+
+    expect(
+      (day1Project.copy.ko as LocalizedCopy).day1Labels,
+    ).toBeUndefined();
   });
 });

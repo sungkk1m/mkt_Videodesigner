@@ -36,6 +36,7 @@ describe('buildOutputFileName', () => {
     expect(names).toEqual([
       'ua-video_3scene_ko_9x16_15s_60fps.mp4',
       'ua-video_day1_ko_9x16_15s_60fps.mp4',
+      'ua-video_day1x4_ko_9x16_15s_60fps.mp4',
       'ua-video_kvloop_ko_9x16_15s_60fps.mp4',
     ]);
     // No two templates may collapse onto the same filename.

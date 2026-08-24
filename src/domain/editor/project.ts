@@ -4,6 +4,7 @@ import {appIconRect} from '../day1/endCard';
 import {splitLayout} from '../day1/layout';
 import {
   DAY1_END_CARD_MS,
+  day1QuadSectionDurations,
   MIN_END_CARD_TRIM_MS,
   activePanelForSection,
   day1SectionDurations,
@@ -36,6 +37,9 @@ import {
 } from '../timeline/timeline';
 import {
   DAY1_SECTION_LABELS,
+  DAY1_QUAD_DURATION_PRESETS,
+  DAY1_QUAD_SECTION_LABELS,
+  DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
   DEFAULT_KV_COUNT,
@@ -77,6 +81,7 @@ import {
   type CtaRenderProps,
   type CtaSceneSettings,
   type Day1Panel,
+  type Day1QuadSettings,
   type Day1EndCardRenderProps,
   type Day1PanelRenderProps,
   type Day1Props,
@@ -186,6 +191,54 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
 };
 
 /**
+ * day1-quad Design §5.4 — the Day1 defaults with exactly one value changed.
+ *
+ * `labelStyle.fontSize` drops 72 → 44 because a quad cell is half as wide as a
+ * Day1 panel (537px vs 1080px at 9:16), and 72px overflows it. Everything else
+ * — the divider, the end card, and the panels' `contain` framing (Plan Q4) — is
+ * the Day1 value, so `DEFAULT_DAY1_PANEL_TRANSFORM` is reused as is.
+ */
+export const DEFAULT_DAY1_QUAD_SETTINGS: Day1QuadSettings = {
+  template: 'day1-quad',
+  panelA: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelB: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelC: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelD: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  split: {...DEFAULT_DAY1_SETTINGS.split},
+  labelStyle: {...DEFAULT_DAY1_SETTINGS.labelStyle, fontSize: 44},
+  endCard: structuredClone(DEFAULT_DAY1_SETTINGS.endCard),
+};
+
+/**
+ * day1-quad Plan Q9 — the labels start filled, with the same English in all
+ * four locales: `Day1` … `Day7` are numbers, not copy to translate, and a value
+ * in every locale means switching the language tab never blanks the frame.
+ * Day1 (two panels) keeps its empty labels — Plan Q10's no-change rule.
+ */
+const DAY1_QUAD_DEFAULT_LABELS = {
+  a: 'Day1',
+  b: 'Day2',
+  c: 'Day3',
+  d: 'Day7',
+} as const;
+
+/**
  * key-visual-looping Design Ref: §3.2 — the documented starting values for a
  * looping payload. Four key visuals repeated twice is the reference format
  * (Plan §1.2), and the closing fade is on because both reference videos end on
@@ -231,6 +284,13 @@ export const day1Of = (project: EditorProject): Day1Settings | null =>
   project.templateSettings.template === 'day1' ? project.templateSettings : null;
 
 /** The looping counterpart of `threeSceneOf`. */
+export const day1QuadOf = (
+  project: EditorProject,
+): Day1QuadSettings | null =>
+  project.templateSettings.template === 'day1-quad'
+    ? project.templateSettings
+    : null;
+
 export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
   project.templateSettings.template === 'kv-loop'
     ? project.templateSettings
@@ -890,6 +950,17 @@ const buildDay1Sections = (preset: DurationPreset): Sections => {
   }));
 };
 
+/** day1-quad Design §6.1 — four panels then the end card. */
+const buildDay1QuadSections = (preset: DurationPreset): Sections => {
+  const durations = day1QuadSectionDurations(preset);
+
+  return DAY1_QUAD_SECTION_ORDER.map((id, index) => ({
+    id,
+    label: DAY1_QUAD_SECTION_LABELS[id],
+    durationMs: durations[index] as number,
+  }));
+};
+
 /**
  * key-visual-looping Design Ref: §3.1 — one section per key visual, holding an
  * even share of a single cycle. Design D-02: the count comes from `slots`, so
@@ -927,6 +998,34 @@ export const switchTemplate = (
       ...project,
       sections: buildDay1Sections(project.durationPreset),
       templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
+    };
+  }
+
+  if (template === 'day1-quad') {
+    // Plan Q8a / Design §4.4 — the quad template offers 15s and 30s, so a 60s
+    // project is coerced on the way in. The dialog says so before it happens,
+    // which is the same contract the looping template's ratio coercion has.
+    const preset = (
+      DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[]
+    ).includes(project.durationPreset)
+      ? project.durationPreset
+      : 30;
+
+    return {
+      ...project,
+      durationPreset: preset,
+      sections: buildDay1QuadSections(preset),
+      templateSettings: structuredClone(DEFAULT_DAY1_QUAD_SETTINGS),
+      // Plan Q9 — labels arrive filled, in every locale.
+      copy: Object.fromEntries(
+        LOCALES.map((locale) => [
+          locale,
+          {
+            ...(project.copy[locale] as LocalizedCopy),
+            day1Labels: {...DAY1_QUAD_DEFAULT_LABELS},
+          },
+        ]),
+      ) as Record<Locale, LocalizedCopy>,
     };
   }
 

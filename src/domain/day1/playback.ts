@@ -35,3 +35,20 @@ export const day1SectionDurations = (
 
   return [panelA, splitMs - panelA, DAY1_END_CARD_MS];
 };
+
+/**
+ * day1-quad Design §6.1 — the end card takes its opening slice and the four
+ * panels split the rest evenly.
+ *
+ * The remainder goes to the last panel, matching `day1SectionDurations`, so the
+ * five always total the preset exactly — the schema rejects anything else.
+ * 15s gives 3.0s per panel and 30s gives 6.75s, both clear of `MIN_SCENE_MS`.
+ */
+export const day1QuadSectionDurations = (
+  preset: DurationPreset,
+): SceneDurationsMs => {
+  const splitMs = preset * 1000 - DAY1_END_CARD_MS;
+  const each = Math.floor(splitMs / 4);
+
+  return [each, each, each, splitMs - each * 3, DAY1_END_CARD_MS];
+};

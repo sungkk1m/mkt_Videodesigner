@@ -719,6 +719,8 @@ const boxOf = (key: Day1PanelKey): PanelRect => {
 |---|---|---|---|
 | M1 | 공통 경로 (§4) | 엔드카드 길이 · 파일명 세그먼트 · 드롭다운 + E2E 헬퍼 | **기존 스위트 전량.** 단정 6곳·조작 10곳 갱신. SC7 |
 | M2 | 스키마·상수 (§5.2~5.4) | 공용 조각 추출, arm, 구간 ID, 라벨 c/d, 기본값, 프리셋 상수 | 유닛. **저장 문서 왕복이 최우선** |
+| | | **M2 실행 중 발견**: `TEMPLATE_KINDS`에 arm을 넣으면 선택기가 즉시 노출하는데, `EditorWorkspace`의 `template-unsupported` 폴백(`EditorWorkspace.tsx:724`)에는 **돌아갈 방법이 없다** — 자동저장까지 걸리면 새로고침해도 갇힌다. 그 폴백은 "미래 버전 JSON을 가져온 경우"용이었고 M2가 앱 안에서 거기로 가는 길을 만든다. 그래서 M2는 `SELECTABLE_TEMPLATES`로 선택기에서만 가려 두고, **M5가 그 상수를 지운다** | |
+| | | 또한 M2는 전환이 유효한 프로젝트를 만들어야 하므로 `switchTemplate` arm·`buildDay1QuadSections`·`day1QuadSectionDurations`를 함께 넣는다(원래 M3 항목). 넣지 않으면 스키마가 받아들이는 문서를 만들 경로가 없다 | |
 | M3 | 도메인 (§5.1, §5.5, §6.1) | `quadLayout`, 재생·구간, 키 확장, `switchTemplate`, 프리플라이트 | 유닛. 기하 전수 |
 | M4 | 컴포지션 (§6.2~6.4) | `Panel` 추출 → `QuadFrame` → `Day1QuadComposition` → 프롭 빌더 + 스냅샷 arm | 유닛 + **기존 Day1 E2E가 추출 게이트** |
 | M5 | UI (§7.1~7.3) | 애셋 4슬롯, 인스펙터 `panelKeys`, 라벨 16칸, 프리셋 목록 | E2E 신규 |

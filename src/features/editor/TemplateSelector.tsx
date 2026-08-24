@@ -14,12 +14,31 @@ import {
 const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   'three-scene': '3장면',
   day1: 'Day1 비교',
+  // day1-quad Plan Q11 — the operator's own wording.
+  'day1-quad': 'Day1(4 video)',
   'kv-loop': '키비주얼 루핑',
 };
+
+/**
+ * Templates `EditorWorkspace` can actually draw.
+ *
+ * `day1-quad` is in the schema and the domain from M2 on, but the workspace only
+ * learns to render it in M5. Until then it would land the operator on the
+ * `template-unsupported` notice, which has no way back — and autosave would keep
+ * them there across a reload. TEMPLATE_KINDS stays the schema's truth; this is
+ * the narrower "offerable" set.
+ *
+ * day1-quad Design §7.1 — delete this and map `TEMPLATE_KINDS` directly once the
+ * quad inspector lands.
+ */
+const SELECTABLE_TEMPLATES: readonly TemplateKind[] = TEMPLATE_KINDS.filter(
+  (template) => template !== 'day1-quad',
+);
 
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   'three-scene': '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
   day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
+  'day1-quad': '패널 A~D 영상과 분할선·라벨·엔드카드 설정',
   'kv-loop': '키비주얼 이미지와 반복·모션·오버레이 설정',
 };
 
@@ -60,7 +79,7 @@ export const TemplateSelector = ({
         }}
         value={current}
       >
-        {TEMPLATE_KINDS.map((template) => (
+        {SELECTABLE_TEMPLATES.map((template) => (
           <option key={template} value={template}>
             {TEMPLATE_LABELS[template]}
           </option>
