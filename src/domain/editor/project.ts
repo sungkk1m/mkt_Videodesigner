@@ -58,6 +58,7 @@ import {
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
+  MAX_LABEL_GLOW_PX,
   MAX_LABEL_OUTLINE_WIDTH_PX,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
@@ -179,6 +180,14 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
     outlineColor: '#000000',
     outlineWidthPx: 8,
     position: 'top',
+    // day1-label-effects FR-06 — both effects start off, so a project made
+    // before this cycle and a new one render the same label.
+    showBackground: false,
+    backgroundColor: '#000000',
+    backgroundOpacity: 0.6,
+    glowEnabled: false,
+    glowColor: '#ffffff',
+    glowStrengthPx: 16,
   },
   endCard: {
     mode: 'banner',
@@ -1326,6 +1335,18 @@ export const updateDay1LabelStyle = (
         patch.outlineWidthPx ?? current.outlineWidthPx,
         0,
         MAX_LABEL_OUTLINE_WIDTH_PX,
+      ),
+      // day1-label-effects FR-02/FR-04 — the two numeric effect fields clamp
+      // like every other bounded label value rather than rejecting the patch.
+      backgroundOpacity: clamp(
+        patch.backgroundOpacity ?? current.backgroundOpacity,
+        0,
+        1,
+      ),
+      glowStrengthPx: clamp(
+        patch.glowStrengthPx ?? current.glowStrengthPx,
+        0,
+        MAX_LABEL_GLOW_PX,
       ),
     },
   });

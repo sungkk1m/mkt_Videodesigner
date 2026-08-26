@@ -1,0 +1,115 @@
+# day1-label-effects Do Report
+
+> 2026-08-26 (단일 세션) · Plan → (경량 Design, Plan §5 내장) → Do → Check(부분)
+> 브랜치 `claude/label-textbox-effect-toggle-5kayu6` · **main 병합 보류**(사용자 요청: 다른 기능 진행 중)
+> 상태: **구현 완료, SC5(실렌더 픽셀)만 이 컨테이너에서 실행 불가 — §4 참조**
+
+발단은 기능 요청이 아니라 **실현 가능성 질문**이었다. "Day1 · Day1(4 video) 라벨에
+텍스트 박스 on/off를, 가능하면 글로우 on/off까지"라는 요청에 대해 Plan §0에서 두
+템플릿이 `Panel.tsx`의 `PanelLabel` 하나를 공유한다는 것과, 두 효과가 이미 다른
+오버레이에서 같은 렌더 경로로 MP4에 구워지고 있다는 것을 코드 근거로 확인한 뒤,
+Q1–Q5 확정을 받아 그대로 구현했다.
+
+## Executive Summary
+
+| 항목 | 값 |
+|------|-----|
+| Feature | day1-label-effects |
+| 변경 규모 | 프로덕션 7파일(신규 1) · 테스트 4파일(신규 1) — `labelStyle` 6필드, 컴포지션 1곳, 인스펙터 2토글+4필드 |
+| 최종 검증 | 유닛 **588 passed**(신규 7) · `tsc -b` + `vite build` 성공 · 신규 e2e L2 **2 passed** · 기존 e2e 회귀 7 passed |
+| 미실행 | 신규 e2e L3(실렌더 2건) — 이 컨테이너에 H.264 코덱을 가진 Chrome이 없음(§4) |
+| 착수 시 기준선 | 유닛 581 passed |
+
+### Value Delivered
+
+| 관점 | 계획 | 실제 전달 |
+|------|------|-----------|
+| Problem | 밝은 게임플레이 위 라벨 가독성 부족 | 라벨 뒤 반투명 채움 판 + 글자 둘레 글로우, 각각 독립 on/off |
+| Solution | 공유 `labelStyle`에 6필드 | 스키마·기본값·클램프·렌더·UI 전부 반영, 신규 커맨드 0개 |
+| Function UX | 두 템플릿 동시 적용 | `Panel.tsx` 1곳 수정으로 Day1·Day1(4 video) 동시 적용(유닛 테스트로 양쪽 고정) |
+| Core Value | 기존 프로젝트 무영향 | zod `.default()` + 기본 꺼짐 — 마이그레이션 0줄, `PROJECT_SCHEMA_VERSION` 2 유지 |
+
+## 1. Key Decisions & Outcomes
+
+| 결정 | 근거 | 결과 |
+|------|------|------|
+| Q1 채움 판(테두리 사각형 아님) | 자막 "배경 사용"과 같은 개념, 가독성 목적에 직접 부합 | `SubtitleOverlay`와 동일한 여백(`0.3em 0.6em`)·모서리(8px) — 새 상수 0개 |
+| Q2·Q3 색·수치까지 노출 | 흰 글자에 흰 글로우처럼 무의미한 고정 조합을 피함 | 박스 3필드 + 글로우 3필드, 자막 스키마와 같은 이름 |
+| Q4 독립 토글(배타 아님) | 배타 처리는 사용자가 원한 조합을 막는다 | 동시 사용 가능. 이때 글로우는 판 **안쪽**에서 보인다(§3 문서화된 동작) |
+| Q5 `hexToRgba` 공유 파일로 이동 | 복제 금지 | `src/compositions/shared/color.ts` 신설, `SubtitleOverlay`는 import 1줄만 변경 |
+| 글로우는 `text-shadow` 2겹 | `filter: drop-shadow`는 박스 사각형까지 발광시키고 요소를 매 프레임 래스터화 | 정지 텍스트라 프레임당 비용 무시 가능 |
+| 기본 꺼짐 | 기존 프로젝트 산출물 보존 | 저장된 v2 문서가 외곽선만 있는 라벨로 그대로 파싱됨(유닛으로 고정) |
+
+## 2. 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `src/domain/editor/schema.ts` | `day1LabelStyleSchema`에 6필드 `.default()` |
+| `src/domain/editor/constants.ts` | `MAX_LABEL_GLOW_PX = 32` |
+| `src/domain/editor/types.ts` | 렌더 프롭 `Day1LabelStyle`에 같은 6필드 |
+| `src/domain/editor/project.ts` | 기본값 6개 + `updateDay1LabelStyle` 클램프 2개 |
+| `src/compositions/shared/color.ts` | **신규** — `hexToRgba` 공용화(순수 이동) |
+| `src/compositions/shared/SubtitleOverlay.tsx` | 위 함수 import로 전환(동작 무변경) |
+| `src/compositions/day1/Panel.tsx` | `PanelLabel`에 배경/여백/모서리 + `textShadow` 분기 |
+| `src/features/editor/Day1Inspector.tsx` | 라벨 섹션에 토글 2 + 조건부 필드 4 |
+| `.gitignore` | `artifacts/day1-label-effects/`(렌더 산출물) |
+
+Plan §3의 "변경 없음" 예측이 그대로 지켜졌다: `projectStore.ts`·`EditorWorkspace.tsx`·
+`SplitFrame.tsx`·`QuadFrame.tsx`는 한 줄도 바뀌지 않았다(`onLabelStyle`이 이미
+`Partial<labelStyle>`을 통과시키고, 프롭 빌더가 이미 스프레드로 전달했기 때문).
+
+## 3. 문서화된 동작 — 박스와 글로우를 함께 켰을 때
+
+글로우는 판의 배경과 **같은 요소**에 얹히는 `text-shadow`이므로, 박스를 켜면 글로우는
+판 안쪽에서만 보인다(판 바깥으로 번지지 않는다). Q4에서 확정한 대로 막지 않았고,
+`Panel.tsx`의 주석에 같은 내용을 남겼다. 판 밖으로 번지는 발광이 필요하면 별도
+사이클에서 `filter: drop-shadow` 옵션을 논의해야 한다.
+
+## 4. Success Criteria Final Status — 4/6 검증, 2건 환경 제약
+
+| SC | 내용 | 상태 |
+|----|------|------|
+| SC1 | 기존 v2 문서가 6필드 기본값으로 파싱 · 범위 위반 거부 | ✅ 유닛 3건 신규 |
+| SC2 | 커맨드 패치·클램프, day1·quad 양쪽 | ✅ 유닛 2건 신규 |
+| SC3 | 프롭 통과, day1·quad 양쪽 | ✅ 유닛 2건 신규 |
+| SC4 | 토글이 꺼졌으면 하위 필드 비노출, 켜면 노출(두 템플릿) | ✅ e2e L2 2건 신규, 실브라우저 통과 |
+| SC5 | 실렌더 MP4에서 판 색·글로우 픽셀 확인 | ⚠️ **미실행** — 스펙은 작성했으나 이 컨테이너에서 실행 불가 |
+| SC6 | `tsc -b` + 전체 유닛 + 기존 e2e 그린 | ✅ 유닛 588 · build 성공 · 업로드 불필요한 기존 e2e 7건 통과 |
+
+### SC5가 미실행인 이유 (환경 제약, 코드 문제 아님)
+
+이 세션의 컨테이너에는 Playwright 번들 Chromium만 있고 `channel: 'chrome'`
+(실제 Google Chrome)이 없다. 오픈소스 Chromium 빌드에는 독점 코덱이 없어
+**H.264를 디코딩·인코딩하지 못한다.** 실측한 증상:
+
+- 번들 Chromium으로 픽스처(H.264 MP4)를 업로드하면 앱이 정상적으로 거부한다 —
+  "Chrome이 이 영상을 열지 못했습니다 (H.264 (avc1))". 업로드가 막히므로 렌더는
+  물론 미리보기 DOM 확인도 불가.
+- VP8 WebM 소스로 우회해도 프리뷰 게이트(`panelA.url === null`)를 넘지 못했고,
+  출력이 H.264이므로 인코딩 단계에서 다시 막힌다.
+- `npx playwright install chrome`은 이 환경의 프록시가 차단한다(403).
+
+같은 제약이 기존 스펙에도 그대로 걸린다(업로드가 필요한 기존 Day1 e2e도 이 컨테이너에서는
+실행 불가). 따라서 SC5는 **실제 Chrome이 있는 개발/CI 환경에서 `npx playwright test
+day1-label-effects.spec.ts`로 확인**해야 한다.
+
+### SC5 스펙 설계 — 기하 가정 없이 프레임 전체를 센다
+
+라벨 판의 위치는 시스템 폰트 메트릭에 좌우되므로, 좁은 밴드를 좌표로 찍는 대신
+**1080×1920 프레임 전체에서 효과 픽셀 수를 센다**. 0.5s에서 패널 A는 `#e6194b`
+컬러로 재생 중이고 패널 B는 흑백 정지이므로, 판 색(`#ff00ff`)이나 초록 우세 픽셀은
+footage에서 나올 수 없다. 두 렌더가 서로의 음성(negative)을 증명한다:
+
+| 렌더 | 켠 효과 | 기대 |
+|---|---|---|
+| `label-box.mp4` | 박스 `#ff00ff` 100% | 판 색 픽셀 > 5,000 **그리고** 초록 우세 < 2,000 (글로우 꺼짐 증명) |
+| `label-glow.mp4` | 글로우 `#00ff00` 32px | 초록 우세 > 2,000 **그리고** 판 색 < 5,000 (박스 꺼짐 증명) |
+
+## 5. Residual Risks / Follow-ups
+
+| 항목 | 상태 |
+|---|---|
+| SC5 실행 | 사용자 환경에서 1회 실행 필요. 임계값(5,000 / 2,000)은 여유 있게 잡았지만 첫 실행에서 실측치를 보고 조정할 수 있다 |
+| main 병합 | 보류. 진행 중 기능이 정리된 뒤 결정 |
+| README 기능표 | 병합 시점에 라벨 효과 1줄 추가 |
+| 판 여백·모서리 노출 | Non-goal 유지(자막과 같은 고정값). 요청이 생기면 별도 사이클 |

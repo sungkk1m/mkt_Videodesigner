@@ -269,6 +269,14 @@ export interface Day1LabelStyle {
   outlineColor: string;
   outlineWidthPx: number;
   position: SubtitleStyle['position'];
+  /** day1-label-effects FR-01/FR-02 — the fill plate behind the text. */
+  showBackground: boolean;
+  backgroundColor: string;
+  backgroundOpacity: number;
+  /** FR-03/FR-04 — the halo around the glyph and its outline. */
+  glowEnabled: boolean;
+  glowColor: string;
+  glowStrengthPx: number;
 }
 
 /**
