@@ -35,10 +35,9 @@ const BOX_PADDING = '0.3em 0.6em';
 const BOX_RADIUS = 8;
 
 /**
- * day1-label-effects FR-03 — two shadow layers: a tight one that reads as an
- * edge and a doubled one that carries the falloff. `text-shadow` rather than
- * `filter: drop-shadow`, because drop-shadow would glow the plate's rectangle
- * instead of the letters and would rasterise the element every frame.
+ * day1-label-effects FR-03/FR-07 — one halo shape for both glows: a tight layer
+ * that reads as an edge and a doubled one that carries the falloff. Only the
+ * shape is shared; each glow passes its own colour and radius.
  */
 const halo = (strengthPx: number, color: string) =>
   `0 0 ${strengthPx}px ${color}, 0 0 ${strengthPx * 2}px ${color}`;
@@ -93,6 +92,9 @@ const PanelLabel = ({
         padding: style.showBackground ? BOX_PADDING : 0,
         paintOrder: 'stroke',
         textAlign: 'center',
+        // FR-03 — `text-shadow` rather than `filter: drop-shadow`: drop-shadow
+        // would trace the plate's rectangle instead of the letters, and it
+        // rasterises the element every frame.
         textShadow: style.glowEnabled
           ? halo(style.glowStrengthPx, style.glowColor)
           : undefined,
