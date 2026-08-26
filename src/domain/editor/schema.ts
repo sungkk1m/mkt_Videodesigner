@@ -37,6 +37,7 @@ import {
   MAX_SECTION_COUNT,
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
+  MAX_KV_BLUR_PX,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
   MEDIA_FITS,
@@ -462,7 +463,17 @@ export const kvLoopSettingsSchema = z.object({
    * every one of their slots an explicit motion.
    */
   motion: kvMotionSchema.default(ZOOM_IN_MOTION),
-  transitionMs: z.number().min(MIN_TRANSITION_MS).max(MAX_TRANSITION_MS),
+  /**
+   * kv-loop-reference-motion R-1 — from → to → from with the peak at the
+   * hold's centre. Stored documents predate the field and were one-way, which
+   * is what the default preserves (FR-R12).
+   */
+  roundTrip: z.boolean().default(false),
+  /**
+   * kv-loop-reference-motion R-3 — zero is a hard cut. The floor is lowered
+   * here only; MIN_TRANSITION_MS still governs the three-scene template.
+   */
+  transitionMs: z.number().min(0).max(MAX_TRANSITION_MS),
   /** Plan L5 — every field here may be empty and the render still runs. */
   title: z.object({
     images: z.partialRecord(localeSchema, mediaReferenceSchema),
@@ -475,6 +486,18 @@ export const kvLoopSettingsSchema = z.object({
   }),
   /** FR-L17 — closing fade to black. Zero is off. */
   fadeOutMs: z.number().min(0).max(MAX_TRANSITION_MS),
+  /**
+   * kv-loop-reference-motion R-4/R-5 — the gaussian bookends. Either value at
+   * zero turns both ends off, which is also what stored documents parse to.
+   * `durationMs` is fps-independent (D-07); `amountPx` is CSS px on the one
+   * canvas size this template renders (D-08).
+   */
+  blur: z
+    .object({
+      durationMs: z.number().min(0).max(MAX_TRANSITION_MS),
+      amountPx: z.number().min(0).max(MAX_KV_BLUR_PX),
+    })
+    .default({durationMs: 0, amountPx: 0}),
 });
 
 export const templateSettingsSchema = z.discriminatedUnion('template', [

@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T07:30:00.000Z",
+  "lastUpdated": "2026-08-26T09:40:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -705,6 +705,57 @@
         ]
       }
     },
+    "kv-loop-reference-motion": {
+      "phase": "completed",
+      "phaseNumber": 6,
+      "matchRate": 100,
+      "iterationCount": 1,
+      "requirements": [
+        "FR-R01",
+        "FR-R02",
+        "FR-R03",
+        "FR-R04",
+        "FR-R05",
+        "FR-R06",
+        "FR-R07",
+        "FR-R08",
+        "FR-R09",
+        "FR-R10",
+        "FR-R11",
+        "FR-R12",
+        "FR-R13"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md",
+        "design": "docs/02-design/features/kv-loop-reference-motion.design.md",
+        "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md",
+        "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md",
+        "m4Runbook": "docs/01-plan/kv-loop-reference-motion.m4-runbook.md",
+        "m4Verification": "docs/03-analysis/kv-loop-reference-motion.m4-render-verification.md",
+        "report": "docs/04-report/kv-loop-reference-motion.report.md"
+      },
+      "timestamps": {
+        "started": "2026-08-26T06:20:00.000Z",
+        "lastUpdated": "2026-08-26T09:40:00.000Z"
+      },
+      "notes": "Cycle complete. Match Rate 100%, SC 8/8 (7 measured on the real-device H.264 render, SC6 covered by schema-default unit tests). D-10 settled: intensity 0.5 stays (adjustable in UI). NFR-R02 passed (~2% blur overhead). Merged to main; next: kv-object-animation (draft plan + handoff doc docs/00-history/2026-08-26-kv-object-animation-handoff.md)."
+    },
+    "kv-object-animation": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {
+        "plan": "docs/01-plan/features/kv-object-animation.plan.md",
+        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md"
+      },
+      "timestamps": {
+        "started": "2026-08-26T09:10:00.000Z",
+        "lastUpdated": "2026-08-26T09:10:00.000Z"
+      },
+      "notes": "Draft only — the template's confirmed end goal: objects designated by AI or by the user directly, with effects (particles, glow pulse, light sweep) rendered as a deterministic canvas layer. Gated behind kv-loop-reference-motion M4/M5. Not in activeFeatures (cap 5)."
+    },
     "day1-label-effects": {
       "phase": "check",
       "phaseNumber": 4,
@@ -956,13 +1007,44 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-26T06:10:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "none",
+        "to": "plan",
+        "at": "2026-08-26T06:20:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-26T07:10:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "design",
+        "to": "do",
+        "scope": "m0-m3",
+        "at": "2026-08-26T08:20:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-26T08:40:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "check",
+        "to": "completed",
+        "at": "2026-08-26T09:40:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T07:30:00.000Z"
+    "lastActivity": "2026-08-26T09:40:00.000Z"
   },
   "history": [
     {
@@ -998,6 +1080,18 @@
       "scope": "module-1"
     },
     {
+      "timestamp": "2026-07-28T05:21:54.642264Z",
+      "feature": "day1-template",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-07-28T05:39:25.661047Z",
+      "feature": "day1-template",
+      "phase": "design",
+      "action": "created"
+    },
+    {
       "timestamp": "2026-07-28T10:30:00.000Z",
       "feature": "browser-video-mvp",
       "phase": "do",
@@ -1031,18 +1125,6 @@
       "phase": "do",
       "action": "updated",
       "scope": "module-7"
-    },
-    {
-      "timestamp": "2026-07-28T05:21:54.642264Z",
-      "feature": "day1-template",
-      "phase": "plan",
-      "action": "created"
-    },
-    {
-      "timestamp": "2026-07-28T05:39:25.661047Z",
-      "feature": "day1-template",
-      "phase": "design",
-      "action": "created"
     },
     {
       "timestamp": "2026-07-30T09:30:00.000Z",
@@ -1309,6 +1391,12 @@
       "action": "sc5-blocked-no-h264-chrome"
     },
     {
+      "timestamp": "2026-08-26T06:20:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "plan",
+      "action": "plan-drafted-awaiting-decisions"
+    },
+    {
       "timestamp": "2026-08-26T06:40:00.000Z",
       "feature": "day1-label-effects",
       "phase": "check",
@@ -1321,6 +1409,12 @@
       "action": "glow-default-black-recaptured"
     },
     {
+      "timestamp": "2026-08-26T07:10:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "design",
+      "action": "decisions-locked-reference-measured-design-drafted"
+    },
+    {
       "timestamp": "2026-08-26T07:25:00.000Z",
       "feature": "day1-label-effects",
       "phase": "check",
@@ -1331,6 +1425,36 @@
       "feature": "day1-label-effects",
       "phase": "check",
       "action": "regression-control-vs-main-34-eq-34"
+    },
+    {
+      "timestamp": "2026-08-26T08:20:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "do",
+      "action": "m0-m3-complete-in-container"
+    },
+    {
+      "timestamp": "2026-08-26T08:40:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "check",
+      "action": "m4-real-device-render-all-measured-sc-pass"
+    },
+    {
+      "timestamp": "2026-08-26T09:10:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "do",
+      "action": "codec-verified-m4-runbook-blur-cost-measured"
+    },
+    {
+      "timestamp": "2026-08-26T09:10:00.000Z",
+      "feature": "kv-object-animation",
+      "phase": "plan",
+      "action": "draft-plan-created-final-goal"
+    },
+    {
+      "timestamp": "2026-08-26T09:40:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "completed",
+      "action": "cycle-complete-d10-settled-report-written"
     }
   ],
   "stateMachine": {

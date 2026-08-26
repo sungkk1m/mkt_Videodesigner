@@ -379,6 +379,12 @@ export interface KvMotionKeyframes {
   from: KvRect;
   to: KvRect;
   easing: KvEasing;
+  /**
+   * kv-loop-reference-motion R-1 — true runs from → to → from with the peak at
+   * the hold's exact centre, so the hold's last frame is back at `from` and a
+   * cut into the next hold cannot jump (FR-R03).
+   */
+  roundTrip: boolean;
 }
 
 export interface KvSlotRenderProps {
@@ -420,6 +426,12 @@ export type KvLoopProps = {
   transitionInFrames: number;
   /** FR-L17 — zero means no closing fade. */
   fadeOutFrames: number;
+  /**
+   * kv-loop-reference-motion R-4/R-5 — the gaussian bookends, already in
+   * frames. Either being zero turns both ends off.
+   */
+  blurInFrames: number;
+  blurAmountPx: number;
   totalFrames: number;
   title: KvOverlayRenderProps;
   disclaimer: KvDisclaimerRenderProps;
