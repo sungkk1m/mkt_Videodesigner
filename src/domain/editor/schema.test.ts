@@ -14,6 +14,7 @@ import {
   day1QuadProjectFixture,
   kvLoopProjectFixture,
 } from '../../test/fixtures/project';
+import {MAX_LABEL_GLOW_PX} from './constants';
 import type {EditorProject, Section, ThreeSceneSettings} from './types';
 
 const valid = (): EditorProject => createProject(15);
@@ -165,6 +166,12 @@ describe('parseProject — Day1 payload', () => {
           outlineColor: '#000000',
           outlineWidthPx: 8,
           position: 'center',
+          showBackground: false,
+          backgroundColor: '#000000',
+          backgroundOpacity: 0.6,
+          glowEnabled: false,
+          glowColor: '#000000',
+          glowStrengthPx: 16,
         },
         endCard: {
           mode: 'banner',
@@ -251,6 +258,72 @@ describe('parseProject — Day1 payload', () => {
       expect(endCard.videoAudioEnabled).toBe(true);
       expect(endCard.videoAudioVolume).toBe(1);
     }
+  });
+
+  // day1-label-effects Plan SC1 — the same zero-migration story once more: a
+  // document saved before this cycle has no box or glow keys and parses as the
+  // outline-only label it was saved with.
+  it('defaults a legacy labelStyle without the effect fields to both effects off', () => {
+    const project = day1Project();
+    const {
+      showBackground: _b,
+      backgroundColor: _bc,
+      backgroundOpacity: _bo,
+      glowEnabled: _g,
+      glowColor: _gc,
+      glowStrengthPx: _gs,
+      ...legacyLabelStyle
+    } = project.templateSettings.template === 'day1'
+      ? project.templateSettings.labelStyle
+      : (() => {
+          throw new Error('fixture must be day1');
+        })();
+    const legacy = {
+      ...project,
+      templateSettings: {
+        ...project.templateSettings,
+        labelStyle: legacyLabelStyle,
+      },
+    };
+
+    const result = parseProject(legacy);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok && result.value.templateSettings.template === 'day1') {
+      const {labelStyle} = result.value.templateSettings;
+
+      expect(labelStyle.showBackground).toBe(false);
+      expect(labelStyle.backgroundColor).toBe('#000000');
+      expect(labelStyle.backgroundOpacity).toBe(0.6);
+      expect(labelStyle.glowEnabled).toBe(false);
+      expect(labelStyle.glowColor).toBe('#000000');
+      expect(labelStyle.glowStrengthPx).toBe(16);
+    }
+  });
+
+  it('rejects an out-of-range label box opacity (SC1)', () => {
+    const project = day1Project();
+
+    if (project.templateSettings.template !== 'day1') {
+      throw new Error('fixture must be day1');
+    }
+
+    project.templateSettings.labelStyle.backgroundOpacity = 1.5;
+
+    expect(parseProject(project).ok).toBe(false);
+  });
+
+  it('rejects a label glow past the maximum blur radius (SC1)', () => {
+    const project = day1Project();
+
+    if (project.templateSettings.template !== 'day1') {
+      throw new Error('fixture must be day1');
+    }
+
+    project.templateSettings.labelStyle.glowStrengthPx = MAX_LABEL_GLOW_PX + 1;
+
+    expect(parseProject(project).ok).toBe(false);
   });
 
   it('rejects an out-of-range end-card audio volume (SC1)', () => {

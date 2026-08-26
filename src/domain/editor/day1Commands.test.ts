@@ -36,6 +36,7 @@ import {testMediaReference} from '../../test/fixtures/media';
 import {
   DAY1_QUAD_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
+  MAX_LABEL_GLOW_PX,
 } from './types';
 import {
   day1ProjectFixture,
@@ -402,6 +403,27 @@ describe('Day1 split, labels, and end card', () => {
     expect(day1(project).labelStyle.fontSize).toBe(120);
     expect(day1(project).labelStyle.outlineWidthPx).toBe(16);
     expect(day1(project).labelStyle.position).toBe('center');
+  });
+
+  // day1-label-effects Plan SC2 — the two new numeric fields clamp like every
+  // other bounded label value, and the booleans pass through untouched.
+  it('takes the box and glow patch and clamps its two numbers', () => {
+    const project = updateDay1LabelStyle(withPanels(), {
+      showBackground: true,
+      backgroundColor: '#123456',
+      backgroundOpacity: 1.5,
+      glowEnabled: true,
+      glowColor: '#ff00ff',
+      glowStrengthPx: 99,
+    });
+
+    expect(day1(project).labelStyle.showBackground).toBe(true);
+    expect(day1(project).labelStyle.backgroundColor).toBe('#123456');
+    expect(day1(project).labelStyle.backgroundOpacity).toBe(1);
+    expect(day1(project).labelStyle.glowEnabled).toBe(true);
+    expect(day1(project).labelStyle.glowColor).toBe('#ff00ff');
+    expect(day1(project).labelStyle.glowStrengthPx).toBe(MAX_LABEL_GLOW_PX);
+    expect(parseProject(project).ok).toBe(true);
   });
 
   it('patches the end card layers and presets', () => {
@@ -881,6 +903,21 @@ describe('shared-field commands on the four-panel template', () => {
 
     expect(day1QuadSettingsOf(project).labelStyle.position).toBe('center');
     expect(day1QuadSettingsOf(project).labelStyle.fontSize).toBe(60);
+  });
+
+  // day1-label-effects FR-05 — the quad shares the command, so the same patch
+  // has to land on the four-panel template too.
+  it('takes the box and glow patch on a quad project', () => {
+    const project = updateDay1LabelStyle(day1QuadProjectFixture(), {
+      showBackground: true,
+      glowEnabled: true,
+      glowStrengthPx: 24,
+    });
+
+    expect(day1QuadSettingsOf(project).labelStyle.showBackground).toBe(true);
+    expect(day1QuadSettingsOf(project).labelStyle.glowEnabled).toBe(true);
+    expect(day1QuadSettingsOf(project).labelStyle.glowStrengthPx).toBe(24);
+    expect(parseProject(project).ok).toBe(true);
   });
 
   it('switches the end card to video mode on a quad project', () => {

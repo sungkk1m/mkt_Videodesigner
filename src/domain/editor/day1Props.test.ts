@@ -12,6 +12,7 @@ import {
   createProject,
   setDay1LabelText,
   setDay1PanelSource,
+  updateDay1LabelStyle,
   parseProject,
   updateDay1Transform,
 } from './project';
@@ -185,6 +186,29 @@ describe('buildDay1Props', () => {
       buildDay1Props({...project, selectedLocale: 'en'}, testUrlResolver())
         ?.panelA.label,
     ).toBe('');
+  });
+
+  // day1-label-effects Plan SC3 — the effect fields ride the same spread the
+  // rest of `labelStyle` does, so the composition sees exactly what was stored.
+  it('carries the label box and glow settings into the render props', () => {
+    const project = updateDay1LabelStyle(loadedDay1(), {
+      showBackground: true,
+      backgroundColor: '#123456',
+      backgroundOpacity: 0.8,
+      glowEnabled: true,
+      glowColor: '#ff00ff',
+      glowStrengthPx: 24,
+    });
+    const props = buildDay1Props(project, testUrlResolver());
+
+    expect(props?.labelStyle).toMatchObject({
+      showBackground: true,
+      backgroundColor: '#123456',
+      backgroundOpacity: 0.8,
+      glowEnabled: true,
+      glowColor: '#ff00ff',
+      glowStrengthPx: 24,
+    });
   });
 
   it('carries BGM but no narration, since Day1 is outside the TTS scope', () => {
@@ -365,6 +389,23 @@ describe('buildDay1QuadProps', () => {
       expect(panel.url).toBe(TEST_SOURCE_URL);
       // Plan Q4 — panels start `contain`, so the backdrop path is live.
       expect(panel.fit).toBe('contain');
+    });
+  });
+
+  // day1-label-effects FR-05 — one shared style set, so the quad's props carry
+  // the same effects as Day1's.
+  it('carries the label box and glow settings into the quad render props', () => {
+    const project = updateDay1LabelStyle(withFourPanels(), {
+      showBackground: true,
+      glowEnabled: true,
+      glowStrengthPx: 24,
+    });
+    const props = buildDay1QuadProps(project, testUrlResolver());
+
+    expect(props?.labelStyle).toMatchObject({
+      showBackground: true,
+      glowEnabled: true,
+      glowStrengthPx: 24,
     });
   });
 
