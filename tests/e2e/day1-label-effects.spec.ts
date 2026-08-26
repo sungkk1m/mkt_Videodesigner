@@ -30,6 +30,8 @@ const RENDER_TIMEOUT = 10 * 60 * 1000;
 /** Neither fixture palette holds it, so a match in the output is the plate. */
 const BOX_HEX = '#ff00ff';
 const GLOW_HEX = '#00ff00';
+/** Yellow is dominant in neither the plate (magenta) nor the glyph glow. */
+const BOX_GLOW_HEX = '#ffff00';
 
 /**
  * The whole 9:16 frame, deliberately: counting effect pixels anywhere beats
@@ -67,6 +69,10 @@ const countNear = (pixels: Rgb[], hex: string) => {
 
 const countGreenDominant = (pixels: Rgb[]) =>
   pixels.filter(([r, g, b]) => g > r + DOMINANCE && g > b + DOMINANCE).length;
+
+/** FR-07 — the plate's halo. Magenta and white both fail this test. */
+const countYellowDominant = (pixels: Rgb[]) =>
+  pixels.filter(([r, g, b]) => r > b + DOMINANCE && g > b + DOMINANCE).length;
 
 const openDay1WithLabel = async (page: Page) => {
   await page.goto('/');
@@ -137,6 +143,19 @@ test.describe('day1-label-effects — inspector (L2)', () => {
     // Q4 — the effects are independent, so the box does not pull the glow in.
     await expect(page.getByTestId('day1-label-glow-color')).toHaveCount(0);
 
+    // FR-07/FR-08 — the plate's own halo lives under the plate, off by default,
+    // and reveals its own colour and radius rather than the lettering's.
+    await expect(page.getByTestId('day1-label-box-glow')).not.toBeChecked();
+    await expect(page.getByTestId('day1-label-box-glow-color')).toHaveCount(0);
+
+    await page.getByTestId('day1-label-box-glow').check();
+
+    await expect(page.getByTestId('day1-label-box-glow-color')).toBeVisible();
+    await expect(
+      page.getByTestId('day1-label-box-glow-strength-number'),
+    ).toHaveValue('16');
+    await expect(page.getByTestId('day1-label-glow-color')).toHaveCount(0);
+
     await page.getByTestId('day1-label-glow').check();
 
     await expect(page.getByTestId('day1-label-glow-color')).toBeVisible();
@@ -147,6 +166,8 @@ test.describe('day1-label-effects — inspector (L2)', () => {
     await page.getByTestId('day1-label-background').uncheck();
 
     await expect(page.getByTestId('day1-label-background-color')).toHaveCount(0);
+    // The plate's halo is a plate setting, so it hides with the plate.
+    await expect(page.getByTestId('day1-label-box-glow')).toHaveCount(0);
     await expect(page.getByTestId('day1-label-glow-color')).toBeVisible();
   });
 
@@ -158,9 +179,11 @@ test.describe('day1-label-effects — inspector (L2)', () => {
     await page.getByTestId('section-day1-label').click();
 
     await page.getByTestId('day1-label-background').check();
+    await page.getByTestId('day1-label-box-glow').check();
     await page.getByTestId('day1-label-glow').check();
 
     await expect(page.getByTestId('day1-label-background-color')).toBeVisible();
+    await expect(page.getByTestId('day1-label-box-glow-strength')).toBeVisible();
     await expect(page.getByTestId('day1-label-glow-strength')).toBeVisible();
   });
 });
@@ -177,11 +200,16 @@ test.describe('day1-label-effects — render (L3)', () => {
     await page.getByTestId('day1-label-background').check();
     await page.getByTestId('day1-label-background-color').fill(BOX_HEX);
     await page.getByTestId('day1-label-background-opacity-number').fill('100');
+    // FR-07 — the plate's halo rides out on the same render.
+    await page.getByTestId('day1-label-box-glow').check();
+    await page.getByTestId('day1-label-box-glow-color').fill(BOX_GLOW_HEX);
+    await page.getByTestId('day1-label-box-glow-strength-number').fill('32');
 
     const frame = await renderAndSample(page, 'label-box.mp4');
 
     expect(countNear(frame, BOX_HEX)).toBeGreaterThan(EFFECT_PIXELS);
-    // FR-06 — the glow stayed off, so nothing in the frame glows.
+    expect(countYellowDominant(frame)).toBeGreaterThan(GLOW_PIXELS);
+    // FR-06 — the glyph glow stayed off, so no letter in the frame glows.
     expect(countGreenDominant(frame)).toBeLessThan(GLOW_PIXELS);
   });
 
@@ -194,10 +222,18 @@ test.describe('day1-label-effects — render (L3)', () => {
     await page.getByTestId('day1-label-glow-color').fill(GLOW_HEX);
     await page.getByTestId('day1-label-glow-strength-number').fill('32');
 
+    // FR-07 — switch the plate's halo on and then take the plate away. The
+    // setting stays stored, and the render must show no halo at all.
+    await page.getByTestId('day1-label-background').check();
+    await page.getByTestId('day1-label-box-glow').check();
+    await page.getByTestId('day1-label-box-glow-color').fill(BOX_GLOW_HEX);
+    await page.getByTestId('day1-label-background').uncheck();
+
     const frame = await renderAndSample(page, 'label-glow.mp4');
 
     expect(countGreenDominant(frame)).toBeGreaterThan(GLOW_PIXELS);
     // FR-06 — the box stayed off, so there is no plate anywhere.
     expect(countNear(frame, BOX_HEX)).toBeLessThan(EFFECT_PIXELS);
+    expect(countYellowDominant(frame)).toBeLessThan(GLOW_PIXELS);
   });
 });

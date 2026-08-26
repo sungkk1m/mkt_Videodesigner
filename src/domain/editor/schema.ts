@@ -302,6 +302,15 @@ export const day1LabelStyleSchema = z.object({
   glowEnabled: z.boolean().default(false),
   glowColor: hexColorSchema.default('#000000'),
   glowStrengthPx: z.number().min(0).max(MAX_LABEL_GLOW_PX).default(16),
+  /**
+   * FR-07/FR-08 — the halo around the plate's own rectangle. Deliberately a
+   * second set of fields rather than a reuse of the glyph glow: the two are
+   * independent by requirement, so a white plate halo must not repaint the
+   * lettering white.
+   */
+  boxGlowEnabled: z.boolean().default(false),
+  boxGlowColor: hexColorSchema.default('#000000'),
+  boxGlowStrengthPx: z.number().min(0).max(MAX_LABEL_GLOW_PX).default(16),
 });
 
 export const day1EndCardSchema = z.object({

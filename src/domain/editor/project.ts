@@ -188,6 +188,9 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
     glowEnabled: false,
     glowColor: '#000000',
     glowStrengthPx: 16,
+    boxGlowEnabled: false,
+    boxGlowColor: '#000000',
+    boxGlowStrengthPx: 16,
   },
   endCard: {
     mode: 'banner',
@@ -1345,6 +1348,11 @@ export const updateDay1LabelStyle = (
       ),
       glowStrengthPx: clamp(
         patch.glowStrengthPx ?? current.glowStrengthPx,
+        0,
+        MAX_LABEL_GLOW_PX,
+      ),
+      boxGlowStrengthPx: clamp(
+        patch.boxGlowStrengthPx ?? current.boxGlowStrengthPx,
         0,
         MAX_LABEL_GLOW_PX,
       ),

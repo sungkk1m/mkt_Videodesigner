@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T07:30:00.000Z",
+  "lastUpdated": "2026-08-26T08:05:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -725,7 +725,7 @@
       },
       "timestamps": {
         "started": "2026-08-26T05:20:00.000Z",
-        "lastUpdated": "2026-08-26T07:30:00.000Z"
+        "lastUpdated": "2026-08-26T08:05:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -770,8 +770,18 @@
           "SC2": "met - command patch and clamps on day1 and quad",
           "SC3": "met - render props pass-through on both templates",
           "SC4": "met - inspector reveals settings only while the toggle is on",
-          "SC5": "partial - six combinations visually confirmed in the real preview (same composition as the render); encoded-MP4 pixel proof still needs real Chrome",
+          "SC5": "met - closed by the operator's own render from the deployed site (report §6): plate alpha and glow falloff measured on the encoded H.264 output",
           "SC6": "met - unit suite, build, and upload-free e2e regressions green"
+        },
+        "iteration2": {
+          "request": "a glow for the text box too, same UI as the text glow, values not synced",
+          "fields": "boxGlowEnabled / boxGlowColor / boxGlowStrengthPx, all zod .default()",
+          "render": "box-shadow, gated on showBackground; shares only the halo() helper with the glyph glow",
+          "verification": "unit 592 (4 new), tsc -b, e2e L2 2 passed, preview capture of 5 combinations"
+        },
+        "shipped": {
+          "iteration1": "86409dd merged to main 2026-08-26, auto-deployed to GitHub Pages (run 32941843001)",
+          "iteration2": "on the feature branch, awaiting the user's go-ahead to merge"
         }
       }
     }
@@ -962,7 +972,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T07:30:00.000Z"
+    "lastActivity": "2026-08-26T08:05:00.000Z"
   },
   "history": [
     {
@@ -1331,6 +1341,12 @@
       "feature": "day1-label-effects",
       "phase": "check",
       "action": "regression-control-vs-main-34-eq-34"
+    },
+    {
+      "timestamp": "2026-08-26T08:05:00.000Z",
+      "feature": "day1-label-effects",
+      "phase": "check",
+      "action": "sc5-closed-by-production-render-and-box-glow-implemented"
     }
   ],
   "stateMachine": {

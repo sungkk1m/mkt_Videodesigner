@@ -172,6 +172,9 @@ describe('parseProject — Day1 payload', () => {
           glowEnabled: false,
           glowColor: '#000000',
           glowStrengthPx: 16,
+          boxGlowEnabled: false,
+          boxGlowColor: '#000000',
+          boxGlowStrengthPx: 16,
         },
         endCard: {
           mode: 'banner',
@@ -272,6 +275,9 @@ describe('parseProject — Day1 payload', () => {
       glowEnabled: _g,
       glowColor: _gc,
       glowStrengthPx: _gs,
+      boxGlowEnabled: _bg,
+      boxGlowColor: _bgc,
+      boxGlowStrengthPx: _bgs,
       ...legacyLabelStyle
     } = project.templateSettings.template === 'day1'
       ? project.templateSettings.labelStyle
@@ -299,6 +305,9 @@ describe('parseProject — Day1 payload', () => {
       expect(labelStyle.glowEnabled).toBe(false);
       expect(labelStyle.glowColor).toBe('#000000');
       expect(labelStyle.glowStrengthPx).toBe(16);
+      expect(labelStyle.boxGlowEnabled).toBe(false);
+      expect(labelStyle.boxGlowColor).toBe('#000000');
+      expect(labelStyle.boxGlowStrengthPx).toBe(16);
     }
   });
 
@@ -322,6 +331,19 @@ describe('parseProject — Day1 payload', () => {
     }
 
     project.templateSettings.labelStyle.glowStrengthPx = MAX_LABEL_GLOW_PX + 1;
+
+    expect(parseProject(project).ok).toBe(false);
+  });
+
+  it('rejects a box glow past the maximum blur radius (SC8)', () => {
+    const project = day1Project();
+
+    if (project.templateSettings.template !== 'day1') {
+      throw new Error('fixture must be day1');
+    }
+
+    project.templateSettings.labelStyle.boxGlowStrengthPx =
+      MAX_LABEL_GLOW_PX + 1;
 
     expect(parseProject(project).ok).toBe(false);
   });
