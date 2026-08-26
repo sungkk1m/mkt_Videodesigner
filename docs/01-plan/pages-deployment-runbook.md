@@ -125,6 +125,7 @@ npm run verify:deployment
 |---|---|---|---|---|
 | 2026-07-28 | — | 최초 배포 | 수동 dispatch, success | 전 항목 PASS |
 | 2026-08-26 07:15 | `86409dd` | day1-label-effects (라벨 배경 박스·글로우) | push 자동 배포, build+deploy 모두 success (CI `32941842966`도 success) | 미실행 — 아래 주의 |
+| 2026-08-26 14:08 | `3e9f0d0` | day1-label-effects Iteration 2 (텍스트 박스 글로우) | push 자동 배포, build+deploy 모두 success (run `32978443625`) | 미실행 — 아래 주의 |
 
 2026-08-26 배포는 main 병합 푸시로 자동 실행됐고, build 잡의 `npm test`(유닛 588)와
 `npm run build`를 통과한 뒤 `actions/deploy-pages@v4`가 성공했습니다.
