@@ -827,3 +827,56 @@ describe('Day1 commands over four panels', () => {
     expect(parseProject(project).ok).toBe(true);
   });
 });
+
+// day1-quad Design §5.5 regression — the shared-field commands (split, label
+// style, the end card and its trims) read `day1Of` when the quad template
+// shipped, so on a quad project every one of them returned the project
+// unchanged: the split colour would not take, and the end card could not even
+// switch to video mode. Each test below fails against that guard.
+describe('shared-field commands on the four-panel template', () => {
+  it('takes a split colour and width on a quad project', () => {
+    const project = updateDay1Split(day1QuadProjectFixture(), {
+      lineColor: '#ff00ff',
+      lineWidthPx: 10,
+    });
+
+    expect(day1QuadSettingsOf(project).split).toEqual({
+      lineColor: '#ff00ff',
+      lineWidthPx: 10,
+    });
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('takes a label style patch on a quad project', () => {
+    const project = updateDay1LabelStyle(day1QuadProjectFixture(), {
+      position: 'center',
+      fontSize: 60,
+    });
+
+    expect(day1QuadSettingsOf(project).labelStyle.position).toBe('center');
+    expect(day1QuadSettingsOf(project).labelStyle.fontSize).toBe(60);
+  });
+
+  it('switches the end card to video mode on a quad project', () => {
+    const project = updateDay1EndCard(day1QuadProjectFixture(), {mode: 'video'});
+
+    expect(day1QuadSettingsOf(project).endCard.mode).toBe('video');
+  });
+
+  it('sets the end card video and its trim on a quad project', () => {
+    const reference = testMediaReference({id: 'card', durationMs: 8_000});
+    const withVideo = setDay1EndCardVideo(day1QuadProjectFixture(), reference);
+
+    expect(day1QuadSettingsOf(withVideo).endCard.video?.id).toBe('card');
+
+    const moved = setDay1EndCardTrimInMs(withVideo, 2_000);
+
+    expect(day1QuadSettingsOf(moved).endCard.videoTrim.inMs).toBe(2_000);
+
+    const sized = setDay1EndCardTrimLengthMs(moved, 1_000);
+    const trim = day1QuadSettingsOf(sized).endCard.videoTrim;
+
+    expect(trim.outMs - trim.inMs).toBe(1_000);
+    expect(parseProject(sized).ok).toBe(true);
+  });
+});

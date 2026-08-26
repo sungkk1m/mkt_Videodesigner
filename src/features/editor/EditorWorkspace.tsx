@@ -451,10 +451,13 @@ export const EditorWorkspace = ({
     ? activeTransform(selectedScene, project.selectedRatio)
     : DEFAULT_TRANSFORM;
 
-  // FR-D03 — a Day1 render needs both panels present *and* decodable.
+  // FR-D03 / FR-Q02 — a panelled render needs every panel present *and*
+  // decodable. day1-quad Design §7.1 — the key list comes from the payload, so
+  // the quad template's panels C and D count too; this used to branch on `day1`
+  // with A and B hardcoded, which resolved a quad project as [] unresolved.
   const missingPanels = day1MissingPanels(project);
-  const unresolvedPanels = day1
-    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter(
+  const unresolvedPanels = panelled
+    ? panelKeysOf(project.templateSettings).filter(
         (panel) => day1Assets.panelUrl(panel) === null,
       )
     : [];
@@ -470,7 +473,11 @@ export const EditorWorkspace = ({
     (reference, index) =>
       reference !== null && kvAssets.imageUrl(index) === null ? [index] : [],
   );
-  const renderableSource = day1
+  // day1-quad Design §7.1 — gate on either panelled payload. Branching on
+  // `day1` here dropped a quad project into the three-scene arm, whose source
+  // a quad project never has, so the render button stayed disabled with all
+  // four panels uploaded.
+  const renderableSource = panelled
     ? unresolvedPanels.length === 0
     : kvLoop
       ? missingKvImages === 0 && unresolvedKvImages.length === 0
@@ -1500,7 +1507,10 @@ export const EditorWorkspace = ({
         onSeek={seekToMs}
         onSeekFrame={(frame) => seekToMs((frame / project.fps) * 1000)}
         onSelect={(sectionId) =>
-          day1 || kvLoop
+          // day1-quad — the quad template selects on the shared section axis
+          // exactly like Day1 and the loop; `day1 || kvLoop` sent its clip
+          // clicks down the three-scene arm.
+          panelled || kvLoop
             ? setSelectedDay1Section(sectionId)
             : setSelectedKind(sectionId as SceneKind)
         }
@@ -1509,7 +1519,7 @@ export const EditorWorkspace = ({
         // told how many times it plays. Every other template passes nothing.
         repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={day1 || kvLoop ? selectedSectionId : selectedKind}
+        selectedId={panelled || kvLoop ? selectedSectionId : selectedKind}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

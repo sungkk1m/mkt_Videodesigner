@@ -1,7 +1,7 @@
 // day1-quad Design §6.4 — five sections on the shared time axis: four panels
 // live in reading order, then the end card. Built like `Day1Composition`, and
 // consuming the same `EndCardScene` and `AudioLayer`.
-import {AbsoluteFill, Sequence} from 'remotion';
+import {AbsoluteFill, Sequence, useVideoConfig} from 'remotion';
 
 import type {Day1QuadProps} from '../domain/editor/types';
 import {EndCardScene} from './day1/EndCardScene';
@@ -34,6 +34,8 @@ export const Day1QuadComposition = ({
   panels,
   sections,
 }: Day1QuadProps) => {
+  const {fps} = useVideoConfig();
+
   // FR-Q02: all four panels are required. The render path gates on this too, so
   // this is what the editor preview shows while an upload is still missing.
   if (panels.some((panel) => panel.url === null)) {
@@ -48,6 +50,13 @@ export const Day1QuadComposition = ({
           from={section.fromFrame}
           key={section.id}
           name={section.id}
+          // A section boundary swaps the whole Sequence, and a quad section
+          // mounts up to eight <Video> elements (a `contain` panel draws a
+          // backdrop too). Mounted only at the boundary they all decode from
+          // scratch, so the preview blacked out on every panel switch. One
+          // second of premount lets the next grid buffer behind the current
+          // one before it is shown.
+          premountFor={fps}
         >
           {section.activePanel ? (
             <QuadFrame
