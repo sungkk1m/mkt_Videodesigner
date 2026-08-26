@@ -15,6 +15,7 @@ import type {
 } from './constants';
 import type {
   HookMotionPreset,
+  KvEffect,
   KvMotionPreset,
   KvRect,
   MediaTransform,
@@ -54,9 +55,13 @@ export type {
   EditorScenes,
   HookMotionPreset,
   HookSceneSettings,
+  KvEffect,
+  KvEffectRegion,
+  KvGlowEffect,
   KvLoopSettings,
   KvMotion,
   KvMotionPreset,
+  KvParticlesEffect,
   KvRect,
   KvSlot,
   Locale,
@@ -394,6 +399,12 @@ export interface KvSlotRenderProps {
   x: number;
   y: number;
   motion: KvMotionKeyframes;
+  /**
+   * kv-object-animation §2.3 — schema values verbatim: self-contained (no URL,
+   * no frame conversion), so the builder passes them through untouched and the
+   * one consumer (`KvScene`) derives every frame from them (D-03).
+   */
+  effects: readonly KvEffect[];
 }
 
 /** key-visual-looping Design Ref: §5.3 — absent is a normal state (Plan L5). */
