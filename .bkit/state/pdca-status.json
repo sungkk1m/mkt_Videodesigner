@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-24T13:45:00.000Z",
+  "lastUpdated": "2026-08-26T03:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -486,8 +486,8 @@
       }
     },
     "day1-quad": {
-      "phase": "check",
-      "phaseNumber": 4,
+      "phase": "report",
+      "phaseNumber": 5,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -517,7 +517,7 @@
       },
       "timestamps": {
         "started": "2026-08-24T00:00:00.000Z",
-        "lastUpdated": "2026-08-24T13:45:00.000Z"
+        "lastUpdated": "2026-08-26T03:30:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -561,7 +561,7 @@
           "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
         ],
         "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
-        "nextStep": "run the full E2E suite on real Chrome, then merge to main to deploy",
+        "nextStep": "cycle complete - deployed to production and verified on real Chrome by the operator",
         "m0Result": {
           "ranAt": "2026-08-24T05:30:00.000Z",
           "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
@@ -614,18 +614,18 @@
           "notVerified": "every E2E that renders an MP4 - this container has no H.264 encoder or decoder"
         },
         "verification": {
-          "unitTests": "575 passed (cycle started at 529)",
+          "unitTests": "581 passed (cycle started at 529)",
           "build": "tsc -b across three configs + vite build clean",
           "geometry": "quadLayout exhaustive: 3 ratios x divider 0-24px",
           "perfGate": "panel count 2->4 = 1.15x, under the 1.5x limit (VP9 substitute measurement)",
           "panelExtraction": "byte-identical: 1454 + 2945 chars",
           "previewPixels": "panel A saturation 1.000, B/C/D 0.000",
-          "browserFlow": "12 checks in artifacts/m1/verify-quad-ui.mjs"
+          "browserFlow": "12 checks in artifacts/m1/verify-quad-ui.mjs",
+          "realDeviceRender": "SC1 three ratios, SC3 greyscale, SC4 divider pixels and the Q14 size cap all measured on operator renders",
+          "crossTemplate": "20/20 browser checks - no regression in three-scene, day1 or kv-loop"
         },
         "notVerified": [
-          "every MP4 render: this container has no H.264 encoder or decoder",
-          "SC1 three-ratio output, SC4 divider pixels in the render",
-          "the 1.15x gate in absolute terms - needs a re-run on real Chrome"
+          "the full E2E suite on real Chrome - the operator renders covered SC1/SC3/SC4 by measurement, but the automated regression gate still cannot run in this container (no H.264)"
         ],
         "bugFoundInBrowser": "useMediaSession.retain listed only panelA/panelB, so uploading the third quad panel revoked the first two object URLs and all four fell back to the relink prompt. Not reachable by unit tests; surfaced only by running day1 and day1-quad side by side.",
         "e2eRun": {
@@ -648,6 +648,59 @@
         "defectsFoundByE2E": [
           "render preflight gated on template === day1, so day1-quad had none at all (fixed, 5 regression tests)",
           "blocker copy hardcoded to \"영상 2개\" while listing four panels (fixed)"
+        ],
+        "liveDeployment": {
+          "deployedAt": "2026-08-26T03:14:00.000Z",
+          "builds": [
+            "fd7ad18 initial",
+            "c691b0a live-defect fixes",
+            "3d7dd3a realtime scrub",
+            "3afe45b preset fix"
+          ],
+          "url": "https://sungkk1m.github.io/mkt_Videodesigner/",
+          "defectsFoundLive": [
+            "six shared-field commands (split, label style, end card + its two trims) still read day1Of, so all were silent no-ops on quad - the end card could not even switch to video mode",
+            "renderableSource / unresolvedPanels / timeline onSelect / selectedId branched on day1, so four uploaded panels never enabled the render button and clip clicks routed to the three-scene arm",
+            "every section boundary remounted the next grid (up to eight videos with contain), blacking the preview out on each panel switch - fixed with premountFor",
+            "each pointer move seeked the Player, saturating the main thread so the playhead only jumped on release - split into immediate state update + 150ms throttled seek",
+            "applyDurationPreset had no quad arm, so pressing 30s laid the three-scene lengths [3s,24s,3s] over five sections: panel D and the end card became NaN and the composition crashed on Sequence from=NaN"
+          ],
+          "rootCause": "the earlier sweep covered day1Of() calls and `day1 ?` branches but missed raw `template === 'day1'` string comparisons; all such sites have now been audited exhaustively",
+          "crossTemplateRegression": "none - 20/20 browser checks over three-scene, day1, kv-loop, the four-template switching matrix and reload persistence (artifacts/m1/verify-other-templates.mjs); shared-path E2E subset 11 passed / 3 failed, the 3 identical to the previous deploy baseline (H.264 fixtures)"
+        },
+        "realDeviceMeasurement": {
+          "measuredAt": "2026-08-26T03:20:00.000Z",
+          "environment": "operator Windows Chrome 151, build 3afe45b, 9:16 / 60fps / standard",
+          "sameConditionsProof": "addSample depends on frame count and resolution but not panel count, and the two renders agree within 2.5% (2813ms vs 2742ms) - both were 30s at 1080x1920 60fps",
+          "day1TwoPanels": {
+            "waitForReady": 7334.5,
+            "createFrame": 7845.5,
+            "addSample": 2812.5,
+            "audioMixing": 77.2,
+            "totalMs": 18069.7
+          },
+          "quadFourPanels": {
+            "waitForReady": 8188.8,
+            "createFrame": 12537.6,
+            "addSample": 2742.2,
+            "audioMixing": 86.2,
+            "totalMs": 23554.8
+          },
+          "panelCount2to4": "1.30x total; createFrame 1.60x, waitForReady 1.12x, addSample 0.98x (encoding is panel-count independent)",
+          "m0GateVerdict": "M0 predicted 1.15x from the VP9 substitute; actual is 1.30x, so the prediction was 13% optimistic. The direction (sub-linear in panel count, four panels practical) held and the gate conclusion stands.",
+          "sizes": {
+            "15s60fps": "19.7MB",
+            "30s60fps": "42.2MB (43,208KB)",
+            "cap": "52MB",
+            "headroomAt30s": "19% (9.8MB)"
+          },
+          "ratios": "9:16, 1:1 and 16:9 all render",
+          "pixelChecks": "idle panels exactly 0.000 saturation, live panel in colour, divider within codec tolerance of the configured hex"
+        },
+        "openObservations": [
+          "30s at 60fps leaves only 19% headroom under the 52MB cap; a busier source may exceed it, and dropping to 30fps roughly halves the size",
+          "the @remotion/media video cache keeps sources open across template switches (7 blobs / 419MB while rendering a 3-source day1 project) - no failure observed, but memory accumulates in a long session; a refresh clears it",
+          "renderMediaOnWeb is called without licenseKey, so every render logs a warning; passing 'free-license' would silence it but that is a self-certification the operator must decide"
         ]
       }
     }
