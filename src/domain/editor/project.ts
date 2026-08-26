@@ -1260,12 +1260,20 @@ export const setDay1RatioOverride = (
     writeRatioOverride(panel, ratio, enabled),
   );
 
-/** FR-D08 — split line colour and thickness. */
+/**
+ * FR-D08 — split line colour and thickness.
+ *
+ * day1-quad Design §5.5 — split, label style, and the end card are fields both
+ * panelled payloads share, so this command and the five below read
+ * `day1PanelsOf`. They read `day1Of` when the quad template shipped, which
+ * made each of them a silent no-op there — the end card could not even switch
+ * modes, so its video slot was unreachable.
+ */
 export const updateDay1Split = (
   project: EditorProject,
   patch: Partial<Day1Settings['split']>,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
@@ -1289,7 +1297,7 @@ export const updateDay1LabelStyle = (
   project: EditorProject,
   patch: Partial<Day1Settings['labelStyle']>,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
@@ -1327,7 +1335,7 @@ export const updateDay1EndCard = (
   project: EditorProject,
   patch: Day1EndCardPatch,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
@@ -1365,7 +1373,7 @@ export const setDay1EndCardVideo = (
   project: EditorProject,
   reference: MediaReference | null,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
@@ -1413,7 +1421,7 @@ export const setDay1EndCardTrimInMs = (
   project: EditorProject,
   inMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
@@ -1446,7 +1454,7 @@ export const setDay1EndCardTrimLengthMs = (
   project: EditorProject,
   lengthMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;

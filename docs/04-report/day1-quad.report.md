@@ -127,6 +127,35 @@ H.264 인코더도 디코더도 없고, 네트워크 정책이 실제 Chrome 설
 
 ---
 
+## 5.1 라이브 배포 검증에서 발견된 결함 (2026-08-26, build fd7ad18)
+
+`main` 병합 직후 운영자가 실제 Chrome에서 4분할을 처음 만졌고, 컨테이너 검증이
+놓친 결함 4건을 신고했다. 원인은 두 갈래였다.
+
+**갈래 1 — `day1Of` 가드 잔존.** M3의 커맨드 이관이 패널 계열만 옮기고, 공유
+필드 커맨드 6개(`updateDay1Split`·`updateDay1LabelStyle`·`updateDay1EndCard`·
+`setDay1EndCardVideo`·`setDay1EndCardTrimInMs`·`setDay1EndCardTrimLengthMs`)는
+`day1Of`인 채로 남겼다. 4분할에서 이들은 전부 조용한 no-op — **엔드카드는 영상
+모드로 전환조차 되지 않아 업로드 입구가 막힌 것으로 보였다.** EditorWorkspace에도
+같은 잔존이 넷: `renderableSource`가 3장면 arm으로 떨어져 **패널 4개를 다 올려도
+렌더 버튼이 비활성**이었고, `unresolvedPanels`는 A·B 하드코딩, 타임라인
+`onSelect`/`selectedId`는 클립 클릭을 3장면 경로로 보냈다(진단 로그의
+"hook 선택됨"이 그 증상).
+
+**갈래 2 — 섹션 경계 리마운트.** 섹션마다 별도 `<Sequence>`라 경계에서 다음
+그리드 전체가 새로 마운트된다. `contain` 패널은 배경까지 비디오 2장이라 경계마다
+최대 8개가 동시에 디코더를 새로 열었고, **패널 전환 시 프리뷰가 꺼졌다 켜졌다.**
+Day1도 같은 구조지만 2장이라 티가 나지 않았다. `premountFor={fps}`로 다음 섹션을
+1초 먼저 (opacity 0으로) 마운트해 완화했다.
+
+왜 새어 나갔나: 유닛 테스트는 커맨드를 Day1 프로젝트로만 찍었고, 4분할 회귀
+테스트는 패널 계열 커맨드만 덮었다. E2E는 이 경로를 정확히 찍었지만 컨테이너에
+H.264가 없어 실행되지 못했다. 이번 수정에서 여섯 커맨드 전부에 4분할 회귀
+테스트를 추가했고(옛 가드에서 실패함을 확인), 브라우저 검증
+`artifacts/m1/verify-live-fixes.mjs` 9건이 전부 통과한다.
+
+---
+
 ## 6. 남은 작업
 
 1. **실제 Chrome에서 E2E 전량 실행** — `npm run generate:editor-fixture && npx playwright test`
