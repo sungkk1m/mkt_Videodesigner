@@ -117,6 +117,9 @@ type RenderState =
 
 const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
+/** How often a scrub may actually seek the Player. See `seekToMs`. */
+const SCRUB_SEEK_WINDOW_MS = 150;
+
 type LeftTab = 'assets' | 'copy' | 'audio' | 'hook';
 
 // Design Ref: §5.1 — the Hook drawer used to own a permanent full-width band.
@@ -217,6 +220,9 @@ export const EditorWorkspace = ({
   );
   const [renderState, setRenderState] = useState<RenderState>({status: 'idle'});
   const [currentFrame, setCurrentFrame] = useState(0);
+  // The scrub throttle's state. Both belong to `seekToMs` below.
+  const pendingSeekFrame = useRef<number | null>(null);
+  const seekWindowTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   const playerRef = useRef<PlayerRef>(null);
@@ -505,7 +511,11 @@ export const EditorWorkspace = ({
     }
 
     const onFrameUpdate = (event: {detail: {frame: number}}) => {
-      setCurrentFrame(event.detail.frame);
+      // Mid-scrub the pointer owns the playhead: a frameupdate echoed by a
+      // throttled seek would drag it backwards for a beat.
+      if (seekWindowTimer.current === null) {
+        setCurrentFrame(event.detail.frame);
+      }
     };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
@@ -525,14 +535,58 @@ export const EditorWorkspace = ({
   // object URLs.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
+  useEffect(
+    () => () => {
+      if (seekWindowTimer.current !== null) {
+        clearTimeout(seekWindowTimer.current);
+      }
+    },
+    [],
+  );
+
+  /**
+   * A scrub emits one seek per pointer move, and every Player seek redraws the
+   * frame — on a quad project that is up to eight videos re-decoding. On heavy
+   * sources those redraws saturate the main thread, nothing paints until the
+   * pointer is released, and the playhead seemed to jump only at the end.
+   *
+   * The timeline reads `currentFrame` state, so that part is cheap and follows
+   * every pointer event; only the Player seek is throttled — first seek
+   * immediately, then at most one per window, with the newest frame always
+   * flushed at the window's end so the preview lands exactly where the drag
+   * stopped.
+   */
   const seekToMs = useCallback(
     (ms: number) => {
       const frame = Math.min(
         Math.max(msToFrames(ms, project.fps), 0),
         totalFrames - 1,
       );
-      playerRef.current?.seekTo(frame);
+
       setCurrentFrame(frame);
+
+      if (seekWindowTimer.current !== null) {
+        pendingSeekFrame.current = frame;
+        return;
+      }
+
+      playerRef.current?.seekTo(frame);
+
+      const flush = () => {
+        const pending = pendingSeekFrame.current;
+
+        pendingSeekFrame.current = null;
+
+        if (pending === null) {
+          seekWindowTimer.current = null;
+          return;
+        }
+
+        playerRef.current?.seekTo(pending);
+        seekWindowTimer.current = setTimeout(flush, SCRUB_SEEK_WINDOW_MS);
+      };
+
+      seekWindowTimer.current = setTimeout(flush, SCRUB_SEEK_WINDOW_MS);
     },
     [project.fps, totalFrames],
   );
