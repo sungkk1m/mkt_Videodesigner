@@ -211,6 +211,26 @@ describe('buildDay1Props', () => {
     });
   });
 
+  // FR-07 — the plate's own halo rides the same spread, with its own values.
+  it('carries the box glow settings separately from the glyph glow', () => {
+    const project = updateDay1LabelStyle(loadedDay1(), {
+      showBackground: true,
+      glowEnabled: true,
+      glowColor: '#ff0000',
+      boxGlowEnabled: true,
+      boxGlowColor: '#00ff00',
+      boxGlowStrengthPx: 28,
+    });
+    const props = buildDay1Props(project, testUrlResolver());
+
+    expect(props?.labelStyle).toMatchObject({
+      glowColor: '#ff0000',
+      boxGlowEnabled: true,
+      boxGlowColor: '#00ff00',
+      boxGlowStrengthPx: 28,
+    });
+  });
+
   it('carries BGM but no narration, since Day1 is outside the TTS scope', () => {
     const props = buildDay1Props(loadedDay1(), testUrlResolver());
 

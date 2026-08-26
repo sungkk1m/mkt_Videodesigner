@@ -607,6 +607,45 @@ export const Day1Inspector = ({
                 testId="day1-label-background-opacity"
                 value={labelStyle.backgroundOpacity}
               />
+              {/* FR-07/FR-08 — the plate's own halo. Same three controls as the
+                  glyph glow below, on its own fields: the two never share a
+                  colour or a radius. */}
+              <label className="field field--toggle">
+                <input
+                  checked={labelStyle.boxGlowEnabled}
+                  data-testid="day1-label-box-glow"
+                  disabled={disabled}
+                  onChange={(event) =>
+                    onLabelStyle({boxGlowEnabled: event.target.checked})
+                  }
+                  type="checkbox"
+                />
+                <span>박스 글로우</span>
+              </label>
+              {labelStyle.boxGlowEnabled ? (
+                <>
+                  <ColorField
+                    disabled={disabled}
+                    label="박스 글로우 색"
+                    onChange={(boxGlowColor) => onLabelStyle({boxGlowColor})}
+                    testId="day1-label-box-glow-color"
+                    value={labelStyle.boxGlowColor}
+                  />
+                  <PlainField
+                    disabled={disabled}
+                    label="박스 글로우 세기"
+                    max={MAX_LABEL_GLOW_PX}
+                    min={0}
+                    onChange={(boxGlowStrengthPx) =>
+                      onLabelStyle({boxGlowStrengthPx})
+                    }
+                    step={1}
+                    suffix="px"
+                    testId="day1-label-box-glow-strength"
+                    value={labelStyle.boxGlowStrengthPx}
+                  />
+                </>
+              ) : null}
             </>
           ) : null}
 
@@ -620,20 +659,20 @@ export const Day1Inspector = ({
               }
               type="checkbox"
             />
-            <span>글로우</span>
+            <span>글자 글로우</span>
           </label>
           {labelStyle.glowEnabled ? (
             <>
               <ColorField
                 disabled={disabled}
-                label="글로우 색"
+                label="글자 글로우 색"
                 onChange={(glowColor) => onLabelStyle({glowColor})}
                 testId="day1-label-glow-color"
                 value={labelStyle.glowColor}
               />
               <PlainField
                 disabled={disabled}
-                label="글로우 세기"
+                label="글자 글로우 세기"
                 max={MAX_LABEL_GLOW_PX}
                 min={0}
                 onChange={(glowStrengthPx) => onLabelStyle({glowStrengthPx})}

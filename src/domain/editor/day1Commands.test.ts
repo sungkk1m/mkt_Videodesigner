@@ -426,6 +426,31 @@ describe('Day1 split, labels, and end card', () => {
     expect(parseProject(project).ok).toBe(true);
   });
 
+  // day1-label-effects FR-08 — the plate's halo is a second, independent set of
+  // fields: patching one glow must leave the other exactly as it was.
+  it('keeps the box glow independent of the glyph glow', () => {
+    const project = updateDay1LabelStyle(withPanels(), {
+      glowEnabled: true,
+      glowColor: '#ff0000',
+      boxGlowEnabled: true,
+      boxGlowColor: '#00ff00',
+      boxGlowStrengthPx: 99,
+    });
+    const style = day1(project).labelStyle;
+
+    expect(style.glowColor).toBe('#ff0000');
+    expect(style.glowStrengthPx).toBe(16);
+    expect(style.boxGlowColor).toBe('#00ff00');
+    expect(style.boxGlowStrengthPx).toBe(MAX_LABEL_GLOW_PX);
+
+    // Repainting only the plate's halo leaves the lettering's alone.
+    const repainted = updateDay1LabelStyle(project, {boxGlowColor: '#0000ff'});
+
+    expect(day1(repainted).labelStyle.boxGlowColor).toBe('#0000ff');
+    expect(day1(repainted).labelStyle.glowColor).toBe('#ff0000');
+    expect(parseProject(repainted).ok).toBe(true);
+  });
+
   it('patches the end card layers and presets', () => {
     const banner = testMediaReference({id: 'banner', kind: 'image'});
     const project = updateDay1EndCard(withPanels(), {
@@ -917,6 +942,20 @@ describe('shared-field commands on the four-panel template', () => {
     expect(day1QuadSettingsOf(project).labelStyle.showBackground).toBe(true);
     expect(day1QuadSettingsOf(project).labelStyle.glowEnabled).toBe(true);
     expect(day1QuadSettingsOf(project).labelStyle.glowStrengthPx).toBe(24);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('takes the box glow patch on a quad project', () => {
+    const project = updateDay1LabelStyle(day1QuadProjectFixture(), {
+      showBackground: true,
+      boxGlowEnabled: true,
+      boxGlowColor: '#00e5ff',
+    });
+    const style = day1QuadSettingsOf(project).labelStyle;
+
+    expect(style.boxGlowEnabled).toBe(true);
+    expect(style.boxGlowColor).toBe('#00e5ff');
+    expect(style.glowColor).toBe('#000000');
     expect(parseProject(project).ok).toBe(true);
   });
 

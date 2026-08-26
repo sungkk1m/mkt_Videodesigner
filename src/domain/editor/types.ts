@@ -277,6 +277,10 @@ export interface Day1LabelStyle {
   glowEnabled: boolean;
   glowColor: string;
   glowStrengthPx: number;
+  /** FR-07/FR-08 — the halo around the plate, independent of the glyph's. */
+  boxGlowEnabled: boolean;
+  boxGlowColor: string;
+  boxGlowStrengthPx: number;
 }
 
 /**

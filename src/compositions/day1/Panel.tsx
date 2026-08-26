@@ -35,24 +35,26 @@ const BOX_PADDING = '0.3em 0.6em';
 const BOX_RADIUS = 8;
 
 /**
- * day1-label-effects FR-03 — two shadow layers: a tight one that reads as an
- * edge and a doubled one that carries the falloff. `text-shadow` rather than
- * `filter: drop-shadow`, because drop-shadow would glow the plate's rectangle
- * instead of the letters and would rasterise the element every frame.
+ * day1-label-effects FR-03/FR-07 — one halo shape for both glows: a tight layer
+ * that reads as an edge and a doubled one that carries the falloff. Only the
+ * shape is shared; each glow passes its own colour and radius.
  */
-const glowShadow = (style: Day1LabelStyle) =>
-  `0 0 ${style.glowStrengthPx}px ${style.glowColor}, ` +
-  `0 0 ${style.glowStrengthPx * 2}px ${style.glowColor}`;
+const halo = (strengthPx: number, color: string) =>
+  `0 0 ${strengthPx}px ${color}, 0 0 ${strengthPx * 2}px ${color}`;
 
 /**
  * Day1 Design Ref: §5.2 — heavy outlined text. `paintOrder: 'stroke'` draws the
  * stroke behind the glyph so a thick outline never eats into the letter shape,
  * which is what the reference GIF's lettering does.
  *
- * day1-label-effects Q4 — the plate and the glow are independent: the glow is a
- * shadow on the same element as the plate's background, so with both on it
- * reads inside the plate rather than around it. That is the documented
- * behaviour, not a state the component prevents.
+ * day1-label-effects Q4 — the plate and the glyph glow are independent: the
+ * glyph glow is a shadow on the same element as the plate's background, so with
+ * both on it reads inside the plate rather than around it. That is the
+ * documented behaviour, not a state the component prevents.
+ *
+ * FR-07 — the plate carries its own halo through `box-shadow`, which draws
+ * around the plate's rectangle instead of the letters. It is a second set of
+ * fields on purpose: the two glows never share a colour or a radius.
  */
 const PanelLabel = ({
   label,
@@ -74,6 +76,13 @@ const PanelLabel = ({
           ? hexToRgba(style.backgroundColor, style.backgroundOpacity)
           : 'transparent',
         borderRadius: BOX_RADIUS,
+        // FR-07 — a halo with no plate to sit on would draw a glowing rectangle
+        // around invisible bounds, so it follows the plate rather than standing
+        // on its own. The stored settings survive the plate being switched off.
+        boxShadow:
+          style.showBackground && style.boxGlowEnabled
+            ? halo(style.boxGlowStrengthPx, style.boxGlowColor)
+            : undefined,
         color: style.textColor,
         fontFamily: 'system-ui, sans-serif',
         fontSize: style.fontSize,
@@ -83,7 +92,12 @@ const PanelLabel = ({
         padding: style.showBackground ? BOX_PADDING : 0,
         paintOrder: 'stroke',
         textAlign: 'center',
-        textShadow: style.glowEnabled ? glowShadow(style) : undefined,
+        // FR-03 — `text-shadow` rather than `filter: drop-shadow`: drop-shadow
+        // would trace the plate's rectangle instead of the letters, and it
+        // rasterises the element every frame.
+        textShadow: style.glowEnabled
+          ? halo(style.glowStrengthPx, style.glowColor)
+          : undefined,
         WebkitTextStroke: `${style.outlineWidthPx}px ${style.outlineColor}`,
         whiteSpace: 'pre-wrap',
       }}
