@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T05:20:00.000Z",
+  "lastUpdated": "2026-08-26T05:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -724,7 +724,7 @@
       },
       "timestamps": {
         "started": "2026-08-26T05:20:00.000Z",
-        "lastUpdated": "2026-08-26T05:20:00.000Z"
+        "lastUpdated": "2026-08-26T05:45:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -741,15 +741,19 @@
           "P6": "no store or workspace change - onLabelStyle already carries Partial<labelStyle>"
         },
         "openQuestions": [
-          "Q1",
-          "Q2",
-          "Q3",
-          "Q4",
           "Q5"
         ],
         "codeChanged": false,
         "planComplete": false,
-        "estimatedSurface": "6 production files ~90 lines, 4 test files ~70 lines"
+        "estimatedSurface": "6 production files ~90 lines, 4 test files ~70 lines",
+        "confirmedDecisions": {
+          "Q1": "text box = a translucent fill plate behind the label text (not a border rectangle)",
+          "Q2": "box exposes colour and opacity, same trio as SubtitleStyle",
+          "Q3": "glow exposes colour and strength",
+          "Q4": "box and glow are independent toggles; using both is allowed"
+        },
+        "confirmedAt": "2026-08-26T05:45:00.000Z",
+        "defaults": "box #000000 / 60%, glow #ffffff / 16px, both off"
       }
     }
   },
@@ -927,7 +931,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T05:20:00.000Z"
+    "lastActivity": "2026-08-26T05:45:00.000Z"
   },
   "history": [
     {
@@ -1254,6 +1258,12 @@
       "feature": "day1-label-effects",
       "phase": "plan",
       "action": "created"
+    },
+    {
+      "timestamp": "2026-08-26T05:45:00.000Z",
+      "feature": "day1-label-effects",
+      "phase": "plan",
+      "action": "decisions-confirmed-Q1-Q2-Q3-Q4"
     }
   ],
   "stateMachine": {
