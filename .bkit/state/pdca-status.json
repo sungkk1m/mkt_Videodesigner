@@ -1,13 +1,14 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T03:30:00.000Z",
+  "lastUpdated": "2026-08-26T05:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
     "key-visual-looping",
-    "day1-quad"
+    "day1-quad",
+    "day1-label-effects"
   ],
-  "primaryFeature": "day1-quad",
+  "primaryFeature": "day1-label-effects",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -703,10 +704,57 @@
           "renderMediaOnWeb is called without licenseKey, so every render logs a warning; passing 'free-license' would silence it but that is a self-certification the operator must decide"
         ]
       }
+    },
+    "day1-label-effects": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "label-text-box-toggle",
+        "label-box-color-and-opacity",
+        "label-glow-toggle",
+        "label-glow-color-and-strength",
+        "applies-to-day1-and-day1-quad",
+        "defaults-off-no-output-change",
+        "no-schema-version-bump"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/day1-label-effects.plan.md"
+      },
+      "timestamps": {
+        "started": "2026-08-26T05:20:00.000Z",
+        "lastUpdated": "2026-08-26T05:20:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "basedOn": "day1-template labelStyle + day1-quad shared label style (Q5)",
+        "branch": "claude/label-textbox-effect-toggle-5kayu6",
+        "mergePolicy": "no main merge this cycle - user request, other work in flight",
+        "feasibility": "confirmed feasible - both effects reuse CSS already proven in the render path (SubtitleOverlay background, HookScene/DisclaimerBar text-shadow)",
+        "planRecommendations": {
+          "P1": "six flat fields on the shared labelStyle, mirroring SubtitleStyle background trio + a glow trio",
+          "P2": "one composition change: PanelLabel in Panel.tsx serves both day1 and day1-quad",
+          "P3": "zod .default() only - PROJECT_SCHEMA_VERSION stays 2, zero migration code",
+          "P4": "both effects default off, so stored projects render pixel-identical",
+          "P5": "glow via two-layer text-shadow, not filter drop-shadow (box edge would glow, and it rasterises the element)",
+          "P6": "no store or workspace change - onLabelStyle already carries Partial<labelStyle>"
+        },
+        "openQuestions": [
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4",
+          "Q5"
+        ],
+        "codeChanged": false,
+        "planComplete": false,
+        "estimatedSurface": "6 production files ~90 lines, 4 test files ~70 lines"
+      }
     }
   },
   "pipeline": {
-    "currentPhase": "check",
+    "currentPhase": "plan",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -867,13 +915,19 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-24T13:10:00.000Z"
+      },
+      {
+        "feature": "day1-label-effects",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-26T05:20:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T13:45:00.000Z"
+    "lastActivity": "2026-08-26T05:20:00.000Z"
   },
   "history": [
     {
@@ -1194,6 +1248,12 @@
       "feature": "day1-quad",
       "phase": "check",
       "action": "e2e-full-run-31-pass-49-codec-blocked"
+    },
+    {
+      "timestamp": "2026-08-26T05:20:00.000Z",
+      "feature": "day1-label-effects",
+      "phase": "plan",
+      "action": "created"
     }
   ],
   "stateMachine": {
