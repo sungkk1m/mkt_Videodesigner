@@ -1,13 +1,14 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T03:30:00.000Z",
+  "lastUpdated": "2026-08-26T06:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
     "key-visual-looping",
-    "day1-quad"
+    "day1-quad",
+    "kv-loop-reference-motion"
   ],
-  "primaryFeature": "day1-quad",
+  "primaryFeature": "kv-loop-reference-motion",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -703,10 +704,39 @@
           "renderMediaOnWeb is called without licenseKey, so every render logs a warning; passing 'free-license' would silence it but that is a self-certification the operator must decide"
         ]
       }
+    },
+    "kv-loop-reference-motion": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "FR-R01",
+        "FR-R02",
+        "FR-R03",
+        "FR-R04",
+        "FR-R05",
+        "FR-R06",
+        "FR-R07",
+        "FR-R08",
+        "FR-R09",
+        "FR-R10",
+        "FR-R11",
+        "FR-R12",
+        "FR-R13"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md"
+      },
+      "timestamps": {
+        "started": "2026-08-26T06:20:00.000Z",
+        "lastUpdated": "2026-08-26T06:20:00.000Z"
+      },
+      "notes": "Plan drafted from the video designer's 5-item spec. Blocked on decisions D-01~D-11 (§1.5); D-06 conflicts with FR-L17, D-11 needs the campfire reference video uploaded. Current output measured frame by frame in §1.3."
     }
   },
   "pipeline": {
-    "currentPhase": "check",
+    "currentPhase": "plan",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -867,13 +897,19 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-24T13:10:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "none",
+        "to": "plan",
+        "at": "2026-08-26T06:20:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-24T13:45:00.000Z"
+    "lastActivity": "2026-08-26T06:20:00.000Z"
   },
   "history": [
     {
@@ -1194,6 +1230,12 @@
       "feature": "day1-quad",
       "phase": "check",
       "action": "e2e-full-run-31-pass-49-codec-blocked"
+    },
+    {
+      "timestamp": "2026-08-26T06:20:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "plan",
+      "action": "plan-drafted-awaiting-decisions"
     }
   ],
   "stateMachine": {
