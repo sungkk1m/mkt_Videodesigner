@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T08:20:00.000Z",
+  "lastUpdated": "2026-08-26T09:10:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -729,13 +729,29 @@
         "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md",
         "design": "docs/02-design/features/kv-loop-reference-motion.design.md",
         "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md",
-        "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md"
+        "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md",
+        "m4Runbook": "docs/01-plan/kv-loop-reference-motion.m4-runbook.md"
       },
       "timestamps": {
         "started": "2026-08-26T06:20:00.000Z",
-        "lastUpdated": "2026-08-26T08:20:00.000Z"
+        "lastUpdated": "2026-08-26T09:10:00.000Z"
       },
-      "notes": "M0~M3 done in-container: M0 blur spike 5/5 PASS on the fallback rasterizer path (peak scale exactly 1.200 at hold centre, return 1.000, cuts 115/94 vs in-hold 4.6, no canvas bleed); M1 schema/domain (589 unit tests), M2 composition, M3 inspector (4 new DOM E2E + kv-motion 3 pass). Open: M4 real-device H.264 render + intensity review (D-10), M5 benchmark. Final goal recorded: object-layer animation cycle (kv-object-animation) after this one."
+      "notes": "M0~M3 done in-container: M0 blur spike 5/5 PASS on the fallback rasterizer path (peak scale exactly 1.200 at hold centre, return 1.000, cuts 115/94 vs in-hold 4.6, no canvas bleed); M1 schema/domain (589 unit tests), M2 composition, M3 inspector (4 new DOM E2E + kv-motion 3 pass). Open: M4 real-device H.264 render + intensity review (D-10), M5 benchmark. Final goal recorded: object-layer animation cycle (kv-object-animation) after this one. Codec question verified: the product path is fixed mp4/h264/aac (renderEditor.ts) and the capability gate blocks rather than falls back, so M4 uses the normal MP4 render button; VP9 was container-only. New container measurement: blur(30px) costs ~1.25s/frame on the software rasterizer path (29-31s vs 3.4-4.8s for the 90f spike) — real-device M5 decides NFR-R02, mitigations listed in m0-blur-spike §2.1."
+    },
+    "kv-object-animation": {
+      "phase": "plan",
+      "phaseNumber": 1,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {
+        "plan": "docs/01-plan/features/kv-object-animation.plan.md"
+      },
+      "timestamps": {
+        "started": "2026-08-26T09:10:00.000Z",
+        "lastUpdated": "2026-08-26T09:10:00.000Z"
+      },
+      "notes": "Draft only — the template's confirmed end goal: objects designated by AI or by the user directly, with effects (particles, glow pulse, light sweep) rendered as a deterministic canvas layer. Gated behind kv-loop-reference-motion M4/M5. Not in activeFeatures (cap 5)."
     }
   },
   "pipeline": {
@@ -925,7 +941,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T08:20:00.000Z"
+    "lastActivity": "2026-08-26T09:10:00.000Z"
   },
   "history": [
     {
@@ -1264,6 +1280,18 @@
       "feature": "kv-loop-reference-motion",
       "phase": "do",
       "action": "m0-m3-complete-in-container"
+    },
+    {
+      "timestamp": "2026-08-26T09:10:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "do",
+      "action": "codec-verified-m4-runbook-blur-cost-measured"
+    },
+    {
+      "timestamp": "2026-08-26T09:10:00.000Z",
+      "feature": "kv-object-animation",
+      "phase": "plan",
+      "action": "draft-plan-created-final-goal"
     }
   ],
   "stateMachine": {

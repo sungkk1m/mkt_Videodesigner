@@ -62,7 +62,10 @@ const buildProps = (): KvLoopProps => ({
 
 declare global {
   interface Window {
-    __kvM0Render: () => Promise<{
+    __kvM0Render: (overrides?: {
+      blurAmountPx?: number;
+      keepBlob?: boolean;
+    }) => Promise<{
       nativeHtmlInCanvas: boolean;
       totalMs: number;
       webmBase64: string;
@@ -70,8 +73,8 @@ declare global {
   }
 }
 
-window.__kvM0Render = async () => {
-  const props = buildProps();
+window.__kvM0Render = async (overrides = {}) => {
+  const props = {...buildProps(), ...overrides};
   const startedAt = performance.now();
 
   const result = await (renderMediaOnWeb as unknown as (
@@ -99,7 +102,10 @@ window.__kvM0Render = async () => {
   });
 
   const blob = await result.getBlob();
-  const buffer = new Uint8Array(await blob.arrayBuffer());
+  const buffer =
+    overrides.keepBlob === false
+      ? new Uint8Array(0)
+      : new Uint8Array(await blob.arrayBuffer());
   let binary = '';
   const CHUNK = 0x8000;
   for (let index = 0; index < buffer.length; index += CHUNK) {
