@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T06:20:00.000Z",
+  "lastUpdated": "2026-08-26T07:10:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -706,8 +706,8 @@
       }
     },
     "kv-loop-reference-motion": {
-      "phase": "plan",
-      "phaseNumber": 1,
+      "phase": "design",
+      "phaseNumber": 2,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -726,17 +726,19 @@
         "FR-R13"
       ],
       "documents": {
-        "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md"
+        "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md",
+        "design": "docs/02-design/features/kv-loop-reference-motion.design.md",
+        "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md"
       },
       "timestamps": {
         "started": "2026-08-26T06:20:00.000Z",
-        "lastUpdated": "2026-08-26T06:20:00.000Z"
+        "lastUpdated": "2026-08-26T07:10:00.000Z"
       },
-      "notes": "Plan drafted from the video designer's 5-item spec. Blocked on decisions D-01~D-11 (§1.5); D-06 conflicts with FR-L17, D-11 needs the campfire reference video uploaded. Current output measured frame by frame in §1.3."
+      "notes": "Decisions D-01~D-11 locked per user (proposals accepted; D-11 reference uploaded and measured: 4 KVs x 2 cycles, 2.0s holds, all hard cuts, blur bookends ~10f/~30px at 30fps, camera amplitude only +/-1~1.5%, in-art particle/glow animation identified as the unreproducible layer). Design drafted; next: M0 container-blur spike."
     }
   },
   "pipeline": {
-    "currentPhase": "plan",
+    "currentPhase": "design",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -903,13 +905,19 @@
         "from": "none",
         "to": "plan",
         "at": "2026-08-26T06:20:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-26T07:10:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T06:20:00.000Z"
+    "lastActivity": "2026-08-26T07:10:00.000Z"
   },
   "history": [
     {
@@ -1236,6 +1244,12 @@
       "feature": "kv-loop-reference-motion",
       "phase": "plan",
       "action": "plan-drafted-awaiting-decisions"
+    },
+    {
+      "timestamp": "2026-08-26T07:10:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "design",
+      "action": "decisions-locked-reference-measured-design-drafted"
     }
   ],
   "stateMachine": {
