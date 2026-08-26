@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T09:10:00.000Z",
+  "lastUpdated": "2026-08-26T08:40:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -706,8 +706,8 @@
       }
     },
     "kv-loop-reference-motion": {
-      "phase": "do",
-      "phaseNumber": 3,
+      "phase": "check",
+      "phaseNumber": 4,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -730,13 +730,14 @@
         "design": "docs/02-design/features/kv-loop-reference-motion.design.md",
         "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md",
         "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md",
-        "m4Runbook": "docs/01-plan/kv-loop-reference-motion.m4-runbook.md"
+        "m4Runbook": "docs/01-plan/kv-loop-reference-motion.m4-runbook.md",
+        "m4Verification": "docs/03-analysis/kv-loop-reference-motion.m4-render-verification.md"
       },
       "timestamps": {
         "started": "2026-08-26T06:20:00.000Z",
-        "lastUpdated": "2026-08-26T09:10:00.000Z"
+        "lastUpdated": "2026-08-26T08:40:00.000Z"
       },
-      "notes": "M0~M3 done in-container: M0 blur spike 5/5 PASS on the fallback rasterizer path (peak scale exactly 1.200 at hold centre, return 1.000, cuts 115/94 vs in-hold 4.6, no canvas bleed); M1 schema/domain (589 unit tests), M2 composition, M3 inspector (4 new DOM E2E + kv-motion 3 pass). Open: M4 real-device H.264 render + intensity review (D-10), M5 benchmark. Final goal recorded: object-layer animation cycle (kv-object-animation) after this one. Codec question verified: the product path is fixed mp4/h264/aac (renderEditor.ts) and the capability gate blocks rather than falls back, so M4 uses the normal MP4 render button; VP9 was container-only. New container measurement: blur(30px) costs ~1.25s/frame on the software rasterizer path (29-31s vs 3.4-4.8s for the 90f spike) — real-device M5 decides NFR-R02, mitigations listed in m0-blur-spike §2.1."
+      "notes": "M4 real-device render verified: SC1-SC5+SC7 measured PASS on the user's Chrome 151 H.264 MP4 (peak scale exactly 1.100 at hold centre, cuts 49-104 vs in-hold 7.7, blur ramps exactly 20 frames both ends, no canvas bleed); SC6 covered by schema-default unit tests; SC8 passed in M1-M3. NFR-R02 passed: createFrame 991ms for 900 frames (~1.1ms/frame incl. blur) vs the container's 1.25s/frame scare — blur overhead ~2% of a 6.7s encode-dominated render. Open: D-10 aesthetic call on intensity 0.5, merge to main, Pages revert (live URL currently serves the branch build)."
     },
     "kv-object-animation": {
       "phase": "plan",
@@ -755,7 +756,7 @@
     }
   },
   "pipeline": {
-    "currentPhase": "do",
+    "currentPhase": "check",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -935,13 +936,19 @@
         "to": "do",
         "scope": "m0-m3",
         "at": "2026-08-26T08:20:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-26T08:40:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T09:10:00.000Z"
+    "lastActivity": "2026-08-26T08:40:00.000Z"
   },
   "history": [
     {
@@ -1292,6 +1299,12 @@
       "feature": "kv-object-animation",
       "phase": "plan",
       "action": "draft-plan-created-final-goal"
+    },
+    {
+      "timestamp": "2026-08-26T08:40:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "check",
+      "action": "m4-real-device-render-all-measured-sc-pass"
     }
   ],
   "stateMachine": {
