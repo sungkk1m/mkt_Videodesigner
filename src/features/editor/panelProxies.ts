@@ -14,13 +14,20 @@ import {
   panelVisibleRect,
   planPanelProxy,
 } from '../../domain/day1/sourceProxy';
-import {splitLayout} from '../../domain/day1/layout';
-import {activeTransform, day1Of, type Day1PanelKey} from '../../domain/editor/project';
+import {quadLayout, splitLayout} from '../../domain/day1/layout';
+import {
+  activeTransform,
+  day1PanelAt,
+  day1PanelsOf,
+  panelKeysOf,
+  type Day1PanelKey,
+} from '../../domain/editor/project';
 import type {
   AspectRatio,
   Day1Panel,
   EditorProject,
   MediaReference,
+  PanelRect,
 } from '../../domain/editor/types';
 import type {SourceProxyBuilder} from '../../domain/ports';
 import type {FrameRate} from '../../domain/render/profile';
@@ -85,7 +92,6 @@ interface Slot {
   prepared: Prepared;
 }
 
-const PANEL_KEYS = ['panelA', 'panelB'] as const;
 
 export const createPanelProxies = ({
   builder,
@@ -106,13 +112,30 @@ export const createPanelProxies = ({
     {project, ratio, fps, signal}: PrepareRequest,
     key: Day1PanelKey,
   ): Promise<Prepared | null> => {
-    const settings = day1Of(project);
-    const panel = settings?.[key];
+    const settings = day1PanelsOf(project);
+    const panel = day1PanelAt(project, key);
     const source = panel?.source;
 
     if (!settings || !panel) {
       return null;
     }
+
+    // day1-quad Design §7.4 — the panel's own box. `planPanelProxy` below takes
+    // only a box and a transform, so it needs no change for four cells.
+    const keys = panelKeysOf(settings);
+    const boxOf = (): PanelRect => {
+      const index = keys.indexOf(key);
+
+      if (keys.length > 2) {
+        return quadLayout(ratio, settings.split.lineWidthPx).cells[
+          index
+        ] as PanelRect;
+      }
+
+      const split = splitLayout(ratio, settings.split.lineWidthPx);
+
+      return index === 0 ? split.a : split.b;
+    };
 
     const slot = `${key}:${ratio}`;
 
@@ -128,16 +151,15 @@ export const createPanelProxies = ({
       return null;
     }
 
-    const layout = splitLayout(ratio, settings.split.lineWidthPx);
     const plan = planPanelProxy(
-      key === 'panelA' ? layout.a : layout.b,
+      boxOf(),
       {width: source.width, height: source.height},
       activeTransform(panel, ratio),
     );
 
     if (!plan) {
       const size = {width: source.width, height: source.height};
-      const box = key === 'panelA' ? layout.a : layout.b;
+      const box = boxOf();
 
       // day1-video — `panelVisibleRect` below is cover geometry, so under
       // `contain` it would describe a rectangle nobody asked for. Say the real
@@ -257,14 +279,18 @@ export const createPanelProxies = ({
   return {
     prepare: async (request) => {
       const {project} = request;
-      const settings = day1Of(project);
+      const settings = day1PanelsOf(project);
 
       if (!settings) {
         return {project, resolveUrl};
       }
 
+      // day1-quad Design §7.4 — the template's own key list, so the quad's
+      // panels C and D get proxies too. This was a two-element constant, which
+      // silently left half a quad render on its original sources.
+      const keys = panelKeysOf(settings);
       const panels = await Promise.all(
-        PANEL_KEYS.map((key) => preparePanel(request, key)),
+        keys.map((key) => preparePanel(request, key)),
       );
 
       if (panels.every((panel) => panel === null)) {
@@ -278,11 +304,15 @@ export const createPanelProxies = ({
       );
       const patched = {...settings};
 
-      PANEL_KEYS.forEach((key, index) => {
+      keys.forEach((key, index) => {
         const prepared = panels[index];
 
         if (prepared) {
-          patched[key] = {...prepared.panel, source: prepared.source};
+          // The key came from this payload's own list, so it is a field of it.
+          (patched as Record<string, unknown>)[key] = {
+            ...prepared.panel,
+            source: prepared.source,
+          };
         }
       });
 

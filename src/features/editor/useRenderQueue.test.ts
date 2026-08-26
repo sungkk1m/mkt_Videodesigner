@@ -11,13 +11,26 @@ import {
 import type {EditorProject} from '../../domain/editor/types';
 import {
   day1ProjectFixture,
+  day1QuadProjectFixture,
   kvLoopProjectFixture,
 } from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {preflightIssues} from './useRenderQueue';
+import type {Day1PanelKey} from '../../domain/editor/project';
 
 const threeSceneLoaded = () =>
   applySourceToAllScenes(createProject(15), testMediaReference());
+
+const quadWith = (panels: Day1PanelKey[]): EditorProject =>
+  panels.reduce(
+    (project, panel) =>
+      setDay1PanelSource(
+        project,
+        panel,
+        testMediaReference({id: `media_${panel}`, durationMs: 12_000}),
+      ),
+    day1QuadProjectFixture(),
+  );
 
 const day1With = (panels: ('panelA' | 'panelB')[]): EditorProject =>
   panels.reduce(
@@ -175,5 +188,52 @@ describe('preflightIssues — kv-loop (FR-L13)', () => {
     expect(
       preflightIssues({...project, selectedLocale: 'ja'}, true, true),
     ).toEqual([]);
+  });
+});
+
+/**
+ * day1-quad FR-Q02 — the gate used to read `template === 'day1'`, so the
+ * four-panel template got no render preflight at all: a quad project could start
+ * a render with panels missing, unresolved, or too short for their section.
+ * Found by running the E2E suite, not by any unit test.
+ */
+describe('preflightIssues — Day1-quad (FR-Q02)', () => {
+  it('names all four missing panels and counts them', () => {
+    expect(preflightIssues(day1QuadProjectFixture(), false, true)).toEqual([
+      '영상 4개를 모두 올려야 렌더할 수 있습니다. 남은 패널: A · B · C · D',
+    ]);
+  });
+
+  it('names only the panels still missing', () => {
+    expect(
+      preflightIssues(quadWith(['panelA', 'panelC']), false, true),
+    ).toEqual([
+      '영상 4개를 모두 올려야 렌더할 수 있습니다. 남은 패널: B · D',
+    ]);
+  });
+
+  it('asks for a relink once all four are present but unresolved', () => {
+    const loaded = quadWith(['panelA', 'panelB', 'panelC', 'panelD']);
+
+    expect(preflightIssues(loaded, false, true)).toEqual([
+      '패널 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.',
+    ]);
+    expect(preflightIssues(loaded, true, true)).toEqual([]);
+  });
+
+  it('still reports a quad panel whose source cannot fill its section', () => {
+    const short = setDay1PanelSource(
+      quadWith(['panelA', 'panelB', 'panelC', 'panelD']),
+      'panelD',
+      testMediaReference({id: 'short', durationMs: 1200}),
+    );
+
+    expect(preflightIssues(short, true, true).join(' ')).toContain('D');
+  });
+
+  it('leaves the two-panel wording unchanged', () => {
+    expect(preflightIssues(day1ProjectFixture(), false, true)).toEqual([
+      '영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: A · B',
+    ]);
   });
 });

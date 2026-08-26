@@ -2,12 +2,16 @@
 import {describe, expect, it} from 'vitest';
 
 import {APP_ICON_RECT, appIconRect} from '../day1/endCard';
-import {splitLayout} from '../day1/layout';
+import {quadLayout, splitLayout} from '../day1/layout';
 import {
   DEFAULT_DAY1_SETTINGS,
   buildCompositionProps,
   buildDay1Props,
+  buildDay1QuadProps,
+  buildEditorSnapshot,
   createProject,
+  setDay1LabelText,
+  setDay1PanelSource,
   parseProject,
   updateDay1Transform,
 } from './project';
@@ -16,7 +20,11 @@ import {
   testMediaReference,
   testUrlResolver,
 } from '../../test/fixtures/media';
-import {day1ProjectFixture, day1SettingsOf} from '../../test/fixtures/project';
+import {
+  day1ProjectFixture,
+  day1QuadProjectFixture,
+  day1SettingsOf,
+} from '../../test/fixtures/project';
 import type {
   Day1Panel,
   Day1Settings,
@@ -323,5 +331,94 @@ describe('buildCompositionProps on a Day1 project', () => {
 
     expect(props.src).toBeNull();
     expect(props.scenes).toEqual([]);
+  });
+});
+
+// day1-quad Design §6.4 — the four-panel render snapshot.
+describe('buildDay1QuadProps', () => {
+  const withFourPanels = (): EditorProject =>
+    (['panelA', 'panelB', 'panelC', 'panelD'] as const).reduce(
+      (project, key, index) =>
+        setDay1PanelSource(
+          project,
+          key,
+          testMediaReference({id: `m${index}`, durationMs: 12_000}),
+        ),
+      day1QuadProjectFixture(),
+    );
+
+  it('returns null for every other template', () => {
+    expect(buildDay1QuadProps(createProject(), testUrlResolver())).toBeNull();
+    expect(
+      buildDay1QuadProps(day1ProjectFixture(), testUrlResolver()),
+    ).toBeNull();
+  });
+
+  it('bakes the grid geometry and the four resolved panels', () => {
+    const project = withFourPanels();
+    const props = buildDay1QuadProps(project, testUrlResolver());
+
+    expect(props).not.toBeNull();
+    expect(props?.layout).toEqual(quadLayout('9:16', 6));
+    expect(props?.panels).toHaveLength(4);
+    props?.panels.forEach((panel) => {
+      expect(panel.url).toBe(TEST_SOURCE_URL);
+      // Plan Q4 — panels start `contain`, so the backdrop path is live.
+      expect(panel.fit).toBe('contain');
+    });
+  });
+
+  it('lays the five sections out on the frame axis in reading order', () => {
+    const props = buildDay1QuadProps(withFourPanels(), testUrlResolver());
+
+    expect(props?.sections.map((section) => section.activePanel)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      null,
+    ]);
+    // 15s at 30fps: four 3s panels then the 3s card, back to back.
+    expect(props?.sections.map((section) => section.fromFrame)).toEqual([
+      0, 90, 180, 270, 360,
+    ]);
+    expect(
+      props?.sections.reduce(
+        (sum, section) => sum + section.durationInFrames,
+        0,
+      ),
+    ).toBe(450);
+  });
+
+  it('resolves each panel label from the selected locale', () => {
+    const project = setDay1LabelText(withFourPanels(), 'ko', 'c', 'DAY 14');
+    const props = buildDay1QuadProps(project, testUrlResolver());
+
+    expect(props?.panels.map((panel) => panel.label)).toEqual([
+      'Day1',
+      'Day2',
+      'DAY 14',
+      'Day7',
+    ]);
+  });
+
+  it('tags the snapshot so the render path branches exactly once', () => {
+    const snapshot = buildEditorSnapshot(withFourPanels(), testUrlResolver());
+
+    expect(snapshot.template).toBe('day1-quad');
+    // The other templates still resolve to their own arms.
+    expect(buildEditorSnapshot(day1ProjectFixture(), testUrlResolver()).template)
+      .toBe('day1');
+    expect(buildEditorSnapshot(createProject(), testUrlResolver()).template)
+      .toBe('three-scene');
+  });
+
+  it('reuses the Day1 end card untouched (Q7)', () => {
+    const props = buildDay1QuadProps(withFourPanels(), testUrlResolver());
+    const day1Props = buildDay1Props(day1ProjectFixture(), testUrlResolver());
+
+    expect(props?.endCard.iconRect).toEqual(day1Props?.endCard.iconRect);
+    expect(props?.endCard.mode).toBe(day1Props?.endCard.mode);
+    expect(props?.endCard.cardMotion).toBe(day1Props?.endCard.cardMotion);
   });
 });

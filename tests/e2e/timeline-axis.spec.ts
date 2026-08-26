@@ -7,6 +7,7 @@
 // and the Day1 split. Those are what this covers, and it needs no media fixture
 // at all — so it runs anywhere the app runs.
 import {expect, test} from '@playwright/test';
+import {switchTemplate} from './helpers/template';
 
 test.describe('shared time axis — existing templates', () => {
   test('three-scene keeps its three clips and their approved lengths', async ({page}) => {
@@ -60,8 +61,7 @@ test.describe('shared time axis — existing templates', () => {
 
   test('Day1 keeps its three sections and the halfway split', async ({page}) => {
     await page.goto('/');
-    await page.getByTestId('template-day1').click();
-    await page.getByTestId('template-switch-confirm').click();
+    await switchTemplate(page, 'day1');
 
     await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
     await expect(page.getByTestId('timeline-duration-panel-a')).toHaveText('6.0초');
@@ -74,12 +74,10 @@ test.describe('shared time axis — existing templates', () => {
   test('switching three ways leaves each template with its own axis', async ({page}) => {
     await page.goto('/');
 
-    await page.getByTestId('template-kv-loop').click();
-    await page.getByTestId('template-switch-confirm').click();
+    await switchTemplate(page, 'kv-loop');
     await expect(page.getByTestId('timeline-duration-kv-0')).toHaveText('1.9초');
 
-    await page.getByTestId('template-three-scene').click();
-    await page.getByTestId('template-switch-confirm').click();
+    await switchTemplate(page, 'three-scene');
     await expect(page.getByTestId('timeline-duration-hook')).toHaveText('2.0초');
     await expect(page.getByTestId('ratio-16:9')).toBeEnabled();
   });

@@ -156,6 +156,33 @@ textarea:focus-visible,
   opacity: 0.45;
 }
 
+/*
+ * day1-quad Design §4.3 — the template selector became a dropdown, so it needs
+ * the compact header dimensions the segmented control had. `.field select` is
+ * full width with inspector padding, which is wrong in the header.
+ */
+.template-select {
+  min-height: 32px;
+  padding: 0 28px 0 10px;
+  color: var(--text);
+  background: var(--input-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+
+.template-select:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.template-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .field {
   display: grid;
   gap: 6px;

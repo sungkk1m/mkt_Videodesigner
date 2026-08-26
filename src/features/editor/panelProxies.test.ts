@@ -4,8 +4,13 @@
 // failed transcode from failing a render.
 import {describe, expect, it, vi} from 'vitest';
 
-import {buildDay1Props, day1Of} from '../../domain/editor/project';
+import {
+  buildDay1Props,
+  buildDay1QuadProps,
+  day1Of,
+} from '../../domain/editor/project';
 import type {
+  Day1QuadSettings,
   Day1Settings,
   EditorProject,
   MediaReference,
@@ -13,7 +18,10 @@ import type {
 import type {SourceProxy, SourceProxyBuilder} from '../../domain/ports';
 import {fail, ok} from '../../shared/errors/appError';
 import {createAppError} from '../../shared/errors/appError';
-import {day1ProjectFixture} from '../../test/fixtures/project';
+import {
+  day1ProjectFixture,
+  day1QuadProjectFixture,
+} from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {createPanelProxies} from './panelProxies';
 
@@ -356,5 +364,81 @@ describe('createPanelProxies', () => {
     proxies.release();
 
     expect(released).toEqual(['blob:proxy-1', 'blob:proxy-2']);
+  });
+});
+
+// day1-quad Design §7.4 — the proxy loop is driven by the template's panel keys.
+// It used to be a two-element constant, which left half of a quad render on its
+// original, uncropped sources.
+describe('createPanelProxies — four panels', () => {
+  const quadProject = (source: (id: string) => MediaReference): EditorProject => {
+    const panel = (id: string) => ({
+      source: source(id),
+      trim: {inMs: 0, outMs: 3000},
+      transforms: {
+        base: {fit: 'cover' as const, scale: 1, x: 0, y: 0},
+        overrides: {},
+      },
+    });
+    const panels: Partial<Day1QuadSettings> = {
+      panelA: panel('media_a'),
+      panelB: panel('media_b'),
+      panelC: panel('media_c'),
+      panelD: panel('media_d'),
+    };
+
+    return day1QuadProjectFixture(panels);
+  };
+
+  const prepareQuad = async (source: (id: string) => MediaReference) => {
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => {},
+    });
+    const prepared = await proxies.prepare({
+      project: quadProject(source),
+      ratio: '9:16',
+      fps: 30,
+      signal: signal(),
+    });
+
+    return {builder, proxies, prepared};
+  };
+
+  /** A landscape capture in a 9:16 cell: `cover` throws away 68% of its width. */
+  const landscapeSource = (id: string): MediaReference =>
+    testMediaReference({id, width: 1920, height: 1080, durationMs: 324_000});
+
+  it('crops all four panels, not just the first two', async () => {
+    const {builder, proxies, prepared} = await prepareQuad(landscapeSource);
+
+    expect(builder.build).toHaveBeenCalledTimes(4);
+
+    const props = buildDay1QuadProps(prepared.project, prepared.resolveUrl);
+
+    props?.panels.forEach((panel) => {
+      expect(panel.url).toMatch(/^blob:proxy-/);
+    });
+    // One note per panel, which is the whole diagnostic surface.
+    expect(proxies.notes()).toHaveLength(4);
+  });
+
+  /**
+   * The geometric consequence of Design §5.1, and a pleasant one: a quad cell
+   * carries the output frame's own aspect ratio, so a source shaped like the
+   * output is already a near-perfect fit and there is nothing worth cropping.
+   * `planPanelProxy` declines below `MIN_PROXY_SAVINGS` and the render uses the
+   * original file.
+   *
+   * The two-panel split could never offer this — its 9:16 panel is landscape, so
+   * a portrait source lost half its height (day1-render-speed §3, 49.8%).
+   */
+  it('leaves a source already shaped like the cell alone', async () => {
+    const {builder, proxies} = await prepareQuad(portraitSource);
+
+    expect(builder.build).not.toHaveBeenCalled();
+    expect(proxies.notes().join(' ')).toMatch(/skipped|already/i);
   });
 });

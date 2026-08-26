@@ -25,19 +25,20 @@ import {
   type Day1CardMotion,
   type Day1EndCardMode,
   type Day1IconAnimation,
+  type Day1Panel,
+  type Day1PanelSlot,
+  type Day1QuadSettings,
   type Day1Settings,
   type Locale,
   type LocalizedCopy,
   type MediaFit,
   type MediaReference,
   type MediaTransform,
+  type PanelRect,
   type SubtitleStyle,
 } from '../../domain/editor/types';
-import {
-  DAY1_END_CARD_MS,
-  MIN_END_CARD_TRIM_MS,
-} from '../../domain/day1/playback';
-import {splitLayout} from '../../domain/day1/layout';
+import {MIN_END_CARD_TRIM_MS} from '../../domain/day1/playback';
+import {quadLayout, splitLayout} from '../../domain/day1/layout';
 import {ColorField} from './ColorField';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
@@ -55,12 +56,37 @@ import {
 const PANEL_TITLES: Record<Day1PanelKey, string> = {
   panelA: '패널 A',
   panelB: '패널 B',
+  panelC: '패널 C',
+  panelD: '패널 D',
 };
 
-/** Narrowed to the `SplitLayout` keys so a panel can look its own rect up. */
-const PANEL_TEST_KEY: Record<Day1PanelKey, 'a' | 'b'> = {
+/** The panel's letter, used for test ids and for the copy block's label keys. */
+const PANEL_TEST_KEY: Record<Day1PanelKey, Day1PanelSlot> = {
   panelA: 'a',
   panelB: 'b',
+  panelC: 'c',
+  panelD: 'd',
+};
+
+const LABEL_PLACEHOLDERS: Record<Day1PanelSlot, string> = {
+  a: 'DAY 1',
+  b: 'DAY 30',
+  c: 'DAY 3',
+  d: 'DAY 7',
+};
+
+/** day1-quad Design §5.1 — a panel's own slot in the output, for the trim preview. */
+const PANEL_RECT = (
+  panels: readonly Day1PanelKey[],
+  key: Day1PanelKey,
+  ratio: AspectRatio,
+  lineWidthPx: number,
+): PanelRect => {
+  const index = panels.indexOf(key);
+
+  return panels.length > 2
+    ? (quadLayout(ratio, lineWidthPx).cells[index] as PanelRect)
+    : (splitLayout(ratio, lineWidthPx)[index === 0 ? 'a' : 'b'] as PanelRect);
 };
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -107,11 +133,22 @@ const END_CARD_MODE_LABELS: Record<Day1EndCardMode, string> = {
 };
 
 export interface Day1InspectorProps {
-  settings: Day1Settings;
+  /** day1-quad Design §7.1 — either panelled payload; the fields read here are shared. */
+  settings: Day1Settings | Day1QuadSettings;
+  /** The panel keys this template has, in order: two for Day1, four for the quad. */
+  panelKeys: readonly Day1PanelKey[];
+  /** Resolves a panel without indexing the payload (conventions §3.1). */
+  panelOf: (panel: Day1PanelKey) => Day1Panel | null;
   copy: Record<Locale, LocalizedCopy>;
   ratio: AspectRatio;
   /** Section length for each panel, from the shared axis. Day1 Design Ref: §3.1. */
   panelDurationsMs: Record<Day1PanelKey, number>;
+  /**
+   * The end card section's own length. day1-quad Design §4.1 — this used to be
+   * the `DAY1_END_CARD_MS` constant, which made the trim slot disagree with a
+   * card the operator had dragged longer.
+   */
+  endCardDurationMs: number;
   activeTransformOf: (panel: Day1PanelKey) => MediaTransform;
   hasRatioOverride: (panel: Day1PanelKey) => boolean;
   disabled: boolean;
@@ -126,7 +163,7 @@ export interface Day1InspectorProps {
   onToggleRatioOverride: (panel: Day1PanelKey, enabled: boolean) => void;
   onSplit: (patch: Partial<Day1Settings['split']>) => void;
   onLabelStyle: (patch: Partial<Day1Settings['labelStyle']>) => void;
-  onLabelText: (locale: Locale, panel: ActivePanel, value: string) => void;
+  onLabelText: (locale: Locale, panel: Day1PanelSlot, value: string) => void;
   onEndCard: (patch: Day1EndCardPatch) => void;
   onEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => void;
   /** Endcard-Video FR-07 — trim moves only through the reconciling command. */
@@ -142,8 +179,10 @@ const PanelSection = ({
   frameSampler,
   hasOverride,
   panel,
+  panelData,
+  panelKeys,
+  lineWidthPx,
   ratio,
-  settings,
   transform,
   url,
   onResetTransform,
@@ -156,8 +195,10 @@ const PanelSection = ({
   frameSampler: FrameSampler;
   hasOverride: boolean;
   panel: Day1PanelKey;
+  panelData: Day1Panel;
+  panelKeys: readonly Day1PanelKey[];
+  lineWidthPx: number;
   ratio: AspectRatio;
-  settings: Day1Settings;
   transform: MediaTransform;
   /** Session URL of this panel's video, or null while it is unresolved. */
   url: string | null;
@@ -167,12 +208,13 @@ const PanelSection = ({
   onTrimIn: (ms: number) => void;
 }) => {
   const key = PANEL_TEST_KEY[panel];
-  const {source, trim} = settings[panel];
+  const {source, trim} = panelData;
   // day1-video — the panel's own slot in the output, so the strip's preview can
   // show the crop the render will make instead of the whole source. Half of a
   // 9:16 frame is landscape, which is why letterboxing a portrait source into a
-  // 16:9 box left most of the box black.
-  const rect = splitLayout(ratio, settings.split.lineWidthPx)[key];
+  // 16:9 box left most of the box black. A quad cell is a quarter, and carries
+  // the output's own aspect ratio (day1-quad Design §5.1).
+  const rect = PANEL_RECT(panelKeys, panel, ratio, lineWidthPx);
   const sourceMs = source?.durationMs ?? 0;
   const controlsDisabled = disabled || sourceMs <= 0;
   // FR-S02. Mirrors `day1PanelsShorterThanSection`, which the render gate uses.
@@ -348,12 +390,15 @@ export const Day1Inspector = ({
   onEndCardTrimIn,
   onEndCardTrimLength,
   resolveEndCardUrl,
+  endCardDurationMs,
+  panelKeys,
+  panelOf,
 }: Day1InspectorProps) => {
   const {endCard, labelStyle, split} = settings;
   // day1-trim-preview FR-05 — the chosen window length; {0,0} (no video yet)
-  // reads as the full 3s card, mirroring the domain fallback.
+  // reads as the whole card, mirroring the domain fallback.
   const endCardTrimLenMs =
-    endCard.videoTrim.outMs - endCard.videoTrim.inMs || DAY1_END_CARD_MS;
+    endCard.videoTrim.outMs - endCard.videoTrim.inMs || endCardDurationMs;
   // Endcard-Video §5.5 — the badge counts the active treatment's assets only.
   const endCardAssetBadge =
     endCard.mode === 'video'
@@ -369,31 +414,37 @@ export const Day1Inspector = ({
       <div className="inspector__head">
         <h2>Day1 속성</h2>
         <span className="inspector__scene" data-testid="inspector-template">
-          Day1 비교
+          {panelKeys.length > 2 ? 'Day1(4 video)' : 'Day1 비교'}
         </span>
       </div>
 
       <div className="inspector__body">
-        {(['panelA', 'panelB'] as Day1PanelKey[]).map((panel) => (
-          <PanelSection
-            disabled={disabled}
-            durationMs={panelDurationsMs[panel]}
-            frameSampler={frameSampler}
-            hasOverride={hasRatioOverride(panel)}
-            key={panel}
-            onResetTransform={() => onResetTransform(panel)}
-            onToggleRatioOverride={(enabled) =>
-              onToggleRatioOverride(panel, enabled)
-            }
-            onTransform={(patch) => onTransform(panel, patch)}
-            onTrimIn={(ms) => onTrimIn(panel, ms)}
-            panel={panel}
-            ratio={ratio}
-            settings={settings}
-            transform={activeTransformOf(panel)}
-            url={resolvePanelUrl(panel)}
-          />
-        ))}
+        {panelKeys.map((panel) => {
+          const panelData = panelOf(panel);
+
+          return panelData ? (
+            <PanelSection
+              disabled={disabled}
+              durationMs={panelDurationsMs[panel]}
+              frameSampler={frameSampler}
+              hasOverride={hasRatioOverride(panel)}
+              key={panel}
+              lineWidthPx={split.lineWidthPx}
+              onResetTransform={() => onResetTransform(panel)}
+              onToggleRatioOverride={(enabled) =>
+                onToggleRatioOverride(panel, enabled)
+              }
+              onTransform={(patch) => onTransform(panel, patch)}
+              onTrimIn={(ms) => onTrimIn(panel, ms)}
+              panel={panel}
+              panelData={panelData}
+              panelKeys={panelKeys}
+              ratio={ratio}
+              transform={activeTransformOf(panel)}
+              url={resolvePanelUrl(panel)}
+            />
+          ) : null;
+        })}
 
         <InspectorSection
           badge={`${split.lineWidthPx}px`}
@@ -430,25 +481,36 @@ export const Day1Inspector = ({
             <div className="field field--pair" key={locale}>
               <span>{LOCALE_LABELS[locale]}</span>
               <div className="pair-row">
-                {(['a', 'b'] as ActivePanel[]).map((panel) => (
-                  <input
-                    aria-label={`${LOCALE_LABELS[locale]} 패널 ${panel.toUpperCase()} 라벨`}
-                    data-testid={`day1-label-${locale}-${panel}`}
-                    disabled={disabled}
-                    key={panel}
-                    onChange={(event) =>
-                      onLabelText(locale, panel, event.target.value)
-                    }
-                    placeholder={panel === 'a' ? 'DAY 1' : 'DAY 30'}
-                    type="text"
-                    value={(copy[locale] as LocalizedCopy).day1Labels?.[panel] ?? ''}
-                  />
-                ))}
+                {/* day1-quad Design §7.2 — one input per panel the template
+                    has: two for Day1, four for the quad. */}
+                {panelKeys.map((key) => {
+                  const panel = PANEL_TEST_KEY[key];
+
+                  return (
+                    <input
+                      aria-label={`${LOCALE_LABELS[locale]} 패널 ${panel.toUpperCase()} 라벨`}
+                      data-testid={`day1-label-${locale}-${panel}`}
+                      disabled={disabled}
+                      key={panel}
+                      onChange={(event) =>
+                        onLabelText(locale, panel, event.target.value)
+                      }
+                      placeholder={LABEL_PLACEHOLDERS[panel]}
+                      type="text"
+                      value={
+                        (copy[locale] as LocalizedCopy).day1Labels?.[panel] ?? ''
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}
           <p className="panel__hint">
-            왼쪽이 패널 A, 오른쪽이 패널 B입니다. 렌더에는 헤더에서 고른 언어의
+            {panelKeys.length > 2
+              ? '왼쪽부터 패널 A·B·C·D입니다.'
+              : '왼쪽이 패널 A, 오른쪽이 패널 B입니다.'}{' '}
+            렌더에는 헤더에서 고른 언어의
             문구가 들어갑니다.
           </p>
 
@@ -602,11 +664,11 @@ export const Day1Inspector = ({
               <TrimStrip
                 disabled={disabled}
                 inMs={endCard.videoTrim.inMs}
-                maxLengthMs={DAY1_END_CARD_MS}
+                maxLengthMs={endCardDurationMs}
                 minLengthMs={MIN_END_CARD_TRIM_MS}
                 onCommit={onEndCardTrimIn}
                 onCommitLength={onEndCardTrimLength}
-                playbackSlotMs={DAY1_END_CARD_MS}
+                playbackSlotMs={endCardDurationMs}
                 sampler={frameSampler}
                 sectionDurationMs={endCardTrimLenMs}
                 sourceDurationMs={endCard.video?.durationMs ?? 0}
@@ -620,7 +682,7 @@ export const Day1Inspector = ({
                   소스 구간 {formatSeconds(endCard.videoTrim.inMs)}s –{' '}
                   {formatSeconds(endCard.videoTrim.outMs)}s · 구간{' '}
                   {formatSeconds(endCardTrimLenMs)}s · 슬롯{' '}
-                  {formatSeconds(DAY1_END_CARD_MS)}s
+                  {formatSeconds(endCardDurationMs)}s
                 </p>
               ) : null}
 
@@ -654,15 +716,17 @@ export const Day1Inspector = ({
               />
 
               {/* day1-trim-preview FR-06 — a window shorter than the card loops
-                  to fill it; the bar shows exactly how the 3s slot is covered. */}
-              {endCard.video && endCardTrimLenMs < DAY1_END_CARD_MS ? (
+                  to fill it; the bar shows exactly how the slot is covered. */}
+              {endCard.video && endCardTrimLenMs < endCardDurationMs ? (
                 <>
                   <p
                     className="panel__hint"
                     data-testid="day1-endcard-loop-note"
                   >
-                    선택 구간 {formatSeconds(endCardTrimLenMs)}s가 3초보다 짧아
-                    3초를 채울 때까지 반복 재생됩니다.
+                    선택 구간 {formatSeconds(endCardTrimLenMs)}s가 엔드카드{' '}
+                    {formatSeconds(endCardDurationMs)}s보다 짧아{' '}
+                    {formatSeconds(endCardDurationMs)}s를 채울 때까지 반복
+                    재생됩니다.
                   </p>
                   <div
                     aria-hidden
@@ -678,10 +742,10 @@ export const Day1Inspector = ({
                     <span
                       className="loopfill__rest"
                       style={{
-                        flexGrow: DAY1_END_CARD_MS - endCardTrimLenMs,
+                        flexGrow: endCardDurationMs - endCardTrimLenMs,
                       }}
                     >
-                      루프 {formatSeconds(DAY1_END_CARD_MS - endCardTrimLenMs)}s
+                      루프 {formatSeconds(endCardDurationMs - endCardTrimLenMs)}s
                     </span>
                   </div>
                 </>

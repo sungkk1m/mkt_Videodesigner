@@ -5,6 +5,22 @@ export const SCENE_ORDER = ['hook', 'gameplay', 'cta'] as const;
 export const DURATION_PRESETS = [15, 30, 60] as const;
 
 /**
+ * day1-quad Plan Q8a — 60s over four panels is 14.25s each, which nobody asked
+ * for, so the quad template does not offer it.
+ *
+ * A function rather than a `Record<TemplateKind, …>` because this file is the
+ * base of the import order (schema and types both read it) and cannot import
+ * `TemplateKind` back. Three consumers: the preset UI, `switchTemplate`'s
+ * coercion, and the schema refine — Design D-4.
+ */
+export const DAY1_QUAD_DURATION_PRESETS = [15, 30] as const;
+
+export const durationPresetsForTemplate = (
+  template: (typeof TEMPLATE_KINDS)[number],
+): readonly (typeof DURATION_PRESETS)[number][] =>
+  template === 'day1-quad' ? DAY1_QUAD_DURATION_PRESETS : DURATION_PRESETS;
+
+/**
  * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
  * list now. The bounds are the schema's, not a template's: the existing two
  * templates still pin themselves to three section ids, and the looping template
@@ -13,11 +29,36 @@ export const DURATION_PRESETS = [15, 30, 60] as const;
 export const MIN_SECTION_COUNT = 2;
 export const MAX_SECTION_COUNT = 8;
 
-export const TEMPLATE_KINDS = ['three-scene', 'day1', 'kv-loop'] as const;
+export const TEMPLATE_KINDS = [
+  'three-scene',
+  'day1',
+  'day1-quad',
+  'kv-loop',
+] as const;
 export const DEFAULT_TEMPLATE = 'three-scene';
 
 /** Day1 Design Ref: §1.2 — `[panel A active, panel B active, end card]`. */
 export const DAY1_SECTION_ORDER = ['panel-a', 'panel-b', 'endcard'] as const;
+
+/**
+ * day1-quad Design §5.2 — four panels then the end card. Five sections, inside
+ * the `[MIN, MAX]_SECTION_COUNT` bounds the looping template opened up, so the
+ * axis needs no change and `PROJECT_SCHEMA_VERSION` stays 2.
+ */
+export const DAY1_QUAD_SECTION_ORDER = [
+  'panel-a',
+  'panel-b',
+  'panel-c',
+  'panel-d',
+  'endcard',
+] as const;
+
+/**
+ * day1-quad Design §5.3 — the panel letters, shared by the copy keys
+ * (`copy.day1Labels`) and the quad composition's active slot. `ActivePanel`
+ * stays `'a' | 'b'`: `SplitFrame` must not be handed a `'c'`.
+ */
+export const DAY1_PANEL_SLOTS = ['a', 'b', 'c', 'd'] as const;
 
 /**
  * key-visual-looping Design Ref: §3.1 — the looping template's section ids are

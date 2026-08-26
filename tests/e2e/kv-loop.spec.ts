@@ -21,6 +21,7 @@ import {
   probeVideo,
   sampleRegion,
 } from './helpers/videoSampling';
+import {chooseTemplate} from './helpers/template';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
@@ -40,7 +41,9 @@ const CYCLE_MS = HOLD_MS * 4;
 const TRANSITION_MS = 400;
 
 const selectKvLoop = async (page: Page) => {
-  await page.getByTestId('template-kv-loop').click();
+  // FR-L14 — the dialog must say the ratio is being forced before it happens, so
+  // this one goes through `chooseTemplate` and confirms by hand.
+  await chooseTemplate(page, 'kv-loop');
   await expect(page.getByTestId('template-switch-ratio-note')).toBeVisible();
   await page.getByTestId('template-switch-confirm').click();
   await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');

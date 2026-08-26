@@ -13,6 +13,8 @@ import {
   DAY1_CARD_MOTIONS,
   DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
+  DAY1_QUAD_DURATION_PRESETS,
+  DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DURATION_PRESETS,
   HOOK_MOTION_PRESETS,
@@ -192,7 +194,16 @@ export const localizedCopySchema = z.object({
    * parses untouched and three-scene projects never carry the field.
    */
   day1Labels: z
-    .object({a: copyTextSchema, b: copyTextSchema})
+    .object({
+      a: copyTextSchema,
+      b: copyTextSchema,
+      /**
+       * day1-quad Design §5.3 — optional, so a stored Day1 document parses
+       * untouched and no migration is needed. Same trick as `endCard.mode`.
+       */
+      c: copyTextSchema.optional(),
+      d: copyTextSchema.optional(),
+    })
     .optional(),
   /**
    * key-visual-looping Design Ref: §3.3 — the looping template's bottom
@@ -254,56 +265,90 @@ export const day1PanelSchema = z.object({
   transforms: ratioTransformsSchema,
 });
 
+/**
+ * day1-quad Design §5.2 — the three payload pieces Day1 and Day1-quad share,
+ * lifted out of `day1SettingsSchema` unchanged so both arms reference one
+ * definition. Values, bounds, comments, and above all the `.default()`s are
+ * verbatim: those defaults ARE the migration story for stored documents, and
+ * dropping one would make an existing Day1 project fail to parse.
+ */
+export const day1SplitSchema = z.object({
+  lineColor: hexColorSchema,
+  lineWidthPx: z.number().min(0).max(MAX_SPLIT_LINE_WIDTH_PX),
+});
+
+/** Label wording lives in `copy.day1Labels`; only the styling is here. */
+export const day1LabelStyleSchema = z.object({
+  fontSize: z.number().min(MIN_SUBTITLE_FONT_SIZE).max(MAX_SUBTITLE_FONT_SIZE),
+  textColor: hexColorSchema,
+  outlineColor: hexColorSchema,
+  outlineWidthPx: z.number().min(0).max(MAX_LABEL_OUTLINE_WIDTH_PX),
+  position: z.enum(SUBTITLE_POSITIONS),
+});
+
+export const day1EndCardSchema = z.object({
+  /**
+   * Which of the two mutually exclusive treatments renders. The `.default`
+   * is the entire migration story (Endcard-Video Design §3.1): a stored v2
+   * document has no `mode` key and parses as the banner behaviour it was
+   * saved with — no migration code, no schemaVersion bump.
+   */
+  mode: z.enum(DAY1_END_CARD_MODES).default('banner'),
+  /** Finished bannerdesigner export used as the card background. */
+  banner: mediaReferenceSchema.nullable(),
+  /** Same app icon as a separate layer so it can animate. Day1 Plan D4. */
+  appIcon: mediaReferenceSchema.nullable(),
+  iconAdjust: z.object({
+    dx: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
+    dy: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
+    scale: z.number().min(MIN_ICON_SCALE).max(MAX_ICON_SCALE),
+  }),
+  iconAnimation: z.enum(DAY1_ICON_ANIMATIONS),
+  cardMotion: z.enum(DAY1_CARD_MOTIONS),
+  /** One animated illustration that plays for the whole end card. */
+  video: mediaReferenceSchema.nullable().default(null),
+  /**
+   * Window into `video`. When the source is shorter the window covers all of
+   * it and playback loops to fill the card (Endcard-Video Design D-01).
+   * day1-quad Design §4.1 — the card's length is its section's, not a constant.
+   */
+  videoTrim: mediaTrimSchema.default({inMs: 0, outMs: 0}),
+  /**
+   * day1-endcard-audio FR-01/FR-05 — the video's own audio, on by default.
+   * The `.default()`s are again the entire migration story: documents saved
+   * while the card was hard-muted parse as audible at full volume.
+   */
+  videoAudioEnabled: z.boolean().default(true),
+  videoAudioVolume: z.number().min(0).max(1).default(1),
+});
+
 export const day1SettingsSchema = z.object({
   template: z.literal('day1'),
   panelA: day1PanelSchema,
   panelB: day1PanelSchema,
-  split: z.object({
-    lineColor: hexColorSchema,
-    lineWidthPx: z.number().min(0).max(MAX_SPLIT_LINE_WIDTH_PX),
-  }),
-  /** Label wording lives in `copy.day1Labels`; only the styling is here. */
-  labelStyle: z.object({
-    fontSize: z.number().min(MIN_SUBTITLE_FONT_SIZE).max(MAX_SUBTITLE_FONT_SIZE),
-    textColor: hexColorSchema,
-    outlineColor: hexColorSchema,
-    outlineWidthPx: z.number().min(0).max(MAX_LABEL_OUTLINE_WIDTH_PX),
-    position: z.enum(SUBTITLE_POSITIONS),
-  }),
-  endCard: z.object({
-    /**
-     * Which of the two mutually exclusive treatments renders. The `.default`
-     * is the entire migration story (Endcard-Video Design §3.1): a stored v2
-     * document has no `mode` key and parses as the banner behaviour it was
-     * saved with — no migration code, no schemaVersion bump.
-     */
-    mode: z.enum(DAY1_END_CARD_MODES).default('banner'),
-    /** Finished bannerdesigner export used as the card background. */
-    banner: mediaReferenceSchema.nullable(),
-    /** Same app icon as a separate layer so it can animate. Day1 Plan D4. */
-    appIcon: mediaReferenceSchema.nullable(),
-    iconAdjust: z.object({
-      dx: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
-      dy: z.number().min(-MAX_ICON_ADJUST).max(MAX_ICON_ADJUST),
-      scale: z.number().min(MIN_ICON_SCALE).max(MAX_ICON_SCALE),
-    }),
-    iconAnimation: z.enum(DAY1_ICON_ANIMATIONS),
-    cardMotion: z.enum(DAY1_CARD_MOTIONS),
-    /** One animated illustration that plays for the whole 3s end card. */
-    video: mediaReferenceSchema.nullable().default(null),
-    /**
-     * 3s window into `video`. When the source is shorter the window covers all
-     * of it and playback loops to fill the card (Endcard-Video Design D-01).
-     */
-    videoTrim: mediaTrimSchema.default({inMs: 0, outMs: 0}),
-    /**
-     * day1-endcard-audio FR-01/FR-05 — the video's own audio, on by default.
-     * The `.default()`s are again the entire migration story: documents saved
-     * while the card was hard-muted parse as audible at full volume.
-     */
-    videoAudioEnabled: z.boolean().default(true),
-    videoAudioVolume: z.number().min(0).max(1).default(1),
-  }),
+  split: day1SplitSchema,
+  labelStyle: day1LabelStyleSchema,
+  endCard: day1EndCardSchema,
+});
+
+/**
+ * day1-quad Design §5.2 / D-0 — four panels under named keys rather than an
+ * array. That is what lets the fifteen existing Day1 panel commands serve both
+ * templates after `Day1PanelKey` widens, and it keeps one panel-to-section
+ * mapping (`{panelA:0 … panelD:3}`) valid for both.
+ *
+ * Everything else is the Day1 payload verbatim: Plan Q5 keeps one divider and
+ * one label style for all four panels, and Q7 reuses the end card whole.
+ */
+export const day1QuadSettingsSchema = z.object({
+  template: z.literal('day1-quad'),
+  panelA: day1PanelSchema,
+  panelB: day1PanelSchema,
+  panelC: day1PanelSchema,
+  panelD: day1PanelSchema,
+  split: day1SplitSchema,
+  labelStyle: day1LabelStyleSchema,
+  endCard: day1EndCardSchema,
 });
 
 /**
@@ -417,6 +462,7 @@ export const kvLoopSettingsSchema = z.object({
 export const templateSettingsSchema = z.discriminatedUnion('template', [
   threeSceneSettingsSchema,
   day1SettingsSchema,
+  day1QuadSettingsSchema,
   kvLoopSettingsSchema,
 ]);
 
@@ -443,7 +489,9 @@ export const expectedSectionIds = (
     ? SCENE_ORDER
     : settings.template === 'day1'
       ? DAY1_SECTION_ORDER
-      : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
+      : settings.template === 'day1-quad'
+        ? DAY1_QUAD_SECTION_ORDER
+        : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -569,6 +617,60 @@ const refineDay1 = (
 };
 
 /**
+ * day1-quad Design §5.2 — the Day1 refinement over four panels, plus the one
+ * rule Day1 does not have: the preset is narrowed (Plan Q8a).
+ *
+ * Missing panel sources stay a render preflight gate, not a schema error, for
+ * the same reason as Day1: saving mid-upload has to work (FR-Q02).
+ */
+const refineDay1Quad = (
+  project: SectionedProject & {durationPreset: number},
+  settings: z.infer<typeof day1QuadSettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  (['panelA', 'panelB', 'panelC', 'panelD'] as const).forEach((key) => {
+    const panel = settings[key];
+
+    if (panel.source && !panel.source.durationMs) {
+      context.addIssue({
+        code: 'custom',
+        path: ['templateSettings', key, 'source', 'durationMs'],
+        message: 'A Day1 panel source must be a video with a duration.',
+      });
+    }
+
+    refineTrimInSource(
+      panel.trim,
+      panel.source,
+      ['templateSettings', key, 'trim'],
+      context,
+    );
+  });
+
+  refineTrimInSource(
+    settings.endCard.videoTrim,
+    settings.endCard.video,
+    ['templateSettings', 'endCard', 'videoTrim'],
+    context,
+  );
+
+  // Plan Q8a / Design D-4 — narrowed here rather than in `durationPresetSchema`,
+  // so the other templates keep all three presets. `switchTemplate` coerces on
+  // the way in, so the editor never reaches this; an imported JSON can.
+  if (
+    !(DAY1_QUAD_DURATION_PRESETS as readonly number[]).includes(
+      project.durationPreset,
+    )
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['durationPreset'],
+      message: `A day1-quad project runs ${DAY1_QUAD_DURATION_PRESETS.join('s or ')}s only.`,
+    });
+  }
+};
+
+/**
  * key-visual-looping Design Ref: §3.4. Missing key visuals are *not* a schema
  * error, for the same reason a missing Day1 panel is not: saving mid-upload has
  * to work. FR-L13 is a render preflight gate instead (`kvLoopMissingImages`),
@@ -683,6 +785,8 @@ export const editorProjectSchema = z
       refineThreeScene(project, settings, context);
     } else if (settings.template === 'day1') {
       refineDay1(project, settings, context);
+    } else if (settings.template === 'day1-quad') {
+      refineDay1Quad(project, settings, context);
     } else {
       refineKvLoop(project, settings, context);
     }
@@ -736,6 +840,7 @@ export type Sections = z.infer<typeof sectionsSchema>;
 export type TemplateSettings = z.infer<typeof templateSettingsSchema>;
 export type ThreeSceneSettings = z.infer<typeof threeSceneSettingsSchema>;
 export type Day1Settings = z.infer<typeof day1SettingsSchema>;
+export type Day1QuadSettings = z.infer<typeof day1QuadSettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
 export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
 export type KvSlot = z.infer<typeof kvSlotSchema>;

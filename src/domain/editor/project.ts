@@ -1,9 +1,11 @@
 // Design Ref: §10.2 — project state changes only through pure command functions.
 import {DEFAULT_AUDIO_MIX} from '../audio/mix';
 import {appIconRect} from '../day1/endCard';
-import {splitLayout} from '../day1/layout';
+import {quadLayout, splitLayout} from '../day1/layout';
 import {
   DAY1_END_CARD_MS,
+  activePanelForQuadSection,
+  day1QuadSectionDurations,
   MIN_END_CARD_TRIM_MS,
   activePanelForSection,
   day1SectionDurations,
@@ -36,6 +38,9 @@ import {
 } from '../timeline/timeline';
 import {
   DAY1_SECTION_LABELS,
+  DAY1_QUAD_DURATION_PRESETS,
+  DAY1_QUAD_SECTION_LABELS,
+  DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
   DEFAULT_KV_COUNT,
@@ -77,6 +82,10 @@ import {
   type CtaRenderProps,
   type CtaSceneSettings,
   type Day1Panel,
+  type Day1PanelSlot,
+  type Day1QuadProps,
+  type Day1QuadSettings,
+  type TemplateSettings,
   type Day1EndCardRenderProps,
   type Day1PanelRenderProps,
   type Day1Props,
@@ -186,6 +195,54 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
 };
 
 /**
+ * day1-quad Design §5.4 — the Day1 defaults with exactly one value changed.
+ *
+ * `labelStyle.fontSize` drops 72 → 44 because a quad cell is half as wide as a
+ * Day1 panel (537px vs 1080px at 9:16), and 72px overflows it. Everything else
+ * — the divider, the end card, and the panels' `contain` framing (Plan Q4) — is
+ * the Day1 value, so `DEFAULT_DAY1_PANEL_TRANSFORM` is reused as is.
+ */
+export const DEFAULT_DAY1_QUAD_SETTINGS: Day1QuadSettings = {
+  template: 'day1-quad',
+  panelA: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelB: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelC: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelD: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  split: {...DEFAULT_DAY1_SETTINGS.split},
+  labelStyle: {...DEFAULT_DAY1_SETTINGS.labelStyle, fontSize: 44},
+  endCard: structuredClone(DEFAULT_DAY1_SETTINGS.endCard),
+};
+
+/**
+ * day1-quad Plan Q9 — the labels start filled, with the same English in all
+ * four locales: `Day1` … `Day7` are numbers, not copy to translate, and a value
+ * in every locale means switching the language tab never blanks the frame.
+ * Day1 (two panels) keeps its empty labels — Plan Q10's no-change rule.
+ */
+const DAY1_QUAD_DEFAULT_LABELS = {
+  a: 'Day1',
+  b: 'Day2',
+  c: 'Day3',
+  d: 'Day7',
+} as const;
+
+/**
  * key-visual-looping Design Ref: §3.2 — the documented starting values for a
  * looping payload. Four key visuals repeated twice is the reference format
  * (Plan §1.2), and the closing fade is on because both reference videos end on
@@ -231,6 +288,13 @@ export const day1Of = (project: EditorProject): Day1Settings | null =>
   project.templateSettings.template === 'day1' ? project.templateSettings : null;
 
 /** The looping counterpart of `threeSceneOf`. */
+export const day1QuadOf = (
+  project: EditorProject,
+): Day1QuadSettings | null =>
+  project.templateSettings.template === 'day1-quad'
+    ? project.templateSettings
+    : null;
+
 export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
   project.templateSettings.template === 'kv-loop'
     ? project.templateSettings
@@ -832,26 +896,103 @@ export const setSceneSubtitleText = (
 // Each one no-ops on a foreign template, matching the three-scene commands above.
 // ---------------------------------------------------------------------------
 
-export type Day1PanelKey = 'panelA' | 'panelB';
+/**
+ * day1-quad Design §5.5 / D-0 — widened from the two Day1 keys so the fifteen
+ * commands below serve both templates. A command asked for a key the current
+ * payload does not have no-ops, which is the same contract a command aimed at a
+ * foreign template already had.
+ */
+export type Day1PanelKey = 'panelA' | 'panelB' | 'panelC' | 'panelD';
 
-/** Panel A owns section 0, panel B section 1. Day1 Design Ref: §1.2. */
-const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1> = {panelA: 0, panelB: 1};
+const DAY1_PANEL_KEYS = ['panelA', 'panelB'] as const;
+const DAY1_QUAD_PANEL_KEYS = [
+  'panelA',
+  'panelB',
+  'panelC',
+  'panelD',
+] as const;
+
+/**
+ * The panel keys a template actually has, in order. Empty for the templates
+ * with no panels, so callers holding a plain `TemplateSettings` need no
+ * narrowing. UI, proxies, and the render preflight all read this.
+ */
+export const panelKeysOf = (
+  settings: TemplateSettings,
+): readonly Day1PanelKey[] =>
+  settings.template === 'day1'
+    ? DAY1_PANEL_KEYS
+    : settings.template === 'day1-quad'
+      ? DAY1_QUAD_PANEL_KEYS
+      : [];
+
+/**
+ * Panel to section index. Day1 Design Ref: §1.2 — panel A owns section 0 and
+ * panel B section 1; day1-quad Design §5.5 — C and D continue that, so one
+ * mapping is correct for both templates.
+ */
+const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1 | 2 | 3> = {
+  panelA: 0,
+  panelB: 1,
+  panelC: 2,
+  panelD: 3,
+};
 
 const withDay1 = (
   project: EditorProject,
-  settings: Day1Settings,
+  settings: Day1Settings | Day1QuadSettings,
 ): EditorProject => ({...project, templateSettings: settings});
+
+/**
+ * day1-quad Design §5.5 — either panelled payload. The commands below read only
+ * fields the two arms share, so they do not care which one they were handed.
+ */
+export const day1PanelsOf = (
+  project: EditorProject,
+): Day1Settings | Day1QuadSettings | null =>
+  day1Of(project) ?? day1QuadOf(project);
+
+/**
+ * One panel off a project, or null when the template has no such panel.
+ *
+ * Exported because the feature layer used to reach in as `day1Of(project)?.[key]`,
+ * which stops type-checking the moment `Day1PanelKey` covers keys a Day1 payload
+ * does not have. conventions §3.1 — narrow through a helper, never index
+ * `templateSettings` directly.
+ */
+export const day1PanelAt = (
+  project: EditorProject,
+  key: Day1PanelKey,
+): Day1Panel | null => {
+  const settings = day1PanelsOf(project);
+
+  return settings ? panelAt(settings, key) : null;
+};
+
+/** One panel off either payload, or null when that key is not in it. */
+const panelAt = (
+  settings: Day1Settings | Day1QuadSettings,
+  key: Day1PanelKey,
+): Day1Panel | null =>
+  key in settings ? (settings[key as keyof typeof settings] as Day1Panel) : null;
 
 const mapDay1Panel = (
   project: EditorProject,
   key: Day1PanelKey,
   update: (panel: Day1Panel) => Day1Panel,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
-  return settings
-    ? withDay1(project, {...settings, [key]: update(settings[key])})
-    : project;
+  // A Day1 payload has no `panelC`. Asking it to change one is a no-op, not a
+  // crash — the same contract as a command aimed at a foreign template.
+  if (!settings || !(key in settings)) {
+    return project;
+  }
+
+  return withDay1(project, {
+    ...settings,
+    [key]: update(panelAt(settings, key) as Day1Panel),
+  });
 };
 
 const day1SectionMs = (project: EditorProject, key: Day1PanelKey) =>
@@ -859,24 +1000,33 @@ const day1SectionMs = (project: EditorProject, key: Day1PanelKey) =>
 
 /** Day1 Design Ref: §3.5 — a panel trim window never outgrows its section. */
 const reconcileDay1Trims = (project: EditorProject): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   if (!settings) {
     return project;
   }
 
-  const trimOf = (key: Day1PanelKey) =>
-    reconcileTrim(
-      settings[key].trim,
-      settings[key].source?.durationMs ?? 0,
-      day1SectionMs(project, key),
-    );
+  // day1-quad Design §5.5 — driven by the payload's own key list, so the two
+  // and four panel templates share one reconciliation.
+  const reconciled = Object.fromEntries(
+    panelKeysOf(settings).map((key) => {
+      const panel = panelAt(settings, key) as Day1Panel;
 
-  return withDay1(project, {
-    ...settings,
-    panelA: {...settings.panelA, trim: trimOf('panelA')},
-    panelB: {...settings.panelB, trim: trimOf('panelB')},
-  });
+      return [
+        key,
+        {
+          ...panel,
+          trim: reconcileTrim(
+            panel.trim,
+            panel.source?.durationMs ?? 0,
+            day1SectionMs(project, key),
+          ),
+        },
+      ];
+    }),
+  );
+
+  return withDay1(project, {...settings, ...reconciled});
 };
 
 /** Day1 Design Ref: §3.1 — the Day1 view of the shared time axis. */
@@ -886,6 +1036,17 @@ const buildDay1Sections = (preset: DurationPreset): Sections => {
   return DAY1_SECTION_ORDER.map((id, index) => ({
     id,
     label: DAY1_SECTION_LABELS[id],
+    durationMs: durations[index] as number,
+  }));
+};
+
+/** day1-quad Design §6.1 — four panels then the end card. */
+const buildDay1QuadSections = (preset: DurationPreset): Sections => {
+  const durations = day1QuadSectionDurations(preset);
+
+  return DAY1_QUAD_SECTION_ORDER.map((id, index) => ({
+    id,
+    label: DAY1_QUAD_SECTION_LABELS[id],
     durationMs: durations[index] as number,
   }));
 };
@@ -927,6 +1088,34 @@ export const switchTemplate = (
       ...project,
       sections: buildDay1Sections(project.durationPreset),
       templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
+    };
+  }
+
+  if (template === 'day1-quad') {
+    // Plan Q8a / Design §4.4 — the quad template offers 15s and 30s, so a 60s
+    // project is coerced on the way in. The dialog says so before it happens,
+    // which is the same contract the looping template's ratio coercion has.
+    const preset = (
+      DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[]
+    ).includes(project.durationPreset)
+      ? project.durationPreset
+      : 30;
+
+    return {
+      ...project,
+      durationPreset: preset,
+      sections: buildDay1QuadSections(preset),
+      templateSettings: structuredClone(DEFAULT_DAY1_QUAD_SETTINGS),
+      // Plan Q9 — labels arrive filled, in every locale.
+      copy: Object.fromEntries(
+        LOCALES.map((locale) => [
+          locale,
+          {
+            ...(project.copy[locale] as LocalizedCopy),
+            day1Labels: {...DAY1_QUAD_DEFAULT_LABELS},
+          },
+        ]),
+      ) as Record<Locale, LocalizedCopy>,
     };
   }
 
@@ -1001,13 +1190,14 @@ export const setDay1TrimInMs = (
   key: Day1PanelKey,
   inMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
+  const panel = settings && panelAt(settings, key);
 
-  if (!settings) {
+  if (!panel) {
     return project;
   }
 
-  const sourceMs = settings[key].source?.durationMs ?? 0;
+  const sourceMs = panel.source?.durationMs ?? 0;
 
   return mapDay1Panel(project, key, (panel) => ({
     ...panel,
@@ -1025,17 +1215,15 @@ export const setDay1TrimOutMs = (
   key: Day1PanelKey,
   outMs: number,
 ): EditorProject => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
+  const panel = settings && panelAt(settings, key);
 
-  if (!settings) {
+  if (!panel) {
     return project;
   }
 
   const sectionMs = day1SectionMs(project, key);
-  const windowMs = Math.min(
-    sectionMs,
-    settings[key].source?.durationMs ?? sectionMs,
-  );
+  const windowMs = Math.min(sectionMs, panel.source?.durationMs ?? sectionMs);
 
   return setDay1TrimInMs(project, key, outMs - windowMs);
 };
@@ -1191,20 +1379,33 @@ export const setDay1EndCardVideo = (
       videoTrim: reconcileTrim(
         {inMs: 0, outMs: 0},
         reference?.durationMs ?? 0,
-        DAY1_END_CARD_MS,
+        endCardSectionMs(project),
       ),
     },
   });
 };
 
 /**
- * day1-trim-preview FR-05 — the length the user chose, surviving moves. {0,0}
- * (no video picked yet) falls back to the full 3s card.
+ * day1-quad Design §4.1 — the end card's own section length, not the 3s
+ * constant. `DAY1_END_CARD_MS` is only the value the section *starts* at; the
+ * timeline boundary has always been draggable past it, and `EndCardScene`
+ * already renders whatever length the section holds. The end card is the last
+ * section in both Day1 and Day1-quad, so "last" is the rule.
  */
-const endCardWindowMs = (endCard: Day1Settings['endCard']): number => {
+const endCardSectionMs = (project: EditorProject): number =>
+  project.sections[project.sections.length - 1]?.durationMs ?? DAY1_END_CARD_MS;
+
+/**
+ * day1-trim-preview FR-05 — the length the user chose, surviving moves. {0,0}
+ * (no video picked yet) falls back to the whole card.
+ */
+const endCardWindowMs = (
+  endCard: Day1Settings['endCard'],
+  sectionMs: number,
+): number => {
   const lengthMs = endCard.videoTrim.outMs - endCard.videoTrim.inMs;
 
-  return lengthMs > 0 ? lengthMs : DAY1_END_CARD_MS;
+  return lengthMs > 0 ? lengthMs : sectionMs;
 };
 
 /** Endcard-Video FR-07 — mirrors `setDay1TrimInMs` at the chosen window length. */
@@ -1225,16 +1426,21 @@ export const setDay1EndCardTrimInMs = (
       videoTrim: reconcileTrim(
         {inMs, outMs: inMs},
         settings.endCard.video?.durationMs ?? 0,
-        endCardWindowMs(settings.endCard),
+        endCardWindowMs(settings.endCard, endCardSectionMs(project)),
       ),
     },
   });
 };
 
 /**
- * day1-trim-preview FR-05 — window length 0.5s..3s, capped by the source, so a
- * single cut can loop the 3s card. `reconcileTrim` slides the in point back
- * when the longer window would leave the source.
+ * day1-trim-preview FR-05 — window length from 0.5s up to the end card's own
+ * length, capped by the source, so a single cut can loop the card.
+ * `reconcileTrim` slides the in point back when the longer window would leave
+ * the source.
+ *
+ * day1-quad Design §4.1 — the upper bound used to be the 3s constant, which
+ * meant dragging the end card longer left the extra time unreachable: the
+ * operator could only pick a 3s window and the rest was filled by looping.
  */
 export const setDay1EndCardTrimLengthMs = (
   project: EditorProject,
@@ -1255,7 +1461,11 @@ export const setDay1EndCardTrimLengthMs = (
       videoTrim: reconcileTrim(
         {inMs: videoTrim.inMs, outMs: videoTrim.inMs},
         settings.endCard.video?.durationMs ?? 0,
-        clamp(Math.round(lengthMs), MIN_END_CARD_TRIM_MS, DAY1_END_CARD_MS),
+        clamp(
+          Math.round(lengthMs),
+          MIN_END_CARD_TRIM_MS,
+          endCardSectionMs(project),
+        ),
       ),
     },
   });
@@ -1265,7 +1475,9 @@ export const setDay1EndCardTrimLengthMs = (
 export const setDay1LabelText = (
   project: EditorProject,
   locale: Locale,
-  panel: ActivePanel,
+  // day1-quad Design §5.3 — widened from `ActivePanel`, because the quad
+  // template has slots `c` and `d` too.
+  panel: Day1PanelSlot,
   value: string,
 ): EditorProject => {
   const current = project.copy[locale] as LocalizedCopy;
@@ -1627,11 +1839,13 @@ export const updateKvDisclaimerStyle = (
 export const day1MissingPanels = (
   project: EditorProject,
 ): Day1PanelKey[] => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
+  // day1-quad Plan Q6 — all four are required, which needs no new rule: the key
+  // list is simply four long.
   return settings
-    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter(
-        (key) => settings[key].source === null,
+    ? panelKeysOf(settings).filter(
+        (key) => panelAt(settings, key)?.source == null,
       )
     : [];
 };
@@ -1647,15 +1861,13 @@ export const day1MissingPanels = (
 export const day1PanelsShorterThanSection = (
   project: EditorProject,
 ): Day1PanelKey[] => {
-  const settings = day1Of(project);
+  const settings = day1PanelsOf(project);
 
   return settings
-    ? (['panelA', 'panelB'] as Day1PanelKey[]).filter((key, index) => {
-        const sourceMs = settings[key].source?.durationMs ?? 0;
+    ? panelKeysOf(settings).filter((key) => {
+        const sourceMs = panelAt(settings, key)?.source?.durationMs ?? 0;
 
-        return (
-          sourceMs > 0 && sourceMs < (project.sections[index]?.durationMs ?? 0)
-        );
+        return sourceMs > 0 && sourceMs < day1SectionMs(project, key);
       })
     : [];
 };
@@ -1939,6 +2151,88 @@ export const buildDay1Props = (
 };
 
 /**
+ * day1-quad Design §6.4 — the Day1 prop builder over four panels. Returns null
+ * for any other template, matching `buildDay1Props`.
+ *
+ * Everything the composition needs is resolved here: the grid geometry, the
+ * per-section frame layout, the four panels with their locale-resolved labels,
+ * and the end card — which is `buildEndCardProps` unchanged, because Plan Q7
+ * reuses the Day1 card whole.
+ */
+export const buildDay1QuadProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): Day1QuadProps | null => {
+  const settings = day1QuadOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const frames = allocateSceneFrames(
+    sectionDurationsOf(project.sections),
+    project.durationPreset,
+    project.fps,
+  );
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+  let cursor = 0;
+
+  const sections = project.sections.map((section, index) => {
+    const durationInFrames = frames[index] as number;
+    const props: Day1SectionRenderProps<Day1PanelSlot> = {
+      id: section.id,
+      fromFrame: cursor,
+      durationInFrames,
+      activePanel: activePanelForQuadSection(index),
+    };
+
+    cursor += durationInFrames;
+
+    return Object.freeze(props);
+  });
+
+  const panelProps = (panel: Day1Panel, label: string): Day1PanelRenderProps => {
+    const transform = activeTransform(panel, project.selectedRatio);
+    const trimBeforeFrames = msToFrames(panel.trim.inMs, project.fps);
+
+    return Object.freeze({
+      url: resolveUrl(panel.source),
+      trimBeforeFrames,
+      trimAfterFrames: Math.max(
+        trimBeforeFrames + 1,
+        msToFrames(panel.trim.outMs, project.fps),
+      ),
+      fit: transform.fit,
+      scale: transform.scale,
+      x: transform.x,
+      y: transform.y,
+      label,
+    });
+  };
+
+  const labels = copy.day1Labels;
+
+  return Object.freeze({
+    layout: Object.freeze(
+      quadLayout(project.selectedRatio, settings.split.lineWidthPx),
+    ),
+    lineColor: settings.split.lineColor,
+    panels: Object.freeze([
+      panelProps(settings.panelA, labels?.a ?? ''),
+      panelProps(settings.panelB, labels?.b ?? ''),
+      panelProps(settings.panelC, labels?.c ?? ''),
+      panelProps(settings.panelD, labels?.d ?? ''),
+    ]) as Day1QuadProps['panels'],
+    labelStyle: Object.freeze({...settings.labelStyle}),
+    endCard: buildEndCardProps(settings.endCard, project, resolveUrl),
+    sections: Object.freeze(sections) as Day1SectionRenderProps<Day1PanelSlot>[],
+    // Plan §3.2 keeps narration and TTS out of the quad template too, so passing
+    // no scenes yields an empty narration list: only BGM and the live panel.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * key-visual-looping Design Ref: §5.1 — the looping render contract. Returns
  * null for any other template, matching `buildDay1Props`.
  *
@@ -2046,6 +2340,12 @@ export const buildEditorSnapshot = (
 
   if (day1Props) {
     return {template: 'day1', props: day1Props};
+  }
+
+  const day1QuadProps = buildDay1QuadProps(project, resolveUrl);
+
+  if (day1QuadProps) {
+    return {template: 'day1-quad', props: day1QuadProps};
   }
 
   const kvLoopProps = buildKvLoopProps(project, resolveUrl);

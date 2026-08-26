@@ -60,6 +60,7 @@ export const expandRenderJobs = (project: EditorProject): RenderJob[] => {
         fps: project.render.fps,
         ratio,
         locale,
+        template: project.templateSettings.template,
         outputTarget: 'web-fs',
       };
 

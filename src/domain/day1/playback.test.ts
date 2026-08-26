@@ -4,15 +4,31 @@ import {describe, expect, it} from 'vitest';
 import {DURATION_PRESETS} from '../editor/types';
 import {
   DAY1_END_CARD_MS,
+  activePanelForQuadSection,
   activePanelForSection,
+  day1QuadSectionDurations,
   day1SectionDurations,
 } from './playback';
+import {DAY1_QUAD_DURATION_PRESETS, MIN_SCENE_MS} from '../editor/constants';
 
 describe('activePanelForSection', () => {
   it('maps 0 to A, 1 to B, and the end card to no panel', () => {
     expect(activePanelForSection(0)).toBe('a');
     expect(activePanelForSection(1)).toBe('b');
     expect(activePanelForSection(2)).toBeNull();
+  });
+});
+
+describe('activePanelForQuadSection', () => {
+  it('maps the four panels in reading order and the end card to none', () => {
+    expect([0, 1, 2, 3].map(activePanelForQuadSection)).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+    ]);
+    expect(activePanelForQuadSection(4)).toBeNull();
+    expect(activePanelForQuadSection(-1)).toBeNull();
   });
 });
 
@@ -56,5 +72,28 @@ describe('day1SectionDurations', () => {
         expect(durationMs).toBeGreaterThanOrEqual(1000);
       }
     }
+  });
+});
+
+// day1-quad Design §6.1 — five sections: four panels then the end card.
+describe('day1QuadSectionDurations', () => {
+  it.each(DAY1_QUAD_DURATION_PRESETS)(
+    'splits the %ss preset into four panels and the end card',
+    (preset) => {
+      const durations = day1QuadSectionDurations(preset);
+
+      expect(durations).toHaveLength(5);
+      // The schema rejects anything that does not total the preset exactly.
+      expect(durations.reduce((sum, ms) => sum + ms, 0)).toBe(preset * 1000);
+      expect(durations[4]).toBe(DAY1_END_CARD_MS);
+      durations.forEach((ms) => expect(ms).toBeGreaterThanOrEqual(MIN_SCENE_MS));
+    },
+  );
+
+  it('gives the four panels an even split, remainder to the last', () => {
+    // 15s: 12s over four panels is exactly 3s each.
+    expect(day1QuadSectionDurations(15)).toEqual([3000, 3000, 3000, 3000, 3000]);
+    // 30s: 27s over four is 6.75s, which divides evenly at millisecond scale.
+    expect(day1QuadSectionDurations(30)).toEqual([6750, 6750, 6750, 6750, 3000]);
   });
 });

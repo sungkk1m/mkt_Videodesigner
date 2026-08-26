@@ -124,7 +124,7 @@ test.describe('module-4 full editor', () => {
 
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toBe('ua-video_ko_1x1_15s_30fps.mp4');
+    expect(download.suggestedFilename()).toBe('ua-video_3scene_ko_1x1_15s_30fps.mp4');
 
     await mkdir(outputDirectory, {recursive: true});
     const outputPath = resolve(outputDirectory, 'editor-full-1x1.mp4');

@@ -3,8 +3,9 @@
 **https://sungkk1m.github.io/mkt_Videodesigner/**
 
 Chrome에서 서버 없이 UA 영상을 편집하고 다국어·다비율 MP4를 만드는 정적 웹 앱입니다.
-템플릿 2종을 지원합니다 — **3장면**(Hook·Gameplay·CTA, 영상 1개)과 **Day1**(Before/After
-분할 비교, 영상 2개 + 엔드카드).
+템플릿 4종을 지원합니다 — **3장면**(Hook·Gameplay·CTA, 영상 1개), **Day1**(Before/After
+분할 비교, 영상 2개 + 엔드카드), **Day1(4 video)**(2×2 그리드, 영상 4개 + 엔드카드),
+**키비주얼 루핑**(이미지 반복, 9:16 전용).
 
 업로드한 영상과 문구는 애플리케이션 서버로 전송되지 않습니다. 편집, 미리보기,
 렌더, 저장이 모두 브라우저 안에서 끝납니다.
@@ -44,14 +45,19 @@ npm run test:e2e       # 실제 Chrome 렌더 포함 E2E (Playwright)
 
 템플릿별 기능:
 
-| 영역 | 3장면 | Day1 |
-|------|-------|------|
-| 소재 | 영상 1개를 Hook · Gameplay · CTA에 일괄 적용 | 영상 2개 (둘 다 필수), 엔드카드 배너·앱아이콘 |
-| 구간 | Hook · Gameplay · CTA | 패널 A · 패널 B · 엔드카드 |
-| 문구 | 4언어 Hook·자막·CTA | 4언어 패널 라벨 A·B |
-| 고유 | Hook 후보 추천, 나레이션·TTS, 장면 전환 | 활성 패널만 재생 + 비활성 흑백 정지, 분할선 색·두께(스포이트), 아이콘 애니메이션 |
+| 영역 | 3장면 | Day1 | Day1(4 video) |
+|------|-------|------|---------------|
+| 소재 | 영상 1개를 Hook · Gameplay · CTA에 일괄 적용 | 영상 2개 (둘 다 필수), 엔드카드 배너·앱아이콘 | 영상 4개 (전부 필수), 엔드카드는 Day1과 동일 |
+| 구간 | Hook · Gameplay · CTA | 패널 A · 패널 B · 엔드카드 | 패널 A~D · 엔드카드 |
+| 길이 | 15 · 30 · 60초 | 15 · 30 · 60초 | **15 · 30초** |
+| 문구 | 4언어 Hook·자막·CTA | 4언어 패널 라벨 A·B | 4언어 패널 라벨 A~D (기본 `Day1`~`Day7`) |
+| 고유 | Hook 후보 추천, 나레이션·TTS, 장면 전환 | 활성 패널만 재생 + 비활성 흑백 정지, 분할선 색·두께(스포이트) | 2×2 그리드 + 십자 분할선. 셀이 출력 종횡비와 같아 규격 간 프레이밍이 이식된다 |
 
 > 템플릿 전환은 파괴적입니다. 이름·오디오·렌더 설정은 유지되고 장면/패널 설정은 초기화됩니다.
+> 60초 프로젝트에서 Day1(4 video)로 바꾸면 30초로 조정되며, 전환 전에 안내가 뜹니다.
+
+출력 파일명은 `{프로젝트}_{템플릿}_{언어}_{규격}_{길이}s_{fps}fps.mp4`입니다
+(`3scene` · `day1` · `day1x4` · `kvloop`).
 
 ## Project Layout
 
@@ -75,10 +81,19 @@ Zustand를 임포트할 수 없고, feature는 다른 feature 내부를 참조�
 | `docs/01-plan/features/browser-video-mvp.plan.md` | 요구사항과 범위 |
 | `docs/02-design/features/browser-video-mvp.design.md` | 설계, 모듈 완료 로그, 의도적 설계 편차 |
 | `docs/archive/2026-07/day1-template/` | Day1 템플릿 PDCA 전체 (Plan·Design·모듈 증거·Check·리포트) — 사이클 완료 후 아카이브 |
+| `docs/01-plan/features/day1-quad.plan.md` | Day1(4 video) Plan — 결정 15건과 근거 |
+| `docs/02-design/features/day1-quad.design.md` | Day1(4 video) Design — 설계 결정 D-0~D-4 |
+| `docs/03-analysis/day1-quad.m0-perf-gate.md` | 4분할 렌더 성능 실측. 패널 개수는 1.15배, `contain` 블러 배경이 2.13배 |
 | `docs/01-plan/conventions.md` | 코딩 컨벤션 (§3.1 템플릿 규약) |
 | `docs/03-analysis/*.md` | 모듈별 검증 증거와 알려진 한계 |
 
 ## Status
+
+**day1-quad (Day1 4 video) 구현 완료 — 배포 전 실측 대기.** 모듈 M0~M7, 유닛 575개
+통과. 4분할 렌더가 Day1 대비 1.15배로 성능 게이트를 통과했으나, 그 실측은 H.264가
+없는 원격 컨테이너에서 VP9로 대체 측정한 값입니다
+([근거와 한계](docs/03-analysis/day1-quad.m0-perf-gate.md) §6). **실제 Chrome에서의
+MP4 렌더 검증(`tests/e2e/day1-quad.spec.ts`)이 남아 있습니다.**
 
 browser-video-mvp Do 모듈 1~7 완료. day1-template은 **PDCA 사이클 완료**
 (Match Rate 100%, Success Criteria 6/6 — 유닛 272, E2E 27 + 옵트인 60초 렌더 하네스 1).

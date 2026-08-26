@@ -27,6 +27,7 @@ import {
   saturation,
   type Rgb,
 } from './helpers/videoSampling';
+import {switchTemplate} from './helpers/template';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -158,8 +159,7 @@ const colorBoundingBox = async (
 
 /** Selects Day1 through the real confirmation dialog. */
 const selectDay1 = async (page: Page) => {
-  await page.getByTestId('template-day1').click();
-  await page.getByTestId('template-switch-confirm').click();
+  await switchTemplate(page, 'day1');
   await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 };
 
@@ -257,7 +257,7 @@ test.describe('module-6 Day1 render integration', () => {
       );
 
       expect(suggestedFilename).toBe(
-        `ua-video_ko_${spec.file}_15s_30fps.mp4`,
+        `ua-video_day1_ko_${spec.file}_15s_30fps.mp4`,
       );
 
       const probe = await probeVideo(outputPath);
@@ -573,10 +573,10 @@ test.describe('module-6 Day1 render integration', () => {
     }
 
     expect([...downloads].sort()).toEqual([
-      'ua-video_en_1x1_15s_30fps.mp4',
-      'ua-video_en_9x16_15s_30fps.mp4',
-      'ua-video_ko_1x1_15s_30fps.mp4',
-      'ua-video_ko_9x16_15s_30fps.mp4',
+      'ua-video_day1_en_1x1_15s_30fps.mp4',
+      'ua-video_day1_en_9x16_15s_30fps.mp4',
+      'ua-video_day1_ko_1x1_15s_30fps.mp4',
+      'ua-video_day1_ko_9x16_15s_30fps.mp4',
     ]);
   });
 
@@ -609,7 +609,7 @@ test.describe('module-6 Day1 render integration', () => {
 
     // The v1 fixture stores fps 60, and a stored document keeps its own fps
     // (day1-render-fps D-07) — so this stays 60fps while new projects are 30.
-    expect(suggestedFilename).toBe('v1-regression_ko_9x16_15s_60fps.mp4');
+    expect(suggestedFilename).toBe('v1-regression_3scene_ko_9x16_15s_60fps.mp4');
 
     // The three-scene baseline through the same harness and output settings, so
     // the Day1 number logged above is comparable. Design §2.3.

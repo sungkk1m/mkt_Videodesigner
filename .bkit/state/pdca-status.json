@@ -1,12 +1,13 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-22T15:30:00.000Z",
+  "lastUpdated": "2026-08-24T13:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
-    "key-visual-looping"
+    "key-visual-looping",
+    "day1-quad"
   ],
-  "primaryFeature": null,
+  "primaryFeature": "day1-quad",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -483,10 +484,176 @@
           "add the uneven-hold e2e once SC2 passes at even holds"
         ]
       }
+    },
+    "day1-quad": {
+      "phase": "check",
+      "phaseNumber": 4,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "day1-quad-template-arm",
+        "four-video-panels-all-required",
+        "2x2-grid-layout",
+        "reading-order-a-b-c-d",
+        "five-section-axis",
+        "sequential-active-panel",
+        "cross-divider",
+        "contain-default-fit",
+        "shared-style-set",
+        "four-panel-labels-4-locales-day1-day2-day3-day7",
+        "reuse-day1-endcard",
+        "presets-15-30-only",
+        "endcard-length-unlocked-both-templates",
+        "template-segment-in-filename-all-templates",
+        "template-selector-dropdown",
+        "panel-proxy-4-panels",
+        "no-schema-version-bump"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/day1-quad.plan.md",
+        "m0PerfGate": "docs/03-analysis/day1-quad.m0-perf-gate.md",
+        "design": "docs/02-design/features/day1-quad.design.md",
+        "report": "docs/04-report/day1-quad.report.md"
+      },
+      "timestamps": {
+        "started": "2026-08-24T00:00:00.000Z",
+        "lastUpdated": "2026-08-24T13:45:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "basedOn": "day1-template (PDCA complete) + key-visual-looping variable sections",
+        "planRecommendations": {
+          "P1": "separate template arm day1-quad, shared internals extracted; day1 behaviour unchanged",
+          "P2": "2x2 grid - cell aspect equals output aspect in all three ratios (error <= 0.25%)",
+          "P3": "sections = [panel-a, panel-b, panel-c, panel-d, endcard], 5 <= MAX_SECTION_COUNT",
+          "P4": "one live panel, the other three frozen at trim-in in greyscale (keeps decode at one stream)",
+          "P5": "Day1PanelKey widened to panelA..panelD so the existing 15 commands serve both templates",
+          "P6": "copy.day1Labels gains optional c/d - no migration, PROJECT_SCHEMA_VERSION stays 2",
+          "P7": "label default fontSize 72 -> 44 because the cell is half as wide",
+          "P8": "module 0 is a render perf gate: <= 1.5x the Day1 baseline"
+        },
+        "openQuestions": [],
+        "codeChanged": false,
+        "confirmedDecisions": {
+          "Q1": "2x2 grid layout",
+          "Q2": "one live panel, the other three frozen at trim-in in greyscale",
+          "Q3": "reading order A(top-left) B(top-right) C(bottom-left) D(bottom-right); verified no RTL locale in ko/en/ja/zh-TW",
+          "Q4": "panel default fit stays contain - sources are a mix of portrait and landscape",
+          "Q5": "divider and label style: one shared set for all four panels",
+          "Q6": "all four videos required; render blocked otherwise",
+          "Q7": "end card identical to day1 - banner+icon or video, shared schema and composition",
+          "Q8a": "duration presets 15 and 30 only; switching from a 60s project coerces to 30 with a dialog note",
+          "Q8b": "unlock the end-card length constant in BOTH day1 and day1-quad - it is an existing day1 bug, not a new feature",
+          "Q9": "label defaults Day1 / Day2 / Day3 / Day7, same English text in all four locales",
+          "Q10": "new template arm with shared internals extracted; day1 render behaviour unchanged",
+          "Q11": "UI label \"Day1(4 video)\"; template selector moves from segmented buttons to a dropdown",
+          "Q12": "template segment in the output filename, applied to all templates",
+          "Q13": "proceed even if the M0 perf gate exceeds 1.5x the day1 baseline",
+          "Q14": "keep the 52MB proxy ceiling, revisit after M0"
+        },
+        "confirmedAt": "2026-08-24T02:00:00.000Z",
+        "sourceOrientation": "mixed (portrait and landscape both occur)",
+        "topRisk": "R1 composition cost - contain default means up to 8 video elements per frame; M0 gate must measure the contain configuration",
+        "planComplete": true,
+        "sharedPathChanges": [
+          "end-card length: constant 3s -> actual section duration (day1 included) - Day1Inspector.tsx:605,609,681 and project.ts:1258",
+          "output filename: template segment for all templates - 6 assertions to update",
+          "template selector: segmented buttons -> dropdown - 10 e2e files, extract a switchTemplate helper"
+        ],
+        "moduleOrderRationale": "M1 groups the three shared-path changes because each needs zero day1-quad code, so the existing suite is the regression gate before any quad code exists",
+        "nextStep": "run the full E2E suite on real Chrome, then merge to main to deploy",
+        "m0Result": {
+          "ranAt": "2026-08-24T05:30:00.000Z",
+          "environment": "remote container: 4 vCPU, no GPU, headless Chromium 141, NO H.264 encoder or decoder, software VP9",
+          "config": "450 frames, 1080x1920, 30fps, vp9/webm, all-panel sections (no end card), 4 distinct VP9 sources, 2 repeats per config",
+          "panelCount2to4": "1.15x on total wall clock, identical under cover and contain - GATE PASSED (limit 1.5x)",
+          "coverToContain": "2.13x day1 / 2.14x quad - a fixed cost independent of panel count, already paid by day1 today",
+          "bakedBackdrop": "0.48x day1 / 0.52x quad; day1 baked is within 2.9% of cover",
+          "quadBakedVsTodayDay1": "0.60x - a 4-panel quad with baked backdrops renders faster than today 2-panel day1",
+          "bucketsUnusable": "the four web-renderer timing buckets cover only 28-81% of wall clock depending on variant, so cost cannot be attributed to them; all comparisons use wall clock",
+          "rejectedRisks": [
+            "R1 composition cost",
+            "R2 frozen panels re-decoding per frame"
+          ],
+          "newRisk": "R11 - contain blurred backdrop costs 2.13x, pre-existing in day1",
+          "unverified": "absolute numbers are NOT comparable to the documented 17.0s baseline; the real gate must be re-run on the user Chrome. The baked backdrop used ffmpeg gblur, so pixel equivalence with CSS blur() is unverified"
+        },
+        "bakedBackdropDecision": "out of scope for this cycle (2026-08-24). The 2.13x contain cost is day1 pre-existing, day1-quad already passes the gate at 1.15x, and the fix can change output pixels so it needs its own visual-equivalence verification. Follows the day1-render-speed precedent: a separate PDCA cycle. Evidence recorded in plan 2.12 and the M0 analysis 5.",
+        "followUpCycleCandidates": [
+          "baked blurred backdrop - recovers 0.48x on day1 and 0.52x on day1-quad; needs pixel-equivalence verification against CSS blur()"
+        ],
+        "designDecisions": {
+          "D-0": "panels stored as named keys panelA..panelD, not an array - lets the existing 15 day1 commands serve both templates and makes one panel-to-section mapping valid for both",
+          "D-1": "Panel keeps `live: boolean`; a state union adds nothing while Q2 fixes the states at two",
+          "D-2": "template dropdown stays a controlled <select value={current}>, so cancelling needs no restore logic - React reverts it on re-render",
+          "D-3": "end-card actual length is prop-drilled next to panelDurationsMs; the clamp reads the last section off the project it already receives",
+          "D-4": "allowed presets live in a domain constant read by both the preset UI and switchTemplate, and are enforced by a schema refine mirroring kv-loop ratio narrowing"
+        },
+        "designApprovedAt": null,
+        "designRiskNotes": [
+          "extracting day1EndCardSchema must not drop a single .default() - those defaults ARE the migration story for stored day1 documents",
+          "Panel extraction must be a pure move; SplitFrame markup unchanged and data-testid=\"day1-split-line\" preserved"
+        ],
+        "currentScope": "module-7",
+        "completedModules": [
+          "module-0-perf-gate",
+          "module-1-shared-path",
+          "module-2-schema",
+          "module-3-domain",
+          "module-4-composition",
+          "module-5-ui",
+          "module-6-render-proxy",
+          "module-7-e2e-docs"
+        ],
+        "m1Result": {
+          "day1QuadCodeWritten": "zero lines, as designed - the existing suite was the only gate",
+          "endCardLength": "three call sites, not the two the plan listed: setDay1EndCardVideo also seeded the initial window from the 3s constant",
+          "filenameAssertions": "eight, not the six the plan listed - queue.test.ts and pages-subpath.spec.ts were missed in the survey",
+          "selectorCallSites": "12 sites across 10 spec files, replaced by tests/e2e/helpers/template.ts",
+          "verified": "unit 531/531 (baseline 529 + 2 new), tsc -b + vite build clean, dropdown and end-card slot confirmed in a real browser via artifacts/m1/",
+          "notVerified": "every E2E that renders an MP4 - this container has no H.264 encoder or decoder"
+        },
+        "verification": {
+          "unitTests": "575 passed (cycle started at 529)",
+          "build": "tsc -b across three configs + vite build clean",
+          "geometry": "quadLayout exhaustive: 3 ratios x divider 0-24px",
+          "perfGate": "panel count 2->4 = 1.15x, under the 1.5x limit (VP9 substitute measurement)",
+          "panelExtraction": "byte-identical: 1454 + 2945 chars",
+          "previewPixels": "panel A saturation 1.000, B/C/D 0.000",
+          "browserFlow": "12 checks in artifacts/m1/verify-quad-ui.mjs"
+        },
+        "notVerified": [
+          "every MP4 render: this container has no H.264 encoder or decoder",
+          "SC1 three-ratio output, SC4 divider pixels in the render",
+          "the 1.15x gate in absolute terms - needs a re-run on real Chrome"
+        ],
+        "bugFoundInBrowser": "useMediaSession.retain listed only panelA/panelB, so uploading the third quad panel revoked the first two object URLs and all four fell back to the relink prompt. Not reachable by unit tests; surfaced only by running day1 and day1-quad side by side.",
+        "e2eRun": {
+          "ranAt": "2026-08-24T13:45:00.000Z",
+          "config": "artifacts/m1/playwright.container.ts - container Chromium, H.264 fixtures built with ffmpeg-static",
+          "result": "31 passed, 49 failed, 2 skipped of 82 (day1-longform excluded), 20.2 minutes",
+          "failureAnalysis": "47 blocked by the missing H.264 decoder (every one fails at the post-upload metadata or below it); 2 are missing fixtures (codec-av1.mp4, codec-vp8.webm - ffmpeg-static has no libsvtav1). No code defect among them.",
+          "nowVerified": [
+            "template dropdown + switchTemplate e2e helper: 20+ tests across timeline-axis, kv-loop, kv-motion, debug-report switch templates through it and pass",
+            "day1-quad UI: five-section axis, presets narrowed to 15/30, 60s coercion note, four inspector sections, 16 label inputs",
+            "day1 (two panels) unchanged; three-template axis and three-way switching",
+            "codec rejection path"
+          ],
+          "stillUnverified": [
+            "every MP4 render: SC1 three ratios, SC3 greyscale in the output, SC4 divider pixels",
+            "the eight filename assertions - each sits behind an upload",
+            "the 1.15x gate in absolute terms"
+          ]
+        },
+        "defectsFoundByE2E": [
+          "render preflight gated on template === day1, so day1-quad had none at all (fixed, 5 regression tests)",
+          "blocker copy hardcoded to \"영상 2개\" while listing four panels (fixed)"
+        ]
+      }
     }
   },
   "pipeline": {
-    "currentPhase": "archived",
+    "currentPhase": "check",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -622,13 +789,38 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-19T07:25:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": null,
+        "to": "plan",
+        "at": "2026-08-24T00:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "plan",
+        "to": "design",
+        "at": "2026-08-24T07:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "design",
+        "to": "do",
+        "scope": "module-1",
+        "at": "2026-08-24T08:00:00.000Z"
+      },
+      {
+        "feature": "day1-quad",
+        "from": "do",
+        "to": "check",
+        "at": "2026-08-24T13:10:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-19T09:45:00.000Z"
+    "lastActivity": "2026-08-24T13:45:00.000Z"
   },
   "history": [
     {
@@ -895,6 +1087,60 @@
       "feature": "day1-video",
       "phase": "act",
       "action": "iterated"
+    },
+    {
+      "timestamp": "2026-08-24T00:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-24T01:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "decisions-confirmed-Q1-Q2-Q4-Q10"
+    },
+    {
+      "timestamp": "2026-08-24T02:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "all-14-decisions-confirmed"
+    },
+    {
+      "timestamp": "2026-08-24T05:30:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "m0-perf-gate-passed-1.15x"
+    },
+    {
+      "timestamp": "2026-08-24T06:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "plan",
+      "action": "baked-backdrop-moved-out-of-scope-to-own-cycle"
+    },
+    {
+      "timestamp": "2026-08-24T07:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "design",
+      "action": "created"
+    },
+    {
+      "timestamp": "2026-08-24T08:00:00.000Z",
+      "feature": "day1-quad",
+      "phase": "do",
+      "action": "module-1-complete"
+    },
+    {
+      "timestamp": "2026-08-24T13:10:00.000Z",
+      "feature": "day1-quad",
+      "phase": "check",
+      "action": "modules-complete"
+    },
+    {
+      "timestamp": "2026-08-24T13:45:00.000Z",
+      "feature": "day1-quad",
+      "phase": "check",
+      "action": "e2e-full-run-31-pass-49-codec-blocked"
     }
   ],
   "stateMachine": {

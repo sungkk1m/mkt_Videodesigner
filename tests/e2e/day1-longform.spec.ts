@@ -13,6 +13,7 @@ import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {expect, test, type Page} from '@playwright/test';
+import {switchTemplate} from './helpers/template';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
@@ -91,8 +92,7 @@ test.describe('Day1 60s preset render cost', () => {
 
     // --- Day1, two different sources -----------------------------------------
     await page.goto('/');
-    await page.getByTestId('template-day1').click();
-    await page.getByTestId('template-switch-confirm').click();
+    await switchTemplate(page, 'day1');
     await page.getByTestId('day1-panel-a-input').setInputFiles(PANEL_A_SOURCE);
     await page.getByTestId('day1-panel-b-input').setInputFiles(PANEL_B_SOURCE);
     await page.getByRole('button', {name: '60초'}).click();

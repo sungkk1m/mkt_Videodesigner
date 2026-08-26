@@ -3,7 +3,6 @@
 // button. Plan SC: FR-D03 "Day1은 영상 2개를 받으며, 둘 다 없으면 렌더를 차단한다".
 import type {Day1PanelKey} from '../../domain/editor/project';
 import type {
-  Day1Settings,
   MediaReference,
 } from '../../domain/editor/types';
 import type {RelinkVerdict} from '../../domain/media/relink';
@@ -13,18 +12,26 @@ import {SourceRepair} from './SourceRepair';
 
 const PANEL_LABELS: Record<Day1PanelKey, string> = {
   panelA: '패널 A · 먼저 재생',
-  panelB: '패널 B · 나중에 재생',
+  panelB: '패널 B · 두 번째',
+  panelC: '패널 C · 세 번째',
+  panelD: '패널 D · 마지막',
 };
 
 const PANEL_TEST_KEY: Record<Day1PanelKey, string> = {
   panelA: 'a',
   panelB: 'b',
+  panelC: 'c',
+  panelD: 'd',
 };
 
-const PANELS: Day1PanelKey[] = ['panelA', 'panelB'];
-
 export interface Day1AssetPanelProps {
-  settings: Day1Settings;
+  /**
+   * day1-quad Design §7.1 — the panel keys this template has, in order. Two for
+   * Day1, four for Day1-quad. The block below is otherwise identical.
+   */
+  panels: readonly Day1PanelKey[];
+  /** Resolves a panel off the project, so this component never indexes the payload. */
+  panelSource: (panel: Day1PanelKey) => MediaReference | null;
   disabled: boolean;
   busy: boolean;
   uploadError: AppError | null;
@@ -139,7 +146,8 @@ const PanelBlock = ({
 };
 
 export const Day1AssetPanel = ({
-  settings,
+  panels,
+  panelSource,
   disabled,
   busy,
   uploadError,
@@ -157,12 +165,12 @@ export const Day1AssetPanel = ({
   <>
     {missingPanels.length > 0 ? (
       <p className="notice notice--warning" data-testid="day1-panels-blocker">
-        영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널:{' '}
+        영상 {panels.length}개를 모두 올려야 렌더할 수 있습니다. 남은 패널:{' '}
         {missingPanels.map((panel) => PANEL_TEST_KEY[panel].toUpperCase()).join(' · ')}
       </p>
     ) : null}
 
-    {PANELS.map((panel) => (
+    {panels.map((panel) => (
       <PanelBlock
         busy={busy}
         canGrantPermission={canGrantPermission(panel)}
@@ -174,7 +182,7 @@ export const Day1AssetPanel = ({
         onUpload={(file) => onUpload(panel, file)}
         panel={panel}
         relinkVerdict={relinkVerdict}
-        source={settings[panel].source}
+        source={panelSource(panel)}
         supportsFilePicker={supportsFilePicker}
         uploadError={uploadError}
         url={panelUrl(panel)}

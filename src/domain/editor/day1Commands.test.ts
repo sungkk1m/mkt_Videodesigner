@@ -7,6 +7,9 @@ import {
   createProject,
   day1MissingPanels,
   day1Of,
+  day1PanelAt,
+  day1QuadOf,
+  panelKeysOf,
   day1PanelsShorterThanSection,
   hasRatioOverride,
   moveTimelineBoundary,
@@ -30,7 +33,16 @@ import {
   updateDay1Transform,
 } from './project';
 import {testMediaReference} from '../../test/fixtures/media';
-import {day1ProjectFixture, day1SettingsOf} from '../../test/fixtures/project';
+import {
+  DAY1_QUAD_SECTION_ORDER,
+  DEFAULT_DAY1_PANEL_TRANSFORM,
+} from './types';
+import {
+  day1ProjectFixture,
+  day1QuadProjectFixture,
+  day1QuadSettingsOf,
+  day1SettingsOf,
+} from '../../test/fixtures/project';
 import type {EditorProject, LocalizedCopy} from './types';
 
 const day1 = (project: EditorProject) => day1SettingsOf(project);
@@ -482,6 +494,45 @@ describe('Day1 split, labels, and end card', () => {
     expect(parseProject(setDay1EndCardTrimLengthMs(base, 2000)).ok).toBe(true);
   });
 
+  // day1-quad Design §4.1 — the window used to be capped at the 3s constant, so
+  // dragging the end card longer left the extra time unreachable: the operator
+  // could only pick 3s and the rest was filled by looping. The cap is the end
+  // card section's own length now.
+  it('caps the end-card window at the section length, not at 3s', () => {
+    const video = testMediaReference({id: 'ec', durationMs: 12_000});
+    // 15s preset opens as [6000, 6000, 3000]; boundary 1 sits at 12_000ms.
+    // Dragging it to 9000 leaves the end card 6s long.
+    const longCard = setDay1EndCardVideo(
+      moveTimelineBoundary(withPanels(), 1, 9000),
+      video,
+    );
+
+    expect(longCard.sections.map((section) => section.durationMs)).toEqual([
+      6000, 3000, 6000,
+    ]);
+    // Picking the video opens the window at the whole card, not 3s.
+    expect(day1(longCard).endCard.videoTrim).toEqual({inMs: 0, outMs: 6000});
+    // A 6s window is now reachable, and 9s still clamps — to the card, not to 3s.
+    expect(
+      day1(setDay1EndCardTrimLengthMs(longCard, 6000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 6000});
+    expect(
+      day1(setDay1EndCardTrimLengthMs(longCard, 9000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 6000});
+    expect(parseProject(longCard).ok).toBe(true);
+
+    // Shrinking the card shrinks the cap the same way.
+    const shortCard = setDay1EndCardVideo(
+      moveTimelineBoundary(withPanels(), 1, 13_000),
+      video,
+    );
+
+    expect(shortCard.sections[2]?.durationMs).toBe(2000);
+    expect(
+      day1(setDay1EndCardTrimLengthMs(shortCard, 3000)).endCard.videoTrim,
+    ).toEqual({inMs: 0, outMs: 2000});
+  });
+
   it('keeps the in point on length changes and the length on moves (FR-05)', () => {
     const base = setDay1EndCardVideo(
       withPanels(),
@@ -590,5 +641,189 @@ describe('template isolation', () => {
 
     expect(threeSceneOf(project)).toBeNull();
     expect(day1Of(project)).not.toBeNull();
+  });
+});
+
+// day1-quad Design §5.4, §4.4 — the switch into the four-panel template.
+describe('switchTemplate to day1-quad', () => {
+  it('builds the five-section axis and the four-panel payload', () => {
+    const project = switchTemplate(createProject(), 'day1-quad');
+
+    expect(project.sections.map((section) => section.id)).toEqual([
+      ...DAY1_QUAD_SECTION_ORDER,
+    ]);
+    expect(project.sections.map((section) => section.durationMs)).toEqual([
+      3000, 3000, 3000, 3000, 3000,
+    ]);
+
+    const settings = day1QuadOf(project);
+
+    expect(settings).not.toBeNull();
+    expect(day1Of(project)).toBeNull();
+    // Plan Q6 — four panels, all of them empty until the operator uploads.
+    expect([
+      settings?.panelA.source,
+      settings?.panelB.source,
+      settings?.panelC.source,
+      settings?.panelD.source,
+    ]).toEqual([null, null, null, null]);
+    // Plan Q4 — uploads still start lossless, exactly as Day1 does.
+    expect(settings?.panelA.transforms.base).toEqual(
+      DEFAULT_DAY1_PANEL_TRANSFORM,
+    );
+    // Design §5.4 — the one value that differs from Day1: a quad cell is half
+    // as wide, so 72px would overflow it.
+    expect(settings?.labelStyle.fontSize).toBe(44);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('fills the panel labels in every locale (Q9)', () => {
+    const project = switchTemplate(createProject(), 'day1-quad');
+
+    for (const locale of ['ko', 'en', 'ja', 'zh-TW'] as const) {
+      expect((project.copy[locale] as LocalizedCopy).day1Labels).toEqual({
+        a: 'Day1',
+        b: 'Day2',
+        c: 'Day3',
+        d: 'Day7',
+      });
+    }
+  });
+
+  // Plan Q8a — 60s over four panels is 14.25s each, so the template does not
+  // offer it and a 60s project is coerced rather than left invalid.
+  it('coerces a 60s project to 30s on the way in', () => {
+    const sixty = switchTemplate(createProject(60), 'day1-quad');
+
+    expect(sixty.durationPreset).toBe(30);
+    expect(sixty.sections.map((section) => section.durationMs)).toEqual([
+      6750, 6750, 6750, 6750, 3000,
+    ]);
+    expect(parseProject(sixty).ok).toBe(true);
+
+    // 15s and 30s pass through untouched.
+    expect(switchTemplate(createProject(15), 'day1-quad').durationPreset).toBe(15);
+    expect(switchTemplate(createProject(30), 'day1-quad').durationPreset).toBe(30);
+  });
+
+  it('leaves Day1 labels empty — Q10 keeps the two-panel template unchanged', () => {
+    const day1Project = switchTemplate(createProject(), 'day1');
+
+    expect(
+      (day1Project.copy.ko as LocalizedCopy).day1Labels,
+    ).toBeUndefined();
+  });
+});
+
+// day1-quad Design §5.5 — one command set for both templates, keyed by panel.
+describe('Day1 commands over four panels', () => {
+  const quadWithPanels = (): EditorProject =>
+    panelKeysOf(day1QuadProjectFixture().templateSettings).reduce(
+      (project, key, index) =>
+        setDay1PanelSource(
+          project,
+          key,
+          testMediaReference({id: `media_${index}`, durationMs: 12_000}),
+        ),
+      day1QuadProjectFixture(),
+    );
+
+  it('sets each of the four panels independently', () => {
+    const project = quadWithPanels();
+    const settings = day1QuadSettingsOf(project);
+
+    expect([
+      settings.panelA.source?.id,
+      settings.panelB.source?.id,
+      settings.panelC.source?.id,
+      settings.panelD.source?.id,
+    ]).toEqual(['media_0', 'media_1', 'media_2', 'media_3']);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('clamps each panel trim to its own section', () => {
+    // 15s quad: every panel section is 3s, so a 12s source yields a 3s window.
+    const project = quadWithPanels();
+
+    panelKeysOf(project.templateSettings).forEach((key) => {
+      expect(day1PanelAt(project, key)?.trim).toEqual({inMs: 0, outMs: 3000});
+    });
+  });
+
+  it('reports all four as missing until each is uploaded (Q6)', () => {
+    const empty = day1QuadProjectFixture();
+
+    expect(day1MissingPanels(empty)).toEqual([
+      'panelA',
+      'panelB',
+      'panelC',
+      'panelD',
+    ]);
+    expect(day1MissingPanels(quadWithPanels())).toEqual([]);
+  });
+
+  it('reports a quad panel whose source cannot fill its section', () => {
+    const short = setDay1PanelSource(
+      quadWithPanels(),
+      'panelC',
+      testMediaReference({id: 'short', durationMs: 1500}),
+    );
+
+    expect(day1PanelsShorterThanSection(short)).toEqual(['panelC']);
+  });
+
+  // The no-op contract: a Day1 payload simply has no panelC.
+  it('no-ops a panelC command on a two-panel Day1 project', () => {
+    const day1Project = day1ProjectFixture();
+    const after = setDay1PanelSource(
+      day1Project,
+      'panelC',
+      testMediaReference({id: 'ignored', durationMs: 9000}),
+    );
+
+    // `setDay1PanelSource` still runs the reconcilers, so this is value
+    // equality rather than reference equality — nothing about the project moved.
+    expect(after).toEqual(day1Project);
+    expect(day1PanelAt(day1Project, 'panelC')).toBeNull();
+    expect(panelKeysOf(day1Project.templateSettings)).toEqual([
+      'panelA',
+      'panelB',
+    ]);
+  });
+
+  it('returns no panel keys for templates that have none', () => {
+    expect(panelKeysOf(createProject().templateSettings)).toEqual([]);
+  });
+
+  it('moves a quad panel trim and reframes it like a Day1 panel', () => {
+    const project = setDay1TrimInMs(quadWithPanels(), 'panelD', 2000);
+
+    expect(day1PanelAt(project, 'panelD')?.trim).toEqual({
+      inMs: 2000,
+      outMs: 5000,
+    });
+
+    const framed = updateDay1Transform(project, 'panelD', '9:16', {scale: 1.4});
+
+    expect(day1PanelAt(framed, 'panelD')?.transforms.base.scale).toBe(1.4);
+    expect(day1PanelAt(framed, 'panelA')?.transforms.base.scale).toBe(1);
+    expect(parseProject(framed).ok).toBe(true);
+  });
+
+  it('writes labels into the c and d slots', () => {
+    const project = setDay1LabelText(
+      day1QuadProjectFixture(),
+      'ko',
+      'd',
+      'DAY 30',
+    );
+
+    expect((project.copy.ko as LocalizedCopy).day1Labels).toEqual({
+      a: 'Day1',
+      b: 'Day2',
+      c: 'Day3',
+      d: 'DAY 30',
+    });
+    expect(parseProject(project).ok).toBe(true);
   });
 });
