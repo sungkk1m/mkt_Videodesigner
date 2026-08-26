@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T07:25:00.000Z",
+  "lastUpdated": "2026-08-26T07:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -725,7 +725,7 @@
       },
       "timestamps": {
         "started": "2026-08-26T05:20:00.000Z",
-        "lastUpdated": "2026-08-26T07:25:00.000Z"
+        "lastUpdated": "2026-08-26T07:30:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -762,7 +762,8 @@
           "e2eRegression": "7 upload-free existing specs passed",
           "e2eBlocked": "L3 render 2 specs not executed - this container has no proprietary-codec Chrome, so H.264 fixtures cannot be uploaded or encoded",
           "verifiedAt": "2026-08-26T06:10:00.000Z",
-          "previewCapture": "7 combinations on day1 and 5 on day1-quad, captured from the Remotion Player preview using VP8 WebM sources, plus the inspector controls; quad confirms the 44px label keeps the plate inside its cell and the glow inside the panel clip"
+          "previewCapture": "7 combinations on day1 and 5 on day1-quad, captured from the Remotion Player preview using VP8 WebM sources, plus the inspector controls; quad confirms the 44px label keeps the plate inside its cell and the glow inside the panel clip",
+          "regressionControl": "origin/main run under identical fixtures, browser and a separate port: 34 failures on the branch and the same 34 on main, zero on either side only - no regression"
         },
         "successCriteria": {
           "SC1": "met - schema defaults and range rejection",
@@ -961,7 +962,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T07:25:00.000Z"
+    "lastActivity": "2026-08-26T07:30:00.000Z"
   },
   "history": [
     {
@@ -1324,6 +1325,12 @@
       "feature": "day1-label-effects",
       "phase": "check",
       "action": "quad-preview-capture"
+    },
+    {
+      "timestamp": "2026-08-26T07:30:00.000Z",
+      "feature": "day1-label-effects",
+      "phase": "check",
+      "action": "regression-control-vs-main-34-eq-34"
     }
   ],
   "stateMachine": {

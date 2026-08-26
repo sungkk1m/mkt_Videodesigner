@@ -135,6 +135,39 @@ footage에서 나올 수 없다. 두 렌더가 서로의 음성(negative)을 증
 | `label-box.mp4` | 박스 `#ff00ff` 100% | 판 색 픽셀 > 5,000 **그리고** 초록 우세 < 2,000 (글로우 꺼짐 증명) |
 | `label-glow.mp4` | 글로우 `#00ff00` 32px | 초록 우세 > 2,000 **그리고** 판 색 < 5,000 (박스 꺼짐 증명) |
 
+## 4.4 병합 전 회귀 검증 — main 대조 실행 (완료)
+
+브라우저가 H.264를 다루지 못해 렌더 계열 E2E가 실패하는 환경이므로, "실패가 이 변경 탓인가"를
+눈으로 분류하는 대신 **같은 조건에서 `origin/main`을 돌려 실패 집합을 대조**했다.
+
+| 조건 | 내용 |
+|---|---|
+| 브라우저 | Playwright 번들 Chromium (WebCodecs 실측: `avc1` encode=false·decode=false, VP9·VP8·AV1=true) |
+| 픽스처 | 동일한 VP9-in-MP4 세트(양쪽이 같은 파일을 심볼릭 링크로 공유) |
+| 실행 | 브랜치는 포트 4173, main은 별도 worktree + 포트 4183 — 서로의 dev 서버를 재사용하지 않음 |
+
+| | 브랜치 | main |
+|---|---|---|
+| 전체 스위트(브랜치) | 48 passed / 36 failed | — |
+| 대조 15개 스펙 | 34 failed | 34 failed |
+| **한쪽에만 있는 실패** | **0건** | **0건** |
+
+실패 34건은 양쪽에서 동일했다. 원인 분류:
+
+| 원인 | 건수 |
+|---|---|
+| `MP4 렌더` 버튼 disabled / 클릭·`download` 타임아웃 — H.264 인코딩 불가 | 30 |
+| `pages-subpath` — 로컬 설정이 프로덕션 빌드 서버(4190)를 띄우지 않음 | 2 |
+| `media-codec-compat` — 코덱 자체를 검증하는 스펙(AV1 픽스처는 이 환경 ffmpeg에 `libsvtav1`이 없어 생성 실패) | 2 |
+
+라벨·`labelStyle`·글로우·박스와 관련된 실패는 0건이고, 통과한 48건에는 렌더가 필요 없는 UI 표면
+전체(인스펙터·타임라인·템플릿 전환·4분할 UI·트림 UX)와 이번 사이클의 신규 L2 2건이 포함된다.
+
+**코드 차원의 무회귀 근거**도 함께 남긴다: 두 효과가 꺼져 있을 때 라벨 `<span>`이 받는 CSS는
+변경 전과 동일하다 — `backgroundColor: 'transparent'`(원래 미지정 = transparent),
+`padding: 0`(인라인 요소 기본값), `textShadow: undefined`(React가 속성을 생략),
+`borderRadius`는 배경이 없으면 그려지지 않는다.
+
 ## 5. Residual Risks / Follow-ups
 
 | 항목 | 상태 |
