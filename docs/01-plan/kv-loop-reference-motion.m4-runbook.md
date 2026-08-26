@@ -20,16 +20,50 @@
 **결론: 실기기 M4는 평소의 "MP4 렌더" 버튼 그대로다.** 특별한 버전이 필요 없다.
 컨테이너의 VP9 수치(정점 배율·컷·블러 램프)는 코덱 무관 기하라 비교에 그대로 유효하다.
 
-## 1. 준비 (한 번)
+## 1. 앱을 어디서 여는가 — 두 경로
 
-```bash
+배포된 Pages 사이트는 main 기준이라 이 기능이 없다. 둘 중 하나가 필요하다.
+
+### 1-A. Pages에 브랜치를 배포한다 (로컬 작업 없음, 권장)
+
+`deploy-pages.yml`은 `workflow_dispatch`가 열려 있어 임의 브랜치로 실행할 수 있다.
+**단 한 번의 선행 설정이 필요하다** — 2026-08-26 실행(run 32944795611)에서 확인된 것:
+
+| 잡 | 결과 |
+|---|---|
+| `build` (npm ci · 유닛 테스트 · 빌드 · 아티팩트 업로드) | ✅ 성공 |
+| `deploy` | ❌ 1초 만에, 스텝 없이 실패 |
+
+스텝이 하나도 실행되지 않고 로그도 남지 않는 것은 **`github-pages` 환경의 배포
+브랜치 정책**이 기본 브랜치만 허용할 때의 신호다. Pages를 GitHub Actions 소스로
+설정하면 GitHub가 이 정책을 기본으로 건다.
+
+해제 (저장소 관리자, 30초):
+
+> **Settings → Environments → `github-pages` → Deployment branches and tags**
+> → `claude/key-visual-looping-effect-dcqxo6` 를 추가 (또는 *All branches*)
+
+그 뒤 워크플로를 브랜치로 재실행하면 라이브 URL이 이 빌드가 된다:
+
+> **Actions → Deploy to GitHub Pages → Run workflow → Branch: `claude/…-dcqxo6`**
+
+M4가 끝나면 같은 화면에서 **main으로 한 번 더 실행**해 원복한다. 팀 공용 URL을
+잠시 빌려 쓰는 것이므로 원복까지가 한 세트다.
+
+### 1-B. 로컬에서 띄운다 (설정 변경 없음)
+
+Windows PowerShell 기준, 저장소 폴더에서:
+
+```powershell
 git fetch origin claude/key-visual-looping-effect-dcqxo6
 git checkout claude/key-visual-looping-effect-dcqxo6
-npm install
-npm run dev        # http://localhost:5173
+npm ci          # main에서 이미 설치돼 있으면 건너뛰어도 된다 — 이 브랜치는 의존성을 바꾸지 않았다
+npm run dev     # http://localhost:5173
 ```
 
-배포된 Pages 사이트는 main 기준이라 이 기능이 없다 — 반드시 브랜치의 dev 서버로.
+- **Node 22 이상**이 필요하다 (`node -v`).
+- 포트가 물려 있으면 `npm run dev -- --port 5174`.
+- 렌더는 반드시 **Chrome**에서 (`localhost`는 보안 컨텍스트라 WebCodecs·OPFS가 동작한다).
 
 ## 2. 본 렌더 (SC1~SC7 + D-10 검수)
 
@@ -77,3 +111,4 @@ Windows라면 `KV_M0_CHROME="C:\Program Files\Google\Chrome\Application\chrome.e
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 0.1.0 | 2026-08-26 | 김성권 / Claude | 최초 작성 — 코덱 검증 포함 |
+| 0.2.0 | 2026-08-26 | 김성권 / Claude | §1을 두 경로로 분리. Pages 브랜치 배포 시도(run 32944795611) 결과와 환경 정책 해제 절차 기록 |
