@@ -99,10 +99,13 @@ gh workflow run deploy-pages.yml --repo sungkk1m/mkt_Videodesigner
 
 또는 GitHub → **Actions → Deploy to GitHub Pages → Run workflow**.
 
-워크플로는 `workflow_dispatch` 전용으로 유지합니다. 평가 단계에서는 무엇이 언제
-올라갔는지가 기록으로 남는 편이 낫고, 푸시마다 자동 배포되면 "평가"보다 "운영"에
-가까워집니다. 상시 배포가 필요해지면 `.github/workflows/deploy-pages.yml`에
-`push` 트리거를 추가하면 됩니다.
+**2026-08-26 갱신: 워크플로는 더 이상 `workflow_dispatch` 전용이 아닙니다.**
+라이선스 리뷰 §6·§7이 "배포 자체는 트리거가 아니다"로 정리되면서
+`.github/workflows/deploy-pages.yml`에 `push: branches: [main]` 트리거가 들어갔고,
+`docs/**`·`.bkit/**`·`**.md`만 바뀐 커밋은 `paths-ignore`로 건너뜁니다. 즉
+**앱 코드가 담긴 커밋이 main에 올라가면 자동 배포**되며, 위 수동 실행은 재배포가
+필요할 때만 씁니다. 배포 잡은 `npm test` → `npm run build`를 먼저 통과해야
+진행하므로 붉은 스위트는 라이브 URL에 도달하지 못합니다.
 
 ### 3.5 배포 후 확인 — 자동화됨
 
@@ -115,6 +118,20 @@ npm run verify:deployment
 실패 요청·콘솔 오류 수를 출력합니다. 다른 URL은 `DEPLOY_URL` 환경변수로 지정합니다.
 
 2026-07-28 실행 결과: 전 항목 PASS, 실패 요청 0, 콘솔 오류 0.
+
+### 3.6 배포 기록
+
+| 일시(UTC) | 커밋 | 내용 | 워크플로 | 라이브 스모크 |
+|---|---|---|---|---|
+| 2026-07-28 | — | 최초 배포 | 수동 dispatch, success | 전 항목 PASS |
+| 2026-08-26 07:15 | `86409dd` | day1-label-effects (라벨 배경 박스·글로우) | push 자동 배포, build+deploy 모두 success (CI `32941842966`도 success) | 미실행 — 아래 주의 |
+
+2026-08-26 배포는 main 병합 푸시로 자동 실행됐고, build 잡의 `npm test`(유닛 588)와
+`npm run build`를 통과한 뒤 `actions/deploy-pages@v4`가 성공했습니다.
+`npm run verify:deployment`는 이 세션의 컨테이너에서 실행할 수 없었습니다 — 스크립트가
+채널 `chrome`(H.264 포함)을 요구하는데 없고, 컨테이너의 아웃바운드 프록시가
+`sungkk1m.github.io`로의 CONNECT를 403으로 막습니다. **실 Chrome이 있는 로컬에서
+`npm run verify:deployment` 한 번 실행**해 라이브 스모크를 마감하는 것이 남았습니다.
 
 ## 4. 이미 검증된 것 / 남는 것
 
