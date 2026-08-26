@@ -732,6 +732,102 @@
   cursor: nwse-resize;
 }
 
+/* kv-object-animation §5.2 — the selected effect's designation, one at a time.
+   The container passes pointers through so it can sit above the camera
+   rectangles without stealing their drags; only the shapes themselves catch. */
+.kv-effect {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.kv-effect__region,
+.kv-effect__glow {
+  pointer-events: auto;
+}
+
+.kv-effect__region {
+  position: absolute;
+  color: #fb923c;
+  border: 2px solid currentcolor;
+  border-radius: 2px;
+  cursor: move;
+}
+
+/* Sized by width only with a 1:1 aspect, so the disc stays circular in the
+   non-square frame — radius is a fraction of frame width (§2.1). */
+.kv-effect__glow {
+  position: absolute;
+  aspect-ratio: 1;
+  color: #fbbf24;
+  border: 2px solid currentcolor;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  cursor: move;
+}
+
+.kv-effect__label {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3b2003;
+  border-radius: 3px;
+}
+
+.kv-effect__region .kv-effect__label {
+  background: #fb923c;
+}
+
+.kv-effect__glow .kv-effect__label {
+  background: #fbbf24;
+}
+
+.kv-effect__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.kv-effect__handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: currentcolor;
+  border-radius: 3px;
+  cursor: nwse-resize;
+}
+
+.kv-effect__handle--radius {
+  top: 50%;
+  right: -7px;
+  bottom: auto;
+  margin-top: -7px;
+  border-radius: 50%;
+  cursor: ew-resize;
+}
+
+/* kv-object-animation §5.1 — the list row's colour chip. */
+.kv-effect-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 3px;
+}
+
 .kv-slot__select {
   padding: 2px 8px;
   font: inherit;

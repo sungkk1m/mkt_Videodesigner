@@ -94,6 +94,12 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
  */
 export const kvSectionLabel = (index: number) => `KV ${index + 1}`;
 
+/** kv-object-animation §5.1 — the two designated-object types, spelled out. */
+export const KV_EFFECT_LABELS: Record<KvEffect['kind'], string> = {
+  particles: '파티클',
+  glow: '글로우',
+};
+
 /** kv-motion-effects §6.1 — direction is spelled out, never implied. */
 export const KV_MOTION_LABELS: Record<KvMotionPreset, string> = {
   still: '정지',

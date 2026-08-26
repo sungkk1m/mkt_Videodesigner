@@ -12,6 +12,7 @@ import {
   updateBgm,
 } from '../../domain/audio/mix';
 import {
+  addKvEffect,
   applyDurationPreset,
   applySourceToAllScenes,
   createProject,
@@ -19,6 +20,7 @@ import {
   moveTimelineBoundary,
   relinkDay1PanelSource,
   relinkSource,
+  removeKvEffect,
   renameProject,
   resetDay1Transform,
   resetKvSlotTransform,
@@ -61,6 +63,7 @@ import {
   updateDay1Transform,
   updateHookSettings,
   updateKvDisclaimerStyle,
+  updateKvEffect,
   updateKvLoopSettings,
   updateKvSlotTransform,
   updateKvTitleTransform,
@@ -68,6 +71,7 @@ import {
   updateSubtitleStyle,
   type Day1EndCardPatch,
   type Day1PanelKey,
+  type KvEffectPatch,
   type KvLoopPatch,
 } from '../../domain/editor/project';
 import type {
@@ -79,6 +83,7 @@ import type {
   Day1PanelSlot,
   Day1Settings,
   DurationPreset,
+  KvEffect,
   KvLoopSettings,
   KvMotion,
   EditorProject,
@@ -193,6 +198,14 @@ export interface ProjectStore {
   resetKvTransform: (index: number) => void;
   setKvMotion: (index: number, motion: KvMotion | null) => void;
   setKvDefaultMotion: (motion: KvMotion) => void;
+  /** kv-object-animation FR-O01/FR-O06/FR-O07 — the slot's designated objects. */
+  addKvEffect: (index: number, kind: KvEffect['kind']) => void;
+  removeKvEffect: (index: number, effectId: string) => void;
+  updateKvEffect: (
+    index: number,
+    effectId: string,
+    patch: KvEffectPatch,
+  ) => void;
   setKvLoop: (patch: KvLoopPatch) => void;
   setKvTitle: (locale: Locale, reference: MediaReference | null) => void;
   setKvTitleTransform: (patch: Partial<MediaTransform>) => void;
@@ -426,6 +439,14 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: setKvMotion(state.project, index, motion)})),
   setKvDefaultMotion: (motion) =>
     set((state) => ({project: setKvDefaultMotion(state.project, motion)})),
+  addKvEffect: (index, kind) =>
+    set((state) => ({project: addKvEffect(state.project, index, kind)})),
+  removeKvEffect: (index, effectId) =>
+    set((state) => ({project: removeKvEffect(state.project, index, effectId)})),
+  updateKvEffect: (index, effectId, patch) =>
+    set((state) => ({
+      project: updateKvEffect(state.project, index, effectId, patch),
+    })),
   setKvLoop: (patch) =>
     set((state) => ({project: updateKvLoopSettings(state.project, patch)})),
   setKvTitle: (locale, reference) =>

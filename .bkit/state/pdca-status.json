@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T14:05:00.000Z",
+  "lastUpdated": "2026-08-26T14:30:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -761,9 +761,9 @@
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
-        "lastUpdated": "2026-08-26T14:05:00.000Z"
+        "lastUpdated": "2026-08-26T14:30:00.000Z"
       },
-      "notes": "M0 spike committed (5/5 PASS). M1 complete: schema/domain/commands, 610 unit tests green. M2 complete: KvEffectsCanvas (drawKvEffects + component) in compositions/kvloop, KvScene mounts it behind slot.effects.length > 0 sharing the image's transform string (D-04/NFR-O01); M0 harness switched to the production code path and re-run — 5/5 PASS with identical numbers (isolation 0.080, standalone-vs-encoded 0.48, centroid 0.620→0.643). 614 unit tests green (4 new drawing-seam tests). Next: M3 inspector effects section + KvEffectOverlay + E2E."
+      "notes": "M0 spike (5/5 PASS), M1 schema/domain/commands, M2 KvEffectsCanvas + KvScene (harness re-run on production path, 5/5 PASS identical numbers) all committed. M3 complete: store commands wired, inspector effects section (list rows with swatch/select/delete, add buttons disabled at cap, per-kind property controls), KvEffectOverlay (particles rect move + both-axis resize, glow centre drag + radius handle, frame-coordinate draft committed on release), mounted in EditorWorkspace only while an effect is selected (adding auto-selects). E2E kv-effects.spec 3/3 green in the container Chromium; kv-motion/kv-loop regression 12 passed, 1 failed = the known H.264 render block (not a regression). 614 unit tests, build green. Next: M4 reference measurement of defaults, then M5 real-device gate."
     },
     "day1-label-effects": {
       "phase": "check",

@@ -1,15 +1,23 @@
 // key-visual-looping Design Ref: §6.3 — the selected key visual's framing and
 // motion, the loop-wide motion values, and the two optional overlays.
+import type {KvEffectPatch} from '../../domain/editor/project';
 import {
+  KV_EFFECT_LABELS,
   KV_MOTION_LABELS,
   KV_MOTION_PRESETS,
   MAX_KV_BLUR_PX,
+  MAX_KV_EFFECTS_PER_SLOT,
+  MAX_KV_GLOW_PERIOD_MS,
+  MAX_KV_PARTICLE_SIZE_PX,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
+  MIN_KV_EFFECT_SPAN,
+  MIN_KV_GLOW_PERIOD_MS,
   MIN_SCALE,
   MIN_SUBTITLE_FONT_SIZE,
+  type KvEffect,
   type KvLoopSettings,
   type KvMotion,
   type KvMotionPreset,
@@ -21,6 +29,7 @@ import {
   effectiveKvMotion,
   resolveKvMotion,
 } from '../../domain/kvloop/motion';
+import {ColorField} from './ColorField';
 import {LOCALE_LABELS} from './CopyPanel';
 import {AssetField, PercentField, PlainField} from './inspectorFields';
 
@@ -37,6 +46,12 @@ export interface KvLoopInspectorProps {
   supportsFilePicker: boolean;
   titleCanGrantPermission: boolean;
   disabled: boolean;
+  /** kv-object-animation §5.1 — which designated object is being edited. */
+  selectedEffectId: string | null;
+  onSelectEffect: (effectId: string | null) => void;
+  onAddEffect: (kind: KvEffect['kind']) => void;
+  onRemoveEffect: (effectId: string) => void;
+  onEffect: (effectId: string, patch: KvEffectPatch) => void;
   onTransform: (patch: Partial<MediaTransform>) => void;
   onResetTransform: () => void;
   onSlotMotion: (motion: KvMotion | null) => void;
@@ -69,6 +84,11 @@ export const KvLoopInspector = ({
   supportsFilePicker,
   titleCanGrantPermission,
   disabled,
+  selectedEffectId,
+  onSelectEffect,
+  onAddEffect,
+  onRemoveEffect,
+  onEffect,
   onTransform,
   onResetTransform,
   onSlotMotion,
@@ -81,6 +101,8 @@ export const KvLoopInspector = ({
   onDisclaimerStyle,
 }: KvLoopInspectorProps) => {
   const slot = settings.slots[index];
+  const selectedEffect =
+    slot?.effects.find((effect) => effect.id === selectedEffectId) ?? null;
   const effective = effectiveKvMotion(settings, index);
   const customMotion = effective.kind === 'custom';
   const panSelected = settings.slots.some((_, slotIndex) => {
@@ -207,6 +229,188 @@ export const KvLoopInspector = ({
               미리보기 위의 두 사각형이 카메라의 시작·끝입니다. 끌어서 옮기고
               모서리로 크기를 바꾸세요.
             </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {/* kv-object-animation §5.1 — the slot's designated objects. Selection
+          decides what the preview overlay draws, so a row click is how the
+          drag editing starts. */}
+      {slot ? (
+        <section className="panel__group" data-testid="kv-inspector-effects">
+          <h3 className="panel__subtitle">이펙트 오브젝트</h3>
+
+          <p className="panel__hint">
+            원화 위 오브젝트를 지정해 애니메이션을 겁니다. 행을 선택하면
+            미리보기에서 영역·중심을 끌어서 옮길 수 있습니다.
+          </p>
+
+          {slot.effects.map((effect, effectIndex) => (
+            <div
+              className="kv-slot__head"
+              data-testid={`kv-effect-${effectIndex}`}
+              key={effect.id}
+            >
+              <button
+                className={`kv-slot__select${
+                  effect.id === selectedEffectId ? ' kv-slot__select--on' : ''
+                }`}
+                data-testid={`kv-effect-${effectIndex}-select`}
+                disabled={disabled}
+                onClick={() =>
+                  onSelectEffect(
+                    effect.id === selectedEffectId ? null : effect.id,
+                  )
+                }
+                type="button"
+              >
+                <span
+                  className="kv-effect-swatch"
+                  style={{background: effect.color}}
+                />
+                {KV_EFFECT_LABELS[effect.kind]} {effectIndex + 1}
+              </button>
+              <span className="kv-slot__actions">
+                <button
+                  className="button button--secondary"
+                  data-testid={`kv-effect-${effectIndex}-remove`}
+                  disabled={disabled}
+                  onClick={() => onRemoveEffect(effect.id)}
+                  type="button"
+                >
+                  삭제
+                </button>
+              </span>
+            </div>
+          ))}
+
+          <div className="kv-slot__actions">
+            <button
+              className="button button--secondary"
+              data-testid="kv-effect-add-particles"
+              disabled={
+                disabled || slot.effects.length >= MAX_KV_EFFECTS_PER_SLOT
+              }
+              onClick={() => onAddEffect('particles')}
+              type="button"
+            >
+              파티클 추가
+            </button>
+            <button
+              className="button button--secondary"
+              data-testid="kv-effect-add-glow"
+              disabled={
+                disabled || slot.effects.length >= MAX_KV_EFFECTS_PER_SLOT
+              }
+              onClick={() => onAddEffect('glow')}
+              type="button"
+            >
+              글로우 추가
+            </button>
+          </div>
+
+          {/* §6 — the cap is a disabled button, not an error. */}
+          {slot.effects.length >= MAX_KV_EFFECTS_PER_SLOT ? (
+            <p className="panel__hint" data-testid="kv-effect-full-hint">
+              한 장에 최대 {MAX_KV_EFFECTS_PER_SLOT}개까지 지정할 수 있습니다.
+            </p>
+          ) : null}
+
+          {selectedEffect?.kind === 'particles' ? (
+            <>
+              <p className="panel__hint" data-testid="kv-effect-particles-hint">
+                미리보기의 사각형이 방출 영역입니다. 끌어서 옮기고 모서리로
+                크기를 바꾸세요.
+              </p>
+              <ColorField
+                disabled={disabled}
+                label="파티클 색"
+                onChange={(color) => onEffect(selectedEffect.id, {color})}
+                testId="kv-effect-color"
+                value={selectedEffect.color}
+              />
+              <PercentField
+                disabled={disabled}
+                label="밀도"
+                max={1}
+                min={0}
+                onChange={(density) => onEffect(selectedEffect.id, {density})}
+                step={0.01}
+                testId="kv-effect-density"
+                value={selectedEffect.density}
+              />
+              <PercentField
+                disabled={disabled}
+                label="속도"
+                max={1}
+                min={0}
+                onChange={(speed) => onEffect(selectedEffect.id, {speed})}
+                step={0.01}
+                testId="kv-effect-speed"
+                value={selectedEffect.speed}
+              />
+              <PlainField
+                disabled={disabled}
+                label="입자 크기"
+                max={MAX_KV_PARTICLE_SIZE_PX}
+                min={1}
+                onChange={(sizePx) => onEffect(selectedEffect.id, {sizePx})}
+                step={1}
+                suffix="px"
+                testId="kv-effect-size"
+                value={selectedEffect.sizePx}
+              />
+            </>
+          ) : null}
+
+          {selectedEffect?.kind === 'glow' ? (
+            <>
+              <p className="panel__hint" data-testid="kv-effect-glow-hint">
+                미리보기의 원이 글로우 범위입니다. 끌어서 옮기고 오른쪽
+                핸들로 반경을 바꾸세요.
+              </p>
+              <ColorField
+                disabled={disabled}
+                label="글로우 색"
+                onChange={(color) => onEffect(selectedEffect.id, {color})}
+                testId="kv-effect-color"
+                value={selectedEffect.color}
+              />
+              <PercentField
+                disabled={disabled}
+                label="세기"
+                max={1}
+                min={0}
+                onChange={(intensity) =>
+                  onEffect(selectedEffect.id, {intensity})
+                }
+                step={0.01}
+                testId="kv-effect-intensity"
+                value={selectedEffect.intensity}
+              />
+              {/* Fraction of frame width (§2.1), shown as a percentage. */}
+              <PercentField
+                disabled={disabled}
+                label="반경"
+                max={1}
+                min={MIN_KV_EFFECT_SPAN}
+                onChange={(radius) => onEffect(selectedEffect.id, {radius})}
+                step={0.01}
+                testId="kv-effect-radius"
+                value={selectedEffect.radius}
+              />
+              <PlainField
+                disabled={disabled}
+                label="펄스 주기"
+                max={MAX_KV_GLOW_PERIOD_MS}
+                min={MIN_KV_GLOW_PERIOD_MS}
+                onChange={(periodMs) => onEffect(selectedEffect.id, {periodMs})}
+                step={50}
+                suffix="ms"
+                testId="kv-effect-period"
+                value={selectedEffect.periodMs}
+              />
+            </>
           ) : null}
         </section>
       ) : null}

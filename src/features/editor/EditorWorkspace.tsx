@@ -85,6 +85,7 @@ import {CopyPanel} from './CopyPanel';
 import {Day1AssetPanel} from './Day1AssetPanel';
 import {Day1Inspector} from './Day1Inspector';
 import {KvLoopAssetPanel} from './KvLoopAssetPanel';
+import {KvEffectOverlay} from './KvEffectOverlay';
 import {KvLoopInspector} from './KvLoopInspector';
 import {KvMotionOverlay} from './KvMotionOverlay';
 import {Dropzone} from './Dropzone';
@@ -208,6 +209,9 @@ export const EditorWorkspace = ({
   // Day1 shows both panels in one inspector, so the selection only drives the
   // timeline highlight. Day1 Design Ref: §6.3.
   const [selectedDay1Section, setSelectedDay1Section] = useState('panel-a');
+  // kv-object-animation §5.2 — which designated object the preview overlay
+  // draws. UI state, not project state: a selection is an editing posture.
+  const [selectedEffectId, setSelectedEffectId] = useState<string | null>(null);
   const [leftTab, setLeftTab] = useState<LeftTab>('assets');
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
@@ -347,6 +351,12 @@ export const EditorWorkspace = ({
   const selectedKvMotion = kvLoop
     ? effectiveKvMotion(kvLoop, selectedKvIndex)
     : null;
+  // Resolved against the selected slot, so switching slots or removing the
+  // effect simply deselects instead of pointing at something off screen.
+  const selectedKvEffect =
+    kvLoop?.slots[selectedKvIndex]?.effects.find(
+      (effect) => effect.id === selectedEffectId,
+    ) ?? null;
   const kvAssets = useKvLoopAssets({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
@@ -1395,6 +1405,23 @@ export const EditorWorkspace = ({
               }
             />
           ) : null}
+
+          {/* kv-object-animation §5.2 — mounted exactly while an effect is
+              selected, the same "only while being edited" rule the camera
+              rectangles follow. */}
+          {kvLoop && selectedKvEffect ? (
+            <KvEffectOverlay
+              disabled={isRendering}
+              effect={selectedKvEffect}
+              onChange={(patch) =>
+                store().updateKvEffect(
+                  selectedKvIndex,
+                  selectedKvEffect.id,
+                  patch,
+                )
+              }
+            />
+          ) : null}
         </div>
 
       </main>
@@ -1405,6 +1432,27 @@ export const EditorWorkspace = ({
           fps={project.fps}
           index={selectedKvIndex}
           locale={project.selectedLocale}
+          selectedEffectId={selectedKvEffect?.id ?? null}
+          onSelectEffect={setSelectedEffectId}
+          onAddEffect={(kind) => {
+            // Select what was just added, so the overlay appears where the
+            // operator's next action (dragging it into place) happens.
+            const before =
+              kvLoop.slots[selectedKvIndex]?.effects.length ?? 0;
+            store().addKvEffect(selectedKvIndex, kind);
+            const after =
+              kvLoopOf(store().project)?.slots[selectedKvIndex]?.effects ?? [];
+
+            if (after.length > before) {
+              setSelectedEffectId(after[after.length - 1]?.id ?? null);
+            }
+          }}
+          onRemoveEffect={(effectId) =>
+            store().removeKvEffect(selectedKvIndex, effectId)
+          }
+          onEffect={(effectId, patch) =>
+            store().updateKvEffect(selectedKvIndex, effectId, patch)
+          }
           onDisclaimerStyle={(patch) => store().setKvDisclaimerStyle(patch)}
           onDefaultMotion={(motion) => store().setKvDefaultMotion(motion)}
           onSlotMotion={(motion) =>
