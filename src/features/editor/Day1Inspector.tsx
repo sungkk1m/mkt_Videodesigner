@@ -10,6 +10,7 @@ import {
   LOCALES,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
+  MAX_LABEL_GLOW_PX,
   MAX_LABEL_OUTLINE_WIDTH_PX,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
@@ -569,6 +570,80 @@ export const Day1Inspector = ({
             testId="day1-label-outline-width"
             value={labelStyle.outlineWidthPx}
           />
+
+          {/* day1-label-effects FR-01 ~ FR-04 — two independent effects, each
+              revealing its own settings only while it is on. Same shape as the
+              subtitle background block in `SceneInspector`. */}
+          <label className="field field--toggle">
+            <input
+              checked={labelStyle.showBackground}
+              data-testid="day1-label-background"
+              disabled={disabled}
+              onChange={(event) =>
+                onLabelStyle({showBackground: event.target.checked})
+              }
+              type="checkbox"
+            />
+            <span>배경 박스</span>
+          </label>
+          {labelStyle.showBackground ? (
+            <>
+              <ColorField
+                disabled={disabled}
+                label="박스 색"
+                onChange={(backgroundColor) => onLabelStyle({backgroundColor})}
+                testId="day1-label-background-color"
+                value={labelStyle.backgroundColor}
+              />
+              <PercentField
+                disabled={disabled}
+                label="박스 불투명도"
+                max={1}
+                min={0}
+                onChange={(backgroundOpacity) =>
+                  onLabelStyle({backgroundOpacity})
+                }
+                step={0.05}
+                testId="day1-label-background-opacity"
+                value={labelStyle.backgroundOpacity}
+              />
+            </>
+          ) : null}
+
+          <label className="field field--toggle">
+            <input
+              checked={labelStyle.glowEnabled}
+              data-testid="day1-label-glow"
+              disabled={disabled}
+              onChange={(event) =>
+                onLabelStyle({glowEnabled: event.target.checked})
+              }
+              type="checkbox"
+            />
+            <span>글로우</span>
+          </label>
+          {labelStyle.glowEnabled ? (
+            <>
+              <ColorField
+                disabled={disabled}
+                label="글로우 색"
+                onChange={(glowColor) => onLabelStyle({glowColor})}
+                testId="day1-label-glow-color"
+                value={labelStyle.glowColor}
+              />
+              <PlainField
+                disabled={disabled}
+                label="글로우 세기"
+                max={MAX_LABEL_GLOW_PX}
+                min={0}
+                onChange={(glowStrengthPx) => onLabelStyle({glowStrengthPx})}
+                step={1}
+                suffix="px"
+                testId="day1-label-glow-strength"
+                value={labelStyle.glowStrengthPx}
+              />
+            </>
+          ) : null}
         </InspectorSection>
 
         <InspectorSection

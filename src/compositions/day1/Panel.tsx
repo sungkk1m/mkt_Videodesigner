@@ -18,6 +18,7 @@ import type {
   PanelRect,
 } from '../../domain/editor/types';
 import {CANVAS_COLOR} from '../shared/SceneVideo';
+import {hexToRgba} from '../shared/color';
 
 const JUSTIFY = {
   top: 'flex-start',
@@ -26,9 +27,32 @@ const JUSTIFY = {
 } as const;
 
 /**
+ * day1-label-effects §5.4 — the plate's inset and corner are the subtitle's
+ * (`SubtitleOverlay`), so the two overlays read as one system and neither gains
+ * a control the operator has to keep in sync with the other.
+ */
+const BOX_PADDING = '0.3em 0.6em';
+const BOX_RADIUS = 8;
+
+/**
+ * day1-label-effects FR-03 — two shadow layers: a tight one that reads as an
+ * edge and a doubled one that carries the falloff. `text-shadow` rather than
+ * `filter: drop-shadow`, because drop-shadow would glow the plate's rectangle
+ * instead of the letters and would rasterise the element every frame.
+ */
+const glowShadow = (style: Day1LabelStyle) =>
+  `0 0 ${style.glowStrengthPx}px ${style.glowColor}, ` +
+  `0 0 ${style.glowStrengthPx * 2}px ${style.glowColor}`;
+
+/**
  * Day1 Design Ref: §5.2 — heavy outlined text. `paintOrder: 'stroke'` draws the
  * stroke behind the glyph so a thick outline never eats into the letter shape,
  * which is what the reference GIF's lettering does.
+ *
+ * day1-label-effects Q4 — the plate and the glow are independent: the glow is a
+ * shadow on the same element as the plate's background, so with both on it
+ * reads inside the plate rather than around it. That is the documented
+ * behaviour, not a state the component prevents.
  */
 const PanelLabel = ({
   label,
@@ -46,14 +70,20 @@ const PanelLabel = ({
   >
     <span
       style={{
+        backgroundColor: style.showBackground
+          ? hexToRgba(style.backgroundColor, style.backgroundOpacity)
+          : 'transparent',
+        borderRadius: BOX_RADIUS,
         color: style.textColor,
         fontFamily: 'system-ui, sans-serif',
         fontSize: style.fontSize,
         fontWeight: 900,
         letterSpacing: '0.02em',
         lineHeight: 1.2,
+        padding: style.showBackground ? BOX_PADDING : 0,
         paintOrder: 'stroke',
         textAlign: 'center',
+        textShadow: style.glowEnabled ? glowShadow(style) : undefined,
         WebkitTextStroke: `${style.outlineWidthPx}px ${style.outlineColor}`,
         whiteSpace: 'pre-wrap',
       }}

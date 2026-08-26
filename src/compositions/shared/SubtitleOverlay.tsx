@@ -3,6 +3,7 @@
 import {AbsoluteFill} from 'remotion';
 
 import type {SubtitleRenderProps} from '../../domain/editor/types';
+import {hexToRgba} from './color';
 
 const JUSTIFY = {
   top: 'flex-start',
@@ -15,12 +16,6 @@ const TEXT_ALIGN = {
   center: 'center',
   right: 'flex-end',
 } as const;
-
-const hexToRgba = (hex: string, alpha: number) => {
-  const value = Number.parseInt(hex.slice(1), 16);
-
-  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
-};
 
 /** Splits the line so the emphasised phrase can take the emphasis colour. */
 const segmentsOf = (text: string, emphasizedText: string) => {

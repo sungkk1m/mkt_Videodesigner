@@ -192,6 +192,12 @@ export const MAX_CTA_BACKGROUND_BLUR = 40;
 /** Day1 Design Ref: §3.2 — split line, panel label, and end-card icon bounds. */
 export const MAX_SPLIT_LINE_WIDTH_PX = 24;
 export const MAX_LABEL_OUTLINE_WIDTH_PX = 16;
+/**
+ * day1-label-effects FR-04 — the label glow's blur radius. 32px is where the
+ * halo stops reading as a glow and starts washing the panel out at the quad's
+ * 44px default label size.
+ */
+export const MAX_LABEL_GLOW_PX = 32;
 /** End-card icon nudge, as a fraction of the frame. Day1 Design Ref: §3.2. */
 export const MAX_ICON_ADJUST = 0.5;
 export const MIN_ICON_SCALE = 0.5;

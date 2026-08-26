@@ -29,6 +29,7 @@ import {
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
+  MAX_LABEL_GLOW_PX,
   MAX_LABEL_OUTLINE_WIDTH_PX,
   MAX_OFFSET_PERCENT,
   MAX_PROJECT_NAME_LENGTH,
@@ -285,6 +286,23 @@ export const day1LabelStyleSchema = z.object({
   outlineColor: hexColorSchema,
   outlineWidthPx: z.number().min(0).max(MAX_LABEL_OUTLINE_WIDTH_PX),
   position: z.enum(SUBTITLE_POSITIONS),
+  /**
+   * day1-label-effects FR-01/FR-02 — the fill plate behind the label, spelled
+   * exactly like `subtitleStyleSchema`'s background trio so the two overlays
+   * stay one concept with one set of controls.
+   *
+   * The `.default()`s are the entire migration story (endcard-video D-03): a
+   * stored v2 document has none of these keys and parses as the outline-only
+   * label it was saved with, so `PROJECT_SCHEMA_VERSION` stays 2 and the
+   * rendered output of an existing project does not move.
+   */
+  showBackground: z.boolean().default(false),
+  backgroundColor: hexColorSchema.default('#000000'),
+  backgroundOpacity: z.number().min(0).max(1).default(0.6),
+  /** FR-03/FR-04 — the halo around the glyph and its outline. */
+  glowEnabled: z.boolean().default(false),
+  glowColor: hexColorSchema.default('#000000'),
+  glowStrengthPx: z.number().min(0).max(MAX_LABEL_GLOW_PX).default(16),
 });
 
 export const day1EndCardSchema = z.object({
