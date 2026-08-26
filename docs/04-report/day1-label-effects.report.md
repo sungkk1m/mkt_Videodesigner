@@ -237,6 +237,30 @@ Plan §7-2로 정리해 구현했다.
 나머지 36건은 Iteration 1과 **동일한 집합**이다(환경 기인 34건 + 이 사이클 신규 스펙의
 L3 렌더 2건).
 
+### 7.2 새 main(kv-loop 레퍼런스 모션) 병합 후 재검증
+
+kv-loop 레퍼런스 모션 사이클이 main에 올라온 뒤, 그 main을 브랜치로 가져와 같은 검증을
+다시 돌렸다. 두 사이클이 `constants.ts`·`project.ts`·`schema.ts`·`types.ts`를 함께 건드리지만
+서로 다른 위치라 **소스 파일은 전부 자동 병합**됐고, 충돌은 `.bkit/state/pdca-status.json`
+한 곳(양쪽 히스토리·타임스탬프)뿐이어서 두 사이클의 기록을 모두 살려 시간순으로 합쳤다.
+
+| 검사 | 결과 |
+|---|---|
+| `tsc -b` · `vite build` | 통과 |
+| 유닛 | **600 passed** (라벨 592 + kv-loop 신규 8) |
+| E2E 전체 (91건) | **52 passed / 36 failed / 3 skipped** (31.9분) |
+| 기준선(박스 글로우 단독 37건) 대비 신규 실패 | **0건** |
+| kv-loop 신규 스펙 `kv-reference-motion.spec.ts` | 병합 트리에서 **전부 통과** |
+
+지난 실행에서 유일한 차이였던 `hook-analysis › keeps the manual Hook range usable`는 이번에
+**통과**해, 병렬 부하 아래의 타이밍 경합이라는 §7.1의 판정이 재확인됐다.
+
+실패 36건은 전부 알려진 환경 집합이다: H.264 렌더 불가 계열(`day1-template` 9,
+`media-codec-compat` 4, `audio-tts` 3, `batch-render` 2, 엔드카드 4, `day1-trim-ux` 2,
+`persistence-recovery` 2, `kv-loop` 1, `render-poc` 1, `render-fps` 1, `editor-full` 1,
+`editor-vertical-slice` 1, `day1-quad` 1), `pages-subpath` 2(로컬 설정이 4190 서버를
+띄우지 않음), 이 사이클 신규 스펙의 L3 렌더 2건.
+
 ## 8. Residual Risks / Follow-ups
 
 | 항목 | 상태 |
