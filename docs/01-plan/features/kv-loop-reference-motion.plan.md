@@ -6,7 +6,7 @@
 > **Version**: 0.2.0
 > **Author**: 김성권 / Claude
 > **Date**: 2026-08-26
-> **Status**: Do — M0~M3 구현·검증 완료, M4(실기기)·M5(벤치마크) 대기
+> **Status**: **Complete** — M0~M5 및 실기기 검증 통과, D-01~D-11 전부 확정. [Report](../../04-report/kv-loop-reference-motion.report.md)
 
 ---
 

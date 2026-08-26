@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T08:40:00.000Z",
+  "lastUpdated": "2026-08-26T09:40:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -706,10 +706,10 @@
       }
     },
     "kv-loop-reference-motion": {
-      "phase": "check",
-      "phaseNumber": 4,
-      "matchRate": null,
-      "iterationCount": 0,
+      "phase": "completed",
+      "phaseNumber": 6,
+      "matchRate": 100,
+      "iterationCount": 1,
       "requirements": [
         "FR-R01",
         "FR-R02",
@@ -731,13 +731,14 @@
         "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md",
         "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md",
         "m4Runbook": "docs/01-plan/kv-loop-reference-motion.m4-runbook.md",
-        "m4Verification": "docs/03-analysis/kv-loop-reference-motion.m4-render-verification.md"
+        "m4Verification": "docs/03-analysis/kv-loop-reference-motion.m4-render-verification.md",
+        "report": "docs/04-report/kv-loop-reference-motion.report.md"
       },
       "timestamps": {
         "started": "2026-08-26T06:20:00.000Z",
-        "lastUpdated": "2026-08-26T08:40:00.000Z"
+        "lastUpdated": "2026-08-26T09:40:00.000Z"
       },
-      "notes": "M4 real-device render verified: SC1-SC5+SC7 measured PASS on the user's Chrome 151 H.264 MP4 (peak scale exactly 1.100 at hold centre, cuts 49-104 vs in-hold 7.7, blur ramps exactly 20 frames both ends, no canvas bleed); SC6 covered by schema-default unit tests; SC8 passed in M1-M3. NFR-R02 passed: createFrame 991ms for 900 frames (~1.1ms/frame incl. blur) vs the container's 1.25s/frame scare — blur overhead ~2% of a 6.7s encode-dominated render. Open: D-10 aesthetic call on intensity 0.5, merge to main, Pages revert (live URL currently serves the branch build)."
+      "notes": "Cycle complete. Match Rate 100%, SC 8/8 (7 measured on the real-device H.264 render, SC6 covered by schema-default unit tests). D-10 settled: intensity 0.5 stays (adjustable in UI). NFR-R02 passed (~2% blur overhead). Merged to main; next: kv-object-animation (draft plan + handoff doc docs/00-history/2026-08-26-kv-object-animation-handoff.md)."
     },
     "kv-object-animation": {
       "phase": "plan",
@@ -746,7 +747,8 @@
       "iterationCount": 0,
       "requirements": [],
       "documents": {
-        "plan": "docs/01-plan/features/kv-object-animation.plan.md"
+        "plan": "docs/01-plan/features/kv-object-animation.plan.md",
+        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md"
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
@@ -756,7 +758,7 @@
     }
   },
   "pipeline": {
-    "currentPhase": "check",
+    "currentPhase": "completed",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -942,13 +944,19 @@
         "from": "do",
         "to": "check",
         "at": "2026-08-26T08:40:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "check",
+        "to": "completed",
+        "at": "2026-08-26T09:40:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T08:40:00.000Z"
+    "lastActivity": "2026-08-26T09:40:00.000Z"
   },
   "history": [
     {
@@ -1305,6 +1313,12 @@
       "feature": "kv-loop-reference-motion",
       "phase": "check",
       "action": "m4-real-device-render-all-measured-sc-pass"
+    },
+    {
+      "timestamp": "2026-08-26T09:40:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "completed",
+      "action": "cycle-complete-d10-settled-report-written"
     }
   ],
   "stateMachine": {
