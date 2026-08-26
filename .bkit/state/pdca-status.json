@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T09:40:00.000Z",
+  "lastUpdated": "2026-08-26T10:45:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -741,20 +741,28 @@
       "notes": "Cycle complete. Match Rate 100%, SC 8/8 (7 measured on the real-device H.264 render, SC6 covered by schema-default unit tests). D-10 settled: intensity 0.5 stays (adjustable in UI). NFR-R02 passed (~2% blur overhead). Merged to main; next: kv-object-animation (draft plan + handoff doc docs/00-history/2026-08-26-kv-object-animation-handoff.md)."
     },
     "kv-object-animation": {
-      "phase": "plan",
-      "phaseNumber": 1,
+      "phase": "design",
+      "phaseNumber": 2,
       "matchRate": null,
       "iterationCount": 0,
-      "requirements": [],
+      "requirements": [
+        "direct-designation-first",
+        "particles-and-glow",
+        "rect-plus-point-regions",
+        "per-object-seed-determinism",
+        "camera-following-effects",
+        "inspector-plus-overlay-ui"
+      ],
       "documents": {
         "plan": "docs/01-plan/features/kv-object-animation.plan.md",
-        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md"
+        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md",
+        "design": "docs/02-design/features/kv-object-animation.design.md"
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
-        "lastUpdated": "2026-08-26T09:10:00.000Z"
+        "lastUpdated": "2026-08-26T10:45:00.000Z"
       },
-      "notes": "Draft only — the template's confirmed end goal: objects designated by AI or by the user directly, with effects (particles, glow pulse, light sweep) rendered as a deterministic canvas layer. Gated behind kv-loop-reference-motion M4/M5. Not in activeFeatures (cap 5)."
+      "notes": "Plan approved 2026-08-26 — D-01~D-06 confirmed (direct designation + particles/glow, rect+point schema, per-object seed, camera-following canvas layer). AI designation deferred to the next cycle. Not in activeFeatures (cap 5)."
     },
     "day1-label-effects": {
       "phase": "check",
