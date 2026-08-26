@@ -17,6 +17,7 @@ import {
   lerpKvRect,
   rectToTransform,
   resolveKvMotion,
+  withKvRoundTrip,
 } from './motion';
 import {kvLoopProjectFixture} from '../../test/fixtures/project';
 import {kvLoopOf} from '../editor/project';
@@ -257,5 +258,40 @@ describe('effectiveKvMotion', () => {
         to: FULL_KV_RECT,
       }),
     ).toBe(false);
+  });
+});
+
+// kv-loop-reference-motion R-1/D-03 — the round-trip fold.
+describe('withKvRoundTrip', () => {
+  const resolved = resolveKvMotion({kind: 'preset', preset: 'zoomIn'}, 0.5);
+
+  it('forces easeInOut so the peak velocity is zero on both legs', () => {
+    expect(withKvRoundTrip(resolved, true)).toEqual({
+      ...resolved,
+      easing: 'easeInOut',
+      roundTrip: true,
+    });
+  });
+
+  it('applies to a pan and a drawn pair the same way — FR-R04', () => {
+    const pan = resolveKvMotion({kind: 'preset', preset: 'panLeftToRight'}, 0.5);
+    const custom = resolveKvMotion(
+      {
+        kind: 'custom',
+        from: {x: 0, y: 0, size: 1},
+        to: {x: 0.2, y: 0.2, size: 0.5},
+      },
+      0.5,
+    );
+
+    expect(withKvRoundTrip(pan, true).easing).toBe('easeInOut');
+    expect(withKvRoundTrip(custom, true).easing).toBe('easeInOut');
+  });
+
+  it('leaves the resolved easing alone when off, so stored projects hold — FR-R12', () => {
+    expect(withKvRoundTrip(resolved, false)).toEqual({
+      ...resolved,
+      roundTrip: false,
+    });
   });
 });

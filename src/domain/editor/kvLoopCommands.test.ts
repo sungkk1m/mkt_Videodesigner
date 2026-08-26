@@ -268,7 +268,8 @@ describe('buildKvLoopProps', () => {
     ]);
     // The keyframes are resolved here so the Player and the render job read the
     // same pair (kv-motion-effects §2.2). The default loop preset is zoomIn, so
-    // slot 0 inherits "whole frame → centred crop".
+    // slot 0 inherits "whole frame → centred crop" — and a new loop round-trips
+    // it with the forced easeInOut (kv-loop-reference-motion R-1/D-03).
     expect(props?.slots[0]).toMatchObject({
       fit: 'cover',
       scale: 1,
@@ -276,7 +277,8 @@ describe('buildKvLoopProps', () => {
       y: 0,
       motion: {
         from: {x: 0, y: 0, size: 1},
-        easing: 'easeOut',
+        easing: 'easeInOut',
+        roundTrip: true,
       },
     });
     expect(props?.slots[0]?.motion.to.size).toBeLessThan(1);
@@ -312,8 +314,16 @@ describe('buildKvLoopProps', () => {
     const project = filled();
     const settings = kvLoopSettingsOf(project);
 
+    // The new-project default is a cut (FR-R07), so the clamp case sets the
+    // crossfade explicitly.
     expect(
       buildKvLoopProps(project, testUrlResolver())?.transitionInFrames,
+    ).toBe(0);
+    expect(
+      buildKvLoopProps(
+        {...project, templateSettings: {...settings, transitionMs: 400}},
+        testUrlResolver(),
+      )?.transitionInFrames,
     ).toBe(12);
 
     // A one-second transition cannot fit inside a 1.875s hold at 30fps: the
@@ -575,5 +585,99 @@ describe('the looping commands', () => {
       setKvDefaultMotion(project, {kind: 'preset', preset: 'zoomOut'}),
     ).toBe(project);
     expect(updateKvLoopSettings(project, {fadeOutMs: 0})).toBe(project);
+  });
+});
+
+// kv-loop-reference-motion — the round trip, the cut, and the gaussian
+// bookends. Plan FR-R06/R07/R11/R12; Design §2-§3.
+describe('the reference-motion cycle', () => {
+  it('opens a new loop on the reference grammar: cut, round trip, bookends', () => {
+    const settings = kvLoopSettingsOf(kvLoopProjectFixture());
+
+    expect(settings).toMatchObject({
+      roundTrip: true,
+      transitionMs: 0,
+      // D-06 — the bookends replace the black fade; the field stays.
+      fadeOutMs: 0,
+      blur: {durationMs: 333, amountPx: 30},
+    });
+  });
+
+  it('parses a stored document with none of the new fields as all-off — FR-R12', () => {
+    const project = kvLoopProjectFixture();
+    const {
+      roundTrip: _roundTrip,
+      blur: _blur,
+      ...stored
+    } = kvLoopSettingsOf(project) as Record<string, unknown> & {
+      roundTrip: boolean;
+      blur: unknown;
+    };
+    const result = parseProject({
+      ...project,
+      templateSettings: {...stored, transitionMs: 400},
+    });
+
+    if (!result.ok) {
+      throw new Error(result.error.message);
+    }
+
+    // The defaults preserve the one-way, crossfaded, unblurred behaviour the
+    // document was saved with (SC6).
+    expect(kvLoopSettingsOf(result.value)).toMatchObject({
+      roundTrip: false,
+      transitionMs: 400,
+      blur: {durationMs: 0, amountPx: 0},
+    });
+  });
+
+  it('accepts zero as a transition — a cut — and clamps below it', () => {
+    const cut = updateKvLoopSettings(kvLoopProjectFixture(), {
+      transitionMs: -50,
+    });
+
+    expect(kvLoopSettingsOf(cut).transitionMs).toBe(0);
+    expect(parseProject(cut).ok).toBe(true);
+    expect(buildKvLoopProps(cut, testUrlResolver())?.transitionInFrames).toBe(0);
+  });
+
+  it('folds the round trip into every slot with the forced easeInOut — D-03', () => {
+    const project = kvLoopProjectFixture();
+    const props = buildKvLoopProps(project, testUrlResolver());
+
+    for (const slot of props?.slots ?? []) {
+      expect(slot.motion.roundTrip).toBe(true);
+      expect(slot.motion.easing).toBe('easeInOut');
+    }
+
+    // Off keeps the resolved easing, so a stored one-way project renders as
+    // it always did.
+    const oneWay = updateKvLoopSettings(project, {roundTrip: false});
+    const slot = buildKvLoopProps(oneWay, testUrlResolver())?.slots[0];
+
+    expect(slot?.motion.roundTrip).toBe(false);
+    expect(slot?.motion.easing).toBe('easeOut');
+  });
+
+  it('resolves the bookends to frames and clamps their patch — FR-R11', () => {
+    const project = kvLoopProjectFixture();
+
+    // 333ms at the editor's 30fps preview is 10 frames — the reference's own
+    // frame count (reference-measurement §4); a 60fps render doubles it.
+    expect(buildKvLoopProps(project, testUrlResolver())).toMatchObject({
+      blurInFrames: 10,
+      blurAmountPx: 30,
+    });
+
+    const clamped = kvLoopSettingsOf(
+      updateKvLoopSettings(project, {blurDurationMs: 9000, blurAmountPx: -4}),
+    );
+
+    expect(clamped.blur).toEqual({durationMs: 1000, amountPx: 0});
+
+    const off = updateKvLoopSettings(project, {blurDurationMs: 0});
+
+    expect(buildKvLoopProps(off, testUrlResolver())?.blurInFrames).toBe(0);
+    expect(parseProject(off).ok).toBe(true);
   });
 });

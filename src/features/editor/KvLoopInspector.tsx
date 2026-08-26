@@ -3,13 +3,13 @@
 import {
   KV_MOTION_LABELS,
   KV_MOTION_PRESETS,
+  MAX_KV_BLUR_PX,
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_TRANSITION_MS,
   MIN_SCALE,
   MIN_SUBTITLE_FONT_SIZE,
-  MIN_TRANSITION_MS,
   type KvLoopSettings,
   type KvMotion,
   type KvMotionPreset,
@@ -29,6 +29,8 @@ export interface KvLoopInspectorProps {
   /** Which key visual the timeline has selected. */
   index: number;
   locale: Locale;
+  /** For the blur hint only — the stored value stays in ms (D-07). */
+  fps: number;
   titleReference: MediaReference | null;
   titleInheritedFrom: Locale | null;
   titleUrl: string | null;
@@ -44,6 +46,9 @@ export interface KvLoopInspectorProps {
       kenBurnsIntensity: number;
       transitionMs: number;
       fadeOutMs: number;
+      roundTrip: boolean;
+      blurDurationMs: number;
+      blurAmountPx: number;
     }>,
   ) => void;
   onTitleImage: (file: File | null) => void;
@@ -57,6 +62,7 @@ export const KvLoopInspector = ({
   settings,
   index,
   locale,
+  fps,
   titleReference,
   titleInheritedFrom,
   titleUrl,
@@ -260,18 +266,43 @@ export const KvLoopInspector = ({
             강도가 0이면 팬은 정지와 같습니다. 강도를 올리세요.
           </p>
         ) : null}
+        {/* R-1/R-2 — the loop-wide round trip (D-02). The peak is derived, not
+            entered: always the exact centre of each hold. */}
+        <label className="field field--toggle">
+          <input
+            checked={settings.roundTrip}
+            data-testid="kv-round-trip"
+            disabled={disabled}
+            onChange={(event) => onLoop({roundTrip: event.target.checked})}
+            type="checkbox"
+          />
+          <span>왕복 — 들어갔다 제자리로</span>
+        </label>
+        {settings.roundTrip ? (
+          <p className="panel__hint" data-testid="kv-round-trip-hint">
+            각 장의 정확히 중앙에서 최대가 되고, 끝에서 원위치로 돌아옵니다.
+            끝 배율이 시작과 같아 컷이 튀지 않습니다.
+          </p>
+        ) : null}
+        {/* R-3 — zero is a hard cut, the reference's only transition. */}
         <PlainField
           disabled={disabled}
           label="크로스페이드"
           max={MAX_TRANSITION_MS}
-          min={MIN_TRANSITION_MS}
+          min={0}
           onChange={(transitionMs) => onLoop({transitionMs})}
           step={50}
           suffix="ms"
           testId="kv-transition"
           value={settings.transitionMs}
         />
-        {/* FR-L17 — zero turns the closing fade off. */}
+        {settings.transitionMs === 0 ? (
+          <p className="panel__hint" data-testid="kv-cut-hint">
+            0은 컷입니다 — 겹침 없이 다음 장으로 바로 끊깁니다.
+          </p>
+        ) : null}
+        {/* FR-L17 — zero turns the closing fade off. New projects open on the
+            gaussian bookends below instead (D-06). */}
         <PlainField
           disabled={disabled}
           label="마지막 페이드아웃"
@@ -283,6 +314,36 @@ export const KvLoopInspector = ({
           testId="kv-fade-out"
           value={settings.fadeOutMs}
         />
+
+        {/* R-4/R-5 — the gaussian bookends. One duration for both ends (D-09);
+            stored in ms so a 30↔60fps switch keeps the felt length (D-07). */}
+        <PlainField
+          disabled={disabled}
+          label="시작·끝 블러 길이"
+          max={MAX_TRANSITION_MS}
+          min={0}
+          onChange={(blurDurationMs) => onLoop({blurDurationMs})}
+          step={1}
+          suffix="ms"
+          testId="kv-blur-duration"
+          value={settings.blur.durationMs}
+        />
+        <PlainField
+          disabled={disabled}
+          label="시작·끝 블러 세기"
+          max={MAX_KV_BLUR_PX}
+          min={0}
+          onChange={(blurAmountPx) => onLoop({blurAmountPx})}
+          step={1}
+          suffix="px"
+          testId="kv-blur-amount"
+          value={settings.blur.amountPx}
+        />
+        <p className="panel__hint" data-testid="kv-blur-hint">
+          {settings.blur.durationMs > 0 && settings.blur.amountPx > 0
+            ? `영상 처음과 끝 ${Math.round((settings.blur.durationMs / 1000) * fps)}프레임(${fps}fps 기준)이 블러에서 열리고 닫힙니다. 0이면 꺼집니다.`
+            : '길이나 세기가 0이면 블러 없이 시작하고 끝납니다.'}
+        </p>
       </section>
 
       <section className="panel__group" data-testid="kv-inspector-overlays">

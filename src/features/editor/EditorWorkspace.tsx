@@ -1402,6 +1402,7 @@ export const EditorWorkspace = ({
       {kvLoop ? (
         <KvLoopInspector
           disabled={isRendering}
+          fps={project.fps}
           index={selectedKvIndex}
           locale={project.selectedLocale}
           onDisclaimerStyle={(patch) => store().setKvDisclaimerStyle(patch)}

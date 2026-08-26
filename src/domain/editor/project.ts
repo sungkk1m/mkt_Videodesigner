@@ -11,7 +11,7 @@ import {
   day1SectionDurations,
 } from '../day1/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
-import {resolveKvMotion} from '../kvloop/motion';
+import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
 import {
   kvLoopCombination,
   kvLoopCycleDurations,
@@ -45,6 +45,8 @@ import {
   DEFAULT_DAY1_PANEL_TRANSFORM,
   DEFAULT_KV_COUNT,
   DEFAULT_KV_LOOPS,
+  DEFAULT_KV_BLUR_MS,
+  DEFAULT_KV_BLUR_PX,
   DEFAULT_KV_TRANSITION_MS,
   DEFAULT_LOCALE,
   DEFAULT_RATIO,
@@ -65,6 +67,7 @@ import {
   MAX_SECTION_COUNT,
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
+  MAX_KV_BLUR_PX,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
   MIN_SCALE,
@@ -272,12 +275,21 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
   loopCount: DEFAULT_KV_LOOPS,
   kenBurnsIntensity: 0.5,
   motion: {kind: 'preset', preset: 'zoomIn'},
-  transitionMs: DEFAULT_KV_TRANSITION_MS,
+  // kv-loop-reference-motion R-1/R-3 — a new loop breathes and cuts. The
+  // reference is 100% hard cuts, and a round trip is what makes a cut seamless:
+  // both sides of the boundary sit at the same camera (FR-R03).
+  roundTrip: true,
+  transitionMs: 0,
   // An overlay is artwork with its own margins, so it opens on `contain`:
   // cropping a game logo is never what was meant. §5.3.
   title: {images: {}, transform: {...DEFAULT_TRANSFORM, fit: 'contain'}},
   disclaimer: {fontSize: 32, textColor: '#ffffff'},
-  fadeOutMs: DEFAULT_KV_TRANSITION_MS,
+  // D-06 — the gaussian bookends replace the black fade for new projects. The
+  // reference closes on blur, not black (reference-measurement §1); the field
+  // and its control stay, so turning the fade back on is one edit. This
+  // supersedes FR-L17's default deliberately.
+  fadeOutMs: 0,
+  blur: {durationMs: DEFAULT_KV_BLUR_MS, amountPx: DEFAULT_KV_BLUR_PX},
 };
 
 /**
@@ -1785,6 +1797,9 @@ export type KvLoopPatch = Partial<{
   kenBurnsIntensity: number;
   transitionMs: number;
   fadeOutMs: number;
+  roundTrip: boolean;
+  blurDurationMs: number;
+  blurAmountPx: number;
 }>;
 
 /** FR-L08/FR-L09/FR-L17 — the loop-wide motion values. */
@@ -1800,15 +1815,30 @@ export const updateKvLoopSettings = (
     ...(patch.transitionMs === undefined
       ? {}
       : {
-          transitionMs: clamp(
-            patch.transitionMs,
-            MIN_TRANSITION_MS,
-            MAX_TRANSITION_MS,
-          ),
+          // R-3 — zero is a cut. The same floor the schema states; the two
+          // must move together (Plan §6.2).
+          transitionMs: clamp(patch.transitionMs, 0, MAX_TRANSITION_MS),
         }),
     ...(patch.fadeOutMs === undefined
       ? {}
       : {fadeOutMs: clamp(patch.fadeOutMs, 0, MAX_TRANSITION_MS)}),
+    ...(patch.roundTrip === undefined ? {} : {roundTrip: patch.roundTrip}),
+    ...(patch.blurDurationMs === undefined && patch.blurAmountPx === undefined
+      ? {}
+      : {
+          blur: {
+            durationMs: clamp(
+              patch.blurDurationMs ?? settings.blur.durationMs,
+              0,
+              MAX_TRANSITION_MS,
+            ),
+            amountPx: clamp(
+              patch.blurAmountPx ?? settings.blur.amountPx,
+              0,
+              MAX_KV_BLUR_PX,
+            ),
+          },
+        }),
   }));
 
 /** FR-L10 — the optional title, per locale. Clearing it is a normal edit. */
@@ -2331,10 +2361,15 @@ export const buildKvLoopProps = (
       scale: slot.transform.scale,
       x: slot.transform.x,
       y: slot.transform.y,
+      // R-1/D-03 — the round trip is folded here, once, so the Player and the
+      // render job interpolate the identical triangle.
       motion: Object.freeze(
-        resolveKvMotion(
-          slot.motion ?? settings.motion,
-          settings.kenBurnsIntensity,
+        withKvRoundTrip(
+          resolveKvMotion(
+            slot.motion ?? settings.motion,
+            settings.kenBurnsIntensity,
+          ),
+          settings.roundTrip,
         ),
       ),
     }),
@@ -2346,6 +2381,11 @@ export const buildKvLoopProps = (
     kenBurnsIntensity: settings.kenBurnsIntensity,
     transitionInFrames,
     fadeOutFrames: msToFrames(settings.fadeOutMs, project.fps),
+    // R-4/R-5 — resolved to frames here so the composition never reads fps.
+    // No overlap clamp on purpose: the 1000ms ceiling cannot reach the other
+    // end of the shortest (15s) project.
+    blurInFrames: msToFrames(settings.blur.durationMs, project.fps),
+    blurAmountPx: settings.blur.amountPx,
     totalFrames,
     title: Object.freeze({
       url: resolveUrl(title.reference),

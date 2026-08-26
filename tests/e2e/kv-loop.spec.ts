@@ -37,7 +37,11 @@ const RENDER_TIMEOUT = 10 * 60 * 1000;
 /** Default 15s project: four key visuals, two repeats, 1.875s each. */
 const HOLD_MS = 1875;
 const CYCLE_MS = HOLD_MS * 4;
-/** The default crossfade, which every boundary sample has to reason about. */
+/**
+ * The crossfade every boundary sample reasons about. Since
+ * kv-loop-reference-motion a new loop defaults to a cut, so the render pass
+ * sets this value explicitly before rendering.
+ */
 const TRANSITION_MS = 400;
 
 const selectKvLoop = async (page: Page) => {
@@ -387,8 +391,12 @@ test.describe('looping render', () => {
     await selectKvLoop(page);
     await uploadKeyVisuals(page);
 
-    // Nothing else is touched: no title, no disclaimer. That is SC5, and it is
-    // also the state SC1-SC4 are measured in.
+    // SC4 proves the crossfade blend, and the reference-motion default is a
+    // cut — so the fade is dialled in explicitly rather than assumed.
+    await page.getByTestId('kv-transition-number').fill(String(TRANSITION_MS));
+
+    // Nothing else is touched beyond the crossfade: no title, no disclaimer.
+    // That is SC5, and it is also the state SC1-SC4 are measured in.
     const output = await renderAndSave(page, 'kv-loop-15s.mp4');
 
     // SC1 — the file itself.

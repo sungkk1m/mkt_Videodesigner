@@ -56,10 +56,17 @@ export const KvScene = ({
   // clamp stays: a segment is held open for the crossfade that follows it, and
   // holding the last camera position through that overlap is what a cut looks
   // like from the incoming side.
+  //
+  // kv-loop-reference-motion R-1/R-2 — a round trip is the same interpolation
+  // with a third stop: the peak sits at the hold's exact centre (fractional on
+  // an even count, so symmetry is exact) and the last frame is back at 0. That
+  // zero is what makes a cut into the next hold seamless (FR-R03), and the
+  // easing applies per segment, so the peak velocity is zero on both sides.
+  const last = Math.max(1, holdInFrames - 1);
   const progress = interpolate(
     frame,
-    [0, Math.max(1, holdInFrames - 1)],
-    [0, 1],
+    slot.motion.roundTrip ? [0, last / 2, last] : [0, last],
+    slot.motion.roundTrip ? [0, 1, 0] : [0, 1],
     {easing: EASING[slot.motion.easing], extrapolateRight: 'clamp'},
   );
   const {
