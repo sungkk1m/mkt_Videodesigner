@@ -4,10 +4,10 @@
 >
 > **Project**: mkt_videodesigner
 > **Feature**: kv-object-animation
-> **Version**: 0.1.0
+> **Version**: 0.2.0
 > **Author**: 김성권 / Claude
 > **Date**: 2026-08-26
-> **Status**: Draft — M0 스파이크가 §4.2의 드로잉 시점을 실증하면 확정
+> **Status**: Confirmed — M0 스파이크 5/5 PASS(§4.3), 드로잉 시점 확정. M1 착수 가능
 > **Plan**: [kv-object-animation.plan.md](../../01-plan/features/kv-object-animation.plan.md)
 > **Measurements**: [reference-measurement §3](../../03-analysis/kv-loop-reference-motion.reference-measurement.md)
 
@@ -267,6 +267,13 @@ VP9로 렌더한다 (이 컨테이너의 Chromium은 H.264 인코더가 없다 �
 ①이 FAIL이면 드로잉 경로 어딘가에 비결정 입력이 있는 것 — 설계 전제가 무너지므로
 원인 규명 전에 M1로 가지 않는다.
 
+**결과 (2026-08-26)**: 자체 래스터라이저 경로에서 **5/5 PASS** — 2회 렌더가
+sha256 비트 동일(①), 격리 띠 차 0.080(③), 단독 드로잉 vs 인코딩 0.48/255(⑤),
+글로우 중심 0.620→0.643 vs 예측 0.644(④). 비용은 카메라 정지에서 ≈0ms/프레임,
+transform 하에서 ≈19ms/프레임 상한 참고치(②). `useLayoutEffect` 채택 확정,
+선회 불필요. 수치와 재현 절차는
+[m0-canvas-spike](../../03-analysis/kv-object-animation.m0-canvas-spike.md).
+
 ## 5. UI
 
 ### 5.1 인스펙터 — `KvLoopInspector.tsx`
@@ -370,3 +377,4 @@ H.264 렌더로 SC1~SC7 재판정 + 이펙트 on/off 렌더 시간 재측정 →
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 0.1.0 | 2026-08-26 | 김성권 / Claude | 최초 작성 — D-01~D-06 반영, M0 게이트 정의 |
+| 0.2.0 | 2026-08-26 | 김성권 / Claude | M0 판정 기록(§4.3) — 5/5 PASS, 드로잉 시점 확정 |

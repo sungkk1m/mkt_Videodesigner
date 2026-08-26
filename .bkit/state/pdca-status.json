@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T10:45:00.000Z",
+  "lastUpdated": "2026-08-26T11:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -756,13 +756,14 @@
       "documents": {
         "plan": "docs/01-plan/features/kv-object-animation.plan.md",
         "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md",
-        "design": "docs/02-design/features/kv-object-animation.design.md"
+        "design": "docs/02-design/features/kv-object-animation.design.md",
+        "m0Evidence": "docs/03-analysis/kv-object-animation.m0-canvas-spike.md"
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
-        "lastUpdated": "2026-08-26T10:45:00.000Z"
+        "lastUpdated": "2026-08-26T11:20:00.000Z"
       },
-      "notes": "Plan approved 2026-08-26 — D-01~D-06 confirmed (direct designation + particles/glow, rect+point schema, per-object seed, camera-following canvas layer). AI designation deferred to the next cycle. Not in activeFeatures (cap 5)."
+      "notes": "Plan approved + Design confirmed 2026-08-26. M0 canvas spike 5/5 PASS on the software rasterizer path (bit-identical double render, isolation 0.080, standalone-draw vs encoded 0.48/255, camera-follow centroid 0.620->0.643, cost ~0-19ms/frame). Next: M1 schema/domain. AI designation deferred to the next cycle. Not in activeFeatures (cap 5)."
     },
     "day1-label-effects": {
       "phase": "check",
