@@ -49,14 +49,14 @@
 - **FR-01 텍스트 박스 on/off**: 라벨 섹션에 "배경 박스" 토글. 켜면 라벨 텍스트 뒤에 반투명 판이 깔린다. 기본 **꺼짐**.
 - **FR-02 박스 색·불투명도**: 토글이 켜진 동안에만 "박스 색"(color picker)과 "박스 불투명도"(0–100%) 노출. 기본 `#000000` / 60%. 자막(`SubtitleStyle`)과 동일한 필드 구성·동일한 여백(`0.3em 0.6em`)·모서리(8px)를 쓴다 — 새 상수 없음.
 - **FR-03 글로우 on/off**: 라벨 섹션에 "글로우" 토글. 켜면 글자(외곽선 포함) 둘레에 발광이 번진다. 기본 **꺼짐**.
-- **FR-04 글로우 색·세기**: 토글이 켜진 동안에만 "글로우 색"과 "글로우 세기"(0–`MAX_LABEL_GLOW_PX`=32px) 노출. 기본 `#ffffff` / 16px. 세기는 blur 반경이며 0이면 효과 없음.
+- **FR-04 글로우 색·세기**: 토글이 켜진 동안에만 "글로우 색"과 "글로우 세기"(0–`MAX_LABEL_GLOW_PX`=32px) 노출. 기본 `#000000` / 16px — 흰 글자 기준으로 검정 글로우가 소프트 섀도로 읽혀 켜자마자 가독성이 올라간다(미리보기 확인 후 확정). 세기는 blur 반경이며 0이면 효과 없음.
 - **FR-05 두 템플릿 동시 적용**: Day1과 Day1(4 video) 모두에 적용된다. 네 패널은 공유 스타일 1세트(day1-quad Q5)를 그대로 따르며 패널별 개별 설정은 만들지 않는다.
 - **FR-06 하위 호환**: zod `.default()`만으로 기존 v2 문서가 열린다(마이그레이션 0줄, `PROJECT_SCHEMA_VERSION` 2 유지). 두 효과 모두 기본 꺼짐이므로 **기존 프로젝트의 렌더 결과는 변하지 않는다**.
 - **FR-07 미리보기 동등**: 중앙 Player와 최종 렌더는 동일 컴포지션이므로 자동으로 일치한다. 별도 미리보기 코드 없음.
 
 ## 2. Success Criteria
 
-- **SC1** 스키마 unit: 새 6필드가 없는 기존 v2 JSON이 파싱되어 `showBackground:false`, `backgroundColor:'#000000'`, `backgroundOpacity:0.6`, `glowEnabled:false`, `glowColor:'#ffffff'`, `glowStrengthPx:16`로 채워진다. 범위 위반(`backgroundOpacity:1.5`, `glowStrengthPx:99`)은 파싱 실패.
+- **SC1** 스키마 unit: 새 6필드가 없는 기존 v2 JSON이 파싱되어 `showBackground:false`, `backgroundColor:'#000000'`, `backgroundOpacity:0.6`, `glowEnabled:false`, `glowColor:'#000000'`, `glowStrengthPx:16`로 채워진다. 범위 위반(`backgroundOpacity:1.5`, `glowStrengthPx:99`)은 파싱 실패.
 - **SC2** 커맨드 unit: `updateDay1LabelStyle` patch로 6필드가 갱신되고, `backgroundOpacity`는 [0,1], `glowStrengthPx`는 [0,32]로 클램프된다. **day1과 day1-quad 두 픽스처 모두**에서 통과(기존 `day1Commands.test.ts` 두 테스트와 같은 짝).
 - **SC3** 프롭 unit: `buildDay1Props`/`buildDay1QuadProps`가 6필드를 `labelStyle`로 그대로 통과시킨다.
 - **SC4** e2e(L2, DOM): 두 토글이 꺼짐이면 색·수치 필드가 노출되지 않고, 켜면 노출된다. 켠 뒤 미리보기 라벨 요소의 계산 스타일에 `background-color`(지정 rgba)와 `text-shadow`(지정 색·반경)가 존재한다.
@@ -104,7 +104,7 @@ export const day1LabelStyleSchema = z.object({
   backgroundOpacity: z.number().min(0).max(1).default(0.6),
   // FR-03·FR-04
   glowEnabled: z.boolean().default(false),
-  glowColor: hexColorSchema.default('#ffffff'),
+  glowColor: hexColorSchema.default('#000000'),
   glowStrengthPx: z.number().min(0).max(MAX_LABEL_GLOW_PX).default(16),
 });
 ```
@@ -175,7 +175,8 @@ textShadow: style.glowEnabled
 | Q5 | `hexToRgba`를 `src/compositions/shared/color.ts`로 순수 이동하고 자막이 그것을 import하게 할까(1줄 변경), 복제할까? | **이동** — 복제 금지 원칙, 아키텍처 테스트 영향 없음 | **A안 채택 — `compositions/shared/color.ts`로 이동** ✅ |
 
 기본값은 Q2·Q3의 권장안 채택에 포함된 것으로 보아 그대로 확정한다: 박스 `#000000` / 60%,
-글로우 `#ffffff` / 16px, **둘 다 기본 꺼짐**. 다른 값을 원하면 Do 진입 전에 바꾼다.
+글로우 `#000000` / 16px, **둘 다 기본 꺼짐**.
+(글로우 기본색은 미리보기 확인 뒤 흰색 → 검정으로 사용자가 변경 확정.)
 
 ### 7.1 Q5가 무엇인가 (내부 코드 정리 항목)
 

@@ -170,7 +170,7 @@ describe('parseProject — Day1 payload', () => {
           backgroundColor: '#000000',
           backgroundOpacity: 0.6,
           glowEnabled: false,
-          glowColor: '#ffffff',
+          glowColor: '#000000',
           glowStrengthPx: 16,
         },
         endCard: {
@@ -297,7 +297,7 @@ describe('parseProject — Day1 payload', () => {
       expect(labelStyle.backgroundColor).toBe('#000000');
       expect(labelStyle.backgroundOpacity).toBe(0.6);
       expect(labelStyle.glowEnabled).toBe(false);
-      expect(labelStyle.glowColor).toBe('#ffffff');
+      expect(labelStyle.glowColor).toBe('#000000');
       expect(labelStyle.glowStrengthPx).toBe(16);
     }
   });

@@ -300,7 +300,7 @@ export const day1LabelStyleSchema = z.object({
   backgroundOpacity: z.number().min(0).max(1).default(0.6),
   /** FR-03/FR-04 — the halo around the glyph and its outline. */
   glowEnabled: z.boolean().default(false),
-  glowColor: hexColorSchema.default('#ffffff'),
+  glowColor: hexColorSchema.default('#000000'),
   glowStrengthPx: z.number().min(0).max(MAX_LABEL_GLOW_PX).default(16),
 });
 

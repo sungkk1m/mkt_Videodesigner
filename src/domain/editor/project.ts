@@ -186,7 +186,7 @@ export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
     backgroundColor: '#000000',
     backgroundOpacity: 0.6,
     glowEnabled: false,
-    glowColor: '#ffffff',
+    glowColor: '#000000',
     glowStrengthPx: 16,
   },
   endCard: {

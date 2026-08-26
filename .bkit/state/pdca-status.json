@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T06:40:00.000Z",
+  "lastUpdated": "2026-08-26T07:05:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -725,7 +725,7 @@
       },
       "timestamps": {
         "started": "2026-08-26T05:20:00.000Z",
-        "lastUpdated": "2026-08-26T06:40:00.000Z"
+        "lastUpdated": "2026-08-26T07:05:00.000Z"
       },
       "metadata": {
         "project": "mkt_videodesigner",
@@ -750,10 +750,11 @@
           "Q2": "box exposes colour and opacity, same trio as SubtitleStyle",
           "Q3": "glow exposes colour and strength",
           "Q4": "box and glow are independent toggles; using both is allowed",
-          "Q5": "move hexToRgba into compositions/shared/color.ts; SubtitleOverlay imports it"
+          "Q5": "move hexToRgba into compositions/shared/color.ts; SubtitleOverlay imports it",
+          "Q6": "glow default colour white -> black, after the first preview capture showed a white halo vanishing into white text"
         },
         "confirmedAt": "2026-08-26T05:45:00.000Z",
-        "defaults": "box #000000 / 60%, glow #ffffff / 16px, both off",
+        "defaults": "box #000000 / 60%, glow #000000 / 16px, both off",
         "verification": {
           "unitTests": "588 passed (40 files), 7 new",
           "build": "tsc -b + vite build clean",
@@ -761,7 +762,7 @@
           "e2eRegression": "7 upload-free existing specs passed",
           "e2eBlocked": "L3 render 2 specs not executed - this container has no proprietary-codec Chrome, so H.264 fixtures cannot be uploaded or encoded",
           "verifiedAt": "2026-08-26T06:10:00.000Z",
-          "previewCapture": "6 combinations captured from the Remotion Player preview using a VP8 WebM source, plus the inspector controls"
+          "previewCapture": "7 combinations captured from the Remotion Player preview using a VP8 WebM source, plus the inspector controls; recaptured after the glow default changed to black"
         },
         "successCriteria": {
           "SC1": "met - schema defaults and range rejection",
@@ -960,7 +961,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T06:40:00.000Z"
+    "lastActivity": "2026-08-26T07:05:00.000Z"
   },
   "history": [
     {
@@ -1311,6 +1312,12 @@
       "feature": "day1-label-effects",
       "phase": "check",
       "action": "preview-capture-6-combinations"
+    },
+    {
+      "timestamp": "2026-08-26T07:05:00.000Z",
+      "feature": "day1-label-effects",
+      "phase": "check",
+      "action": "glow-default-black-recaptured"
     }
   ],
   "stateMachine": {
