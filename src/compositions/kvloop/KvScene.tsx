@@ -15,6 +15,7 @@ import {
 import type {KvEasing, KvSlotRenderProps} from '../../domain/editor/types';
 import {lerpKvRect, rectToTransform} from '../../domain/kvloop/motion';
 import {CANVAS_COLOR} from '../shared/SceneVideo';
+import {KvEffectsCanvas} from './KvEffectsCanvas';
 
 /**
  * day1-video's blurred backdrop, for a still. `contain` keeps the whole key
@@ -74,6 +75,12 @@ export const KvScene = ({
     xPercent,
     yPercent,
   } = rectToTransform(lerpKvRect(slot.motion.from, slot.motion.to, progress));
+  // kv-object-animation §4.1 — one transform string for the image and the
+  // effect layer. Same layout box + same transform = one coordinate space, so
+  // the effects follow the camera and the operator's framing by construction.
+  const sceneTransform =
+    `translate(${slot.x + xPercent}%, ${slot.y + yPercent}%) ` +
+    `scale(${slot.scale * motionScale})`;
   const opacity =
     fadeInFrames > 0
       ? interpolate(frame, [0, fadeInFrames], [0, 1], {
@@ -111,13 +118,22 @@ export const KvScene = ({
               style={{
                 height: '100%',
                 objectFit: slot.fit,
-                transform:
-                  `translate(${slot.x + xPercent}%, ${slot.y + yPercent}%) ` +
-                  `scale(${slot.scale * motionScale})`,
+                transform: sceneTransform,
                 width: '100%',
               }}
             />
           </AbsoluteFill>
+
+          {/* kv-object-animation NFR-O01 — no effects, no canvas element: a
+              project without designations keeps its exact render tree. */}
+          {slot.effects.length > 0 ? (
+            <AbsoluteFill>
+              <KvEffectsCanvas
+                effects={slot.effects}
+                transform={sceneTransform}
+              />
+            </AbsoluteFill>
+          ) : null}
         </>
       )}
     </AbsoluteFill>

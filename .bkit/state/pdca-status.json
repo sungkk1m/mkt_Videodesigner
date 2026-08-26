@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T13:45:00.000Z",
+  "lastUpdated": "2026-08-26T14:05:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -761,9 +761,9 @@
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
-        "lastUpdated": "2026-08-26T13:45:00.000Z"
+        "lastUpdated": "2026-08-26T14:05:00.000Z"
       },
-      "notes": "M0 spike committed (5/5 PASS). M1 complete: effects schema (discriminated union, .default([]) migration), constants, domain closed forms (hash/particles/reach/glow/clamp), add/remove/update commands with clamps, builder passthrough — 610 unit tests green (14 new). The session was interrupted mid-M1 with the work uncommitted; recovered from the working tree, gaps filled (KvEffect type import, buildKvLoopProps effects passthrough), then tested. Next: M2 KvEffectsCanvas + KvScene integration."
+      "notes": "M0 spike committed (5/5 PASS). M1 complete: schema/domain/commands, 610 unit tests green. M2 complete: KvEffectsCanvas (drawKvEffects + component) in compositions/kvloop, KvScene mounts it behind slot.effects.length > 0 sharing the image's transform string (D-04/NFR-O01); M0 harness switched to the production code path and re-run — 5/5 PASS with identical numbers (isolation 0.080, standalone-vs-encoded 0.48, centroid 0.620→0.643). 614 unit tests green (4 new drawing-seam tests). Next: M3 inspector effects section + KvEffectOverlay + E2E."
     },
     "day1-label-effects": {
       "phase": "check",
