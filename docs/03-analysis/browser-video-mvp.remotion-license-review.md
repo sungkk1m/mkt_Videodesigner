@@ -7,6 +7,8 @@
 > **Status**: Reviewed. Free License covers this project **only** through the
 > evaluation clause. Decision (2026-07-28, revised): deploy for evaluation under
 > that clause; buy a Company License before any campaign use. See §6.
+> **2026-08-26**: the renderer's `licenseKey` argument is deliberately left
+> unpassed — see §6.1.
 > **Reviewer**: Claude Code, from Remotion's published terms. This is a reading
 > of the public license text, not legal advice.
 
@@ -97,6 +99,27 @@ license, and it is corrected here.
 
 If any of those stops being true, the free path ends and
 [§5](#5-cost-if-a-company-license-is-obtained) applies ($25 per seat per month).
+
+### 6.1 The `licenseKey` argument (2026-08-26)
+
+`renderMediaOnWeb` logs a warning on every render because it is called without a
+`licenseKey`. Two values would silence it: a purchased key, or the string
+`'free-license'`.
+
+**Decision (user, 2026-08-26): pass neither. Revisit when campaign use is
+decided.**
+
+The warning blocks nothing — it goes to the console, and every render on the
+live build completes. More to the point, `'free-license'` does not grant
+anything: it *declares* that the project qualifies, and eligibility is decided by
+§3 either way. Adding it would put a company-name assertion in the codebase to
+remove one console line, on a path that ends at a purchased key anyway (§7).
+
+Where it would go if that changes: the `encoding` object in
+`src/infrastructure/render/renderEditor.ts` (one property). The preview player
+already passes `acknowledgeRemotionLicense`; only the render path is unmarked.
+
+---
 
 ## 7. Trigger Conditions
 
