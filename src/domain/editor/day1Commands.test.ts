@@ -828,6 +828,32 @@ describe('Day1 commands over four panels', () => {
   });
 });
 
+// day1-quad regression — `applyDurationPreset` had no quad arm, so switching
+// the preset laid the three-scene lengths [3s, 24s, 3s] over the five-section
+// axis: panel D and the end card became NaN and the composition crashed on
+// `Sequence from=NaN`. The live symptom was a black preview and a failed
+// render the moment 30초 was pressed.
+describe('applyDurationPreset on the four-panel template', () => {
+  it('resizes 15s → 30s to five finite sections totalling the preset', () => {
+    const project = applyDurationPreset(day1QuadProjectFixture(), 30);
+    const durations = project.sections.map((section) => section.durationMs);
+
+    expect(durations).toEqual([6750, 6750, 6750, 6750, 3000]);
+    expect(project.durationPreset).toBe(30);
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('resizes back 30s → 15s', () => {
+    const thirty = applyDurationPreset(day1QuadProjectFixture(), 30);
+    const project = applyDurationPreset(thirty, 15);
+
+    expect(project.sections.map((section) => section.durationMs)).toEqual([
+      3000, 3000, 3000, 3000, 3000,
+    ]);
+    expect(parseProject(project).ok).toBe(true);
+  });
+});
+
 // day1-quad Design §5.5 regression — the shared-field commands (split, label
 // style, the end card and its trims) read `day1Of` when the quad template
 // shipped, so on a quad project every one of them returned the project
