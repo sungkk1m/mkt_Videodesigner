@@ -4,7 +4,9 @@
 // `template-unsupported` notice has no way back and autosave would persist it.
 //
 // When M5 lands, this script's expectation flips: the option appears and
-// switching produces a working quad workspace.
+// switching produces a working quad workspace. M5 landed, so all three checks
+// below now fail on purpose — the record of an intermediate state, not a
+// regression. `verify-quad-ui.mjs` is what covers the shipped behaviour.
 import {chromium} from '@playwright/test';
 
 const b = await chromium.launch({
