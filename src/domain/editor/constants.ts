@@ -110,6 +110,18 @@ export const KV_MOTION_PRESETS = [
 /** The only output ratio the looping template renders. Plan L3 / FR-L14. */
 export const KV_LOOP_RATIO = '9:16';
 
+/**
+ * kv-loop-reference-motion R-4/R-5 — the gaussian bookends that open and close
+ * the video. The defaults are measured off the reference, not invented: its
+ * visible blur ramp is ~10 frames at the 30fps it was authored at (333ms), and
+ * the ramp's starting strength extrapolates to ≈30px on a 1080-wide frame
+ * (reference-measurement §4). Px is stable because this template renders one
+ * canvas size (KV_LOOP_RATIO). 100px has no remaining shape to protect.
+ */
+export const MAX_KV_BLUR_PX = 100;
+export const DEFAULT_KV_BLUR_MS = 333;
+export const DEFAULT_KV_BLUR_PX = 30;
+
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;
 /** The two mutually exclusive end-card treatments. Endcard-Video Design §3.1. */

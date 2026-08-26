@@ -22,6 +22,8 @@ artifacts/day1-trim-ux/
 artifacts/m0/sources/
 artifacts/m0/backdrops/
 artifacts/m0/results.json
+# kv-loop-reference-motion M0 spike output — a regenerable VP9 render.
+artifacts/kv-m0/out/
 *.tsbuildinfo
 
 # bkit local session state. `pdca-status.json` is kept as project state; audit

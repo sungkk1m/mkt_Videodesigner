@@ -7,7 +7,7 @@
 > **Version**: 0.1.0
 > **Author**: 김성권 / Claude
 > **Date**: 2026-08-26
-> **Status**: Draft
+> **Status**: Implemented — M0~M3 done in-container; M4 real-device gate open
 > **Plan**: [kv-loop-reference-motion.plan.md](../../01-plan/features/kv-loop-reference-motion.plan.md)
 > **Measurements**: [reference-measurement.md](../../03-analysis/kv-loop-reference-motion.reference-measurement.md)
 
@@ -201,6 +201,10 @@ Plan §1.4의 리스크를 코드 착수 전에 소거한다. 이 컨테이너�
 잎 노드(각 `KvScene`·오버레이에 개별 filter) 적용으로 선회한다. 선회해도
 스키마·도메인·UI는 동일하고 §4.2의 적용 지점만 바뀐다.
 
+**결과 (2026-08-26)**: 자체 래스터라이저 경로에서 5/5 PASS — 컨테이너 블러
+채택, 선회 불필요. 수치와 재현 절차는
+[m0-blur-spike](../../03-analysis/kv-loop-reference-motion.m0-blur-spike.md).
+
 ## 5. UI — `KvLoopInspector.tsx`
 
 "모션 · 전환" 섹션에 다음이 더해지고, 나머지는 그대로다.
@@ -280,3 +284,4 @@ SC1~SC6: H.264 MP4를 뽑아 Plan §1.3과 동일한 프레임 실측. 이 사�
 | Version | Date | Author | Change |
 |---------|------|--------|--------|
 | 0.1.0 | 2026-08-26 | 김성권 / Claude | 최초 작성 — D-01~D-11 확정과 레퍼런스 실측 반영 |
+| 0.2.0 | 2026-08-26 | 김성권 / Claude | M0 판정 기록(§4.3). M1~M3 구현 완료 |

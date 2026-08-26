@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T07:10:00.000Z",
+  "lastUpdated": "2026-08-26T08:20:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -706,8 +706,8 @@
       }
     },
     "kv-loop-reference-motion": {
-      "phase": "design",
-      "phaseNumber": 2,
+      "phase": "do",
+      "phaseNumber": 3,
       "matchRate": null,
       "iterationCount": 0,
       "requirements": [
@@ -728,17 +728,18 @@
       "documents": {
         "plan": "docs/01-plan/features/kv-loop-reference-motion.plan.md",
         "design": "docs/02-design/features/kv-loop-reference-motion.design.md",
-        "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md"
+        "referenceMeasurement": "docs/03-analysis/kv-loop-reference-motion.reference-measurement.md",
+        "m0Evidence": "docs/03-analysis/kv-loop-reference-motion.m0-blur-spike.md"
       },
       "timestamps": {
         "started": "2026-08-26T06:20:00.000Z",
-        "lastUpdated": "2026-08-26T07:10:00.000Z"
+        "lastUpdated": "2026-08-26T08:20:00.000Z"
       },
-      "notes": "Decisions D-01~D-11 locked per user (proposals accepted; D-11 reference uploaded and measured: 4 KVs x 2 cycles, 2.0s holds, all hard cuts, blur bookends ~10f/~30px at 30fps, camera amplitude only +/-1~1.5%, in-art particle/glow animation identified as the unreproducible layer). Design drafted; next: M0 container-blur spike."
+      "notes": "M0~M3 done in-container: M0 blur spike 5/5 PASS on the fallback rasterizer path (peak scale exactly 1.200 at hold centre, return 1.000, cuts 115/94 vs in-hold 4.6, no canvas bleed); M1 schema/domain (589 unit tests), M2 composition, M3 inspector (4 new DOM E2E + kv-motion 3 pass). Open: M4 real-device H.264 render + intensity review (D-10), M5 benchmark. Final goal recorded: object-layer animation cycle (kv-object-animation) after this one."
     }
   },
   "pipeline": {
-    "currentPhase": "design",
+    "currentPhase": "do",
     "level": "Starter",
     "phaseHistory": [
       {
@@ -911,13 +912,20 @@
         "from": "plan",
         "to": "design",
         "at": "2026-08-26T07:10:00.000Z"
+      },
+      {
+        "feature": "kv-loop-reference-motion",
+        "from": "design",
+        "to": "do",
+        "scope": "m0-m3",
+        "at": "2026-08-26T08:20:00.000Z"
       }
     ]
   },
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T07:10:00.000Z"
+    "lastActivity": "2026-08-26T08:20:00.000Z"
   },
   "history": [
     {
@@ -1250,6 +1258,12 @@
       "feature": "kv-loop-reference-motion",
       "phase": "design",
       "action": "decisions-locked-reference-measured-design-drafted"
+    },
+    {
+      "timestamp": "2026-08-26T08:20:00.000Z",
+      "feature": "kv-loop-reference-motion",
+      "phase": "do",
+      "action": "m0-m3-complete-in-container"
     }
   ],
   "stateMachine": {

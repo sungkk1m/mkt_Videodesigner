@@ -1,7 +1,14 @@
 // key-visual-looping Design Ref: §5.1 — the cycle, repeated, with the two fixed
 // overlays over it. The Player preview and the browser render consume this same
 // component and the same props snapshot.
-import {AbsoluteFill, Sequence, interpolate, useCurrentFrame} from 'remotion';
+import type {ReactNode} from 'react';
+import {
+  AbsoluteFill,
+  Sequence,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
 
 import type {
   KvLoopProps,
@@ -54,8 +61,69 @@ const FadeOut = ({
   );
 };
 
+/**
+ * kv-loop-reference-motion R-4 — the gaussian bookends. One container around
+ * the scenes and both overlays (D-05: a sharp title over a blurred frame reads
+ * as a mistake), so the whole picture goes out of and into focus together.
+ *
+ * The scale rides the blur: a gaussian bleeds the canvas colour in from the
+ * edges over ~3σ, so the frame is overscanned by exactly that much (FR-R10).
+ * Both reach identity the moment the amount does, so there is no pop at the
+ * boundary — and body frames carry no `filter` at all (NFR-R01), which keeps
+ * the rasterizer's per-frame cost untouched outside the bookends.
+ */
+const BlurBookend = ({
+  frames,
+  amountPx,
+  totalFrames,
+  children,
+}: {
+  frames: number;
+  amountPx: number;
+  totalFrames: number;
+  children: ReactNode;
+}) => {
+  const frame = useCurrentFrame();
+  const {width} = useVideoConfig();
+  const active = frames > 0 && amountPx > 0;
+  const options = {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  } as const;
+  const amount = active
+    ? amountPx *
+      Math.max(
+        interpolate(frame, [0, frames], [1, 0], options),
+        interpolate(
+          frame,
+          [Math.max(0, totalFrames - 1 - frames), Math.max(1, totalFrames - 1)],
+          [0, 1],
+          options,
+        ),
+      )
+    : 0;
+
+  return (
+    <AbsoluteFill
+      data-testid="kv-blur-bookend"
+      style={
+        amount > 0
+          ? {
+              filter: `blur(${amount}px)`,
+              transform: `scale(${1 + (3 * amount) / width})`,
+            }
+          : undefined
+      }
+    >
+      {children}
+    </AbsoluteFill>
+  );
+};
+
 export const KvLoopComposition = ({
   audio,
+  blurAmountPx,
+  blurInFrames,
   disclaimer,
   fadeOutFrames,
   kenBurnsIntensity,
@@ -75,33 +143,39 @@ export const KvLoopComposition = ({
 
   return (
     <AbsoluteFill style={{backgroundColor: CANVAS_COLOR}}>
-      {segments.map((segment, index) => {
-        const last = index === segments.length - 1;
+      <BlurBookend
+        amountPx={blurAmountPx}
+        frames={blurInFrames}
+        totalFrames={totalFrames}
+      >
+        {segments.map((segment, index) => {
+          const last = index === segments.length - 1;
 
-        return (
-          <Sequence
-            // A crossfade is the incoming segment fading in over the outgoing
-            // one, so every segment but the last is held open for the overlap.
-            durationInFrames={
-              segment.durationInFrames + (last ? 0 : transitionInFrames)
-            }
-            from={segment.fromFrame}
-            // The same key visual comes back every cycle, so the index alone
-            // would collide.
-            key={`${segment.cycle}-${segment.kvIndex}`}
-            name={`kv-${segment.kvIndex} · ${segment.cycle + 1}`}
-          >
-            <KvScene
-              fadeInFrames={index === 0 ? 0 : transitionInFrames}
-              holdInFrames={segment.durationInFrames}
-              slot={slots[segment.kvIndex] as KvSlotRenderProps}
-            />
-          </Sequence>
-        );
-      })}
+          return (
+            <Sequence
+              // A crossfade is the incoming segment fading in over the outgoing
+              // one, so every segment but the last is held open for the overlap.
+              durationInFrames={
+                segment.durationInFrames + (last ? 0 : transitionInFrames)
+              }
+              from={segment.fromFrame}
+              // The same key visual comes back every cycle, so the index alone
+              // would collide.
+              key={`${segment.cycle}-${segment.kvIndex}`}
+              name={`kv-${segment.kvIndex} · ${segment.cycle + 1}`}
+            >
+              <KvScene
+                fadeInFrames={index === 0 ? 0 : transitionInFrames}
+                holdInFrames={segment.durationInFrames}
+                slot={slots[segment.kvIndex] as KvSlotRenderProps}
+              />
+            </Sequence>
+          );
+        })}
 
-      <TitleOverlay title={title} />
-      <DisclaimerBar disclaimer={disclaimer} />
+        <TitleOverlay title={title} />
+        <DisclaimerBar disclaimer={disclaimer} />
+      </BlurBookend>
 
       {fadeOutFrames > 0 ? (
         <FadeOut frames={fadeOutFrames} totalFrames={totalFrames} />

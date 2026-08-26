@@ -102,7 +102,7 @@ const presetSize = (intensity: number) =>
 export const resolveKvMotion = (
   motion: KvMotion,
   intensity: number,
-): KvMotionKeyframes => {
+): Omit<KvMotionKeyframes, 'roundTrip'> => {
   if (motion.kind === 'custom') {
     return {
       from: clampKvRect(motion.from),
@@ -153,6 +153,22 @@ export const resolveKvMotion = (
       return {from: FULL_KV_RECT, to: FULL_KV_RECT, easing: 'linear'};
   }
 };
+
+/**
+ * kv-loop-reference-motion R-1 / D-03 — the loop-wide round trip, folded into
+ * one slot's keyframes. The easing is forced to `easeInOut` because a round
+ * trip needs zero velocity at the peak: `easeOut` arrives gently but leaves at
+ * full speed, which reads as the camera bouncing off a wall. Off keeps the
+ * resolved easing untouched, so a stored one-way project renders bit-identical
+ * (FR-R12).
+ */
+export const withKvRoundTrip = (
+  keyframes: Omit<KvMotionKeyframes, 'roundTrip'>,
+  roundTrip: boolean,
+): KvMotionKeyframes =>
+  roundTrip
+    ? {...keyframes, easing: 'easeInOut', roundTrip: true}
+    : {...keyframes, roundTrip: false};
 
 /**
  * D-04 — the motion a slot actually uses: its own, or the loop-wide default it
