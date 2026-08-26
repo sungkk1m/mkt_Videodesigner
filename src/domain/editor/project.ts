@@ -542,7 +542,14 @@ export const applyDurationPreset = (
     {...project, durationPreset: preset},
     settingsBefore.template === 'day1'
       ? day1SectionDurations(preset)
-      : settingsBefore.template === 'kv-loop'
+      : // day1-quad — five sections, not three. Without this arm the preset
+        // switch fell through to `createSceneDurations`, laying the
+        // three-scene lengths [3s, 24s, 3s] over a five-section axis: panel D
+        // and the end card became NaN, and the composition crashed on
+        // `Sequence from=NaN` — a black preview and a failed render.
+        settingsBefore.template === 'day1-quad'
+        ? day1QuadSectionDurations(preset)
+        : settingsBefore.template === 'kv-loop'
         ? // The cycle is redivided evenly; the caller is expected to have
           // cleared `kvLoopCombination` first, exactly as the template switch
           // is expected to have been confirmed. Plan L8 forbids quietly
