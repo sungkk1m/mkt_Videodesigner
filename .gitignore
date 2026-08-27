@@ -44,3 +44,7 @@ artifacts/kv-obj-m5/out/
 artifacts/m0/
 artifacts/m1/*.png
 artifacts/m1/*.raw
+# kv-ai-designation P0 spike output — the pinned model runtime and model files
+# (99MB) plus regenerable fixtures and results; the scripts are committed and
+# `node artifacts/kv-ai-p0/prepare.mjs` refetches everything.
+artifacts/kv-ai-p0/out/
