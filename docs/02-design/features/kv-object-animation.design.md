@@ -32,6 +32,11 @@
    받으면 카메라 추종(D-04)이 검증이 아니라 구조로 성립한다.
 3. 스키마는 discriminated union — 이번 사이클은 `particles`·`glow` 두 유형,
    다음 사이클의 마스크·라이트 스윕이 유형 추가로 얹힌다(D-02).
+   > **후속 정정 (2026-08-27, kv-ai-designation D-A05)**: 마스크는 새 `kind`가
+   > 아니라 **지정의 형태**로 들어온다 — `region`이 `{shape: 'rect' | 'mask'}`
+   > 유니온이 되고 `kind`는 그대로다. 마스크는 "무엇을"이 아니라 "어디에"이고,
+   > `kind`에 넣으면 (종류 × 형태)로 조합이 폭발한다. 라이트 스윕은 예상대로
+   > `kind` 추가다. 근거: [kv-ai-designation.plan.md](../../01-plan/features/kv-ai-designation.plan.md) §1.5.1
 4. 이펙트가 없는 슬롯은 캔버스 요소 자체를 만들지 않는다(NFR-O01).
 
 ### 1.2 Key Insight — 방출도 닫힌 식이 된다
