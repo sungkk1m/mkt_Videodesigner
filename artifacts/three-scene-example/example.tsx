@@ -19,6 +19,7 @@ import {
   setRatioOverride,
   setSceneSubtitleText,
   setSceneTransition,
+  setRenderFps,
   setSceneTrimInMs,
   setSelectedLocale,
   setSelectedRatio,
@@ -29,7 +30,9 @@ import {
 } from '../../src/domain/editor/project';
 import type {
   AspectRatio,
+  DurationPreset,
   EditorProject,
+  HookMotionPreset,
   Locale,
   MediaReference,
 } from '../../src/domain/editor/types';
@@ -55,7 +58,7 @@ const reference = (
 });
 
 const SOURCE = reference('gameplay-placeholder.webm', 'video', 'video/webm', {
-  durationMs: 14_000,
+  durationMs: 26_000,
   width: 1080,
   height: 1920,
 });
@@ -66,7 +69,10 @@ const STORE_BADGE = reference('store-badge.png', 'image', 'image/png');
 const resolveUrl = (media: MediaReference | null | undefined) =>
   media ? asset(media.name) : null;
 
-/** The Korean and English copy an operator would type into the Copy tab. */
+/**
+ * Placeholder copy in the shape an operator would type into the Copy tab. Every
+ * line here is example text, not approved marketing copy.
+ */
 const COPY: Record<Locale, {
   hook: string;
   hookSubcopy: string;
@@ -77,39 +83,39 @@ const COPY: Record<Locale, {
   ctaSubcopy: string;
 }> = {
   ko: {
-    hook: '3일 만에 만렙',
-    hookSubcopy: '자동 전투로 잠든 사이에도 성장',
-    hookSubtitle: '설치하면 SSR 영웅 즉시 지급',
+    hook: '설원의 전설',
+    hookSubcopy: '동료와 함께 떠나는 겨울 원정',
+    hookSubtitle: '지금 시작하면 SSR 영웅 지급',
     emphasis: 'SSR 영웅',
-    gameplaySubtitle: '스킬 한 번으로 보스 처리',
-    ctaText: '지금 무료로 시작',
+    gameplaySubtitle: '스킬 한 번으로 서리 정령 정리',
+    ctaText: '지금 플레이',
     ctaSubcopy: '사전예약 보상 전원 지급',
   },
   en: {
-    hook: 'Max level in 3 days',
-    hookSubcopy: 'Idle battles level you up overnight',
-    hookSubtitle: 'Install now for a free SSR hero',
+    hook: 'Legend begins',
+    hookSubcopy: 'A winter expedition with your companions',
+    hookSubtitle: 'Start now, get an SSR hero',
     emphasis: 'SSR hero',
-    gameplaySubtitle: 'One skill clears the boss',
-    ctaText: 'Play free now',
+    gameplaySubtitle: 'One skill clears the frost spirits',
+    ctaText: 'Play now',
     ctaSubcopy: 'Pre-registration rewards for everyone',
   },
   ja: {
-    hook: '3日で最大レベル',
-    hookSubcopy: '放置バトルで寝ている間も成長',
-    hookSubtitle: 'インストールでSSR英雄を配布',
+    hook: '雪原の伝説',
+    hookSubcopy: '仲間と行く冬の遠征',
+    hookSubtitle: '今すぐ始めてSSR英雄を獲得',
     emphasis: 'SSR英雄',
-    gameplaySubtitle: 'スキル一発でボス撃破',
-    ctaText: '今すぐ無料で始める',
+    gameplaySubtitle: 'スキル一発で霜の精霊を撃破',
+    ctaText: '今すぐプレイ',
     ctaSubcopy: '事前登録報酬を全員に',
   },
   'zh-TW': {
-    hook: '3天滿級',
-    hookSubcopy: '掛機戰鬥，睡覺也在變強',
-    hookSubtitle: '安裝即送SSR英雄',
+    hook: '雪原傳說',
+    hookSubcopy: '與夥伴同行的冬季遠征',
+    hookSubtitle: '現在開始即送SSR英雄',
     emphasis: 'SSR英雄',
-    gameplaySubtitle: '一個技能清掉首領',
-    ctaText: '立即免費開玩',
+    gameplaySubtitle: '一個技能清掉霜之精靈',
+    ctaText: '立即遊玩',
     ctaSubcopy: '預約獎勵全員發放',
   },
 };
@@ -119,18 +125,27 @@ const COPY: Record<Locale, {
  * trims, copy per locale, Hook motion, a fade at the first boundary, CTA assets,
  * and a framing override for each non-default ratio.
  */
-export const exampleProject = (locale: Locale, ratio: AspectRatio): EditorProject => {
-  let project = createProject(15, {
+export const exampleProject = (
+  locale: Locale,
+  ratio: AspectRatio,
+  preset: DurationPreset = 15,
+  motionPreset: HookMotionPreset = 'impact',
+): EditorProject => {
+  let project = createProject(preset, {
     id: 'project_three_scene_example',
     createdAt: '2026-08-27T00:00:00.000Z',
   });
 
-  project = renameProject(project, '달빛원정대_3장면예시');
+  project = renameProject(project, 'SODA레전드_3장면예시');
+  // Standard and High both allow 60fps, which is what the toolbar defaults to.
+  project = setRenderFps(project, 60);
   project = applySourceToAllScenes(project, SOURCE);
 
-  // Trim: the Hook takes a critical-hit beat, gameplay runs 2s-12s of the clip.
+  // Trim: the Hook takes a critical-hit beat, gameplay starts a little later so
+  // the two windows are visibly different intervals of the same clip. The 30s
+  // preset's gameplay section is 24s, so its window has to start earlier.
   project = setSceneTrimInMs(project, 'hook', 3_000);
-  project = setSceneTrimInMs(project, 'gameplay', 2_000);
+  project = setSceneTrimInMs(project, 'gameplay', preset === 15 ? 2_000 : 1_000);
 
   // Copy, all four locales, so switching the render locale is a real switch.
   (Object.keys(COPY) as Locale[]).forEach((key) => {
@@ -144,7 +159,7 @@ export const exampleProject = (locale: Locale, ratio: AspectRatio): EditorProjec
   });
 
   project = updateHookSettings(project, {
-    motionPreset: 'impact',
+    motionPreset,
     emphasizedText: COPY[locale].emphasis,
     dimBackground: true,
   });
@@ -177,7 +192,7 @@ export const exampleProject = (locale: Locale, ratio: AspectRatio): EditorProjec
       project = updateSceneTransform(project, kind, ratio, {
         scale: 1,
         x: 0,
-        y: ratio === '1:1' ? -20 : -22,
+        y: ratio === '1:1' ? -14 : -18,
       });
     });
   }
@@ -190,20 +205,34 @@ declare global {
     __renderExample: (input: {
       locale?: Locale;
       ratio?: AspectRatio;
+      preset?: DurationPreset;
+      motionPreset?: HookMotionPreset;
+      /** Render only the first N frames — used for the Hook motion stills. */
+      frames?: number;
     }) => Promise<{base64: string; bytes: number; totalMs: number; scenes: unknown}>;
     /** The render props without rendering, so a report can quote real numbers. */
-    __exampleSnapshot: (input: {locale?: Locale; ratio?: AspectRatio}) => unknown;
+    __exampleSnapshot: (input: {
+      locale?: Locale;
+      ratio?: AspectRatio;
+      preset?: DurationPreset;
+    }) => unknown;
   }
 }
 
-window.__exampleSnapshot = ({locale = 'ko', ratio = '9:16'}) =>
-  buildEditorSnapshot(exampleProject(locale, ratio), resolveUrl);
+window.__exampleSnapshot = ({locale = 'ko', ratio = '9:16', preset = 15}) =>
+  buildEditorSnapshot(exampleProject(locale, ratio, preset), resolveUrl);
 
-window.__renderExample = async ({locale = 'ko', ratio = '9:16'}) => {
+window.__renderExample = async ({
+  locale = 'ko',
+  ratio = '9:16',
+  preset = 15,
+  motionPreset = 'impact',
+  frames,
+}) => {
   await document.fonts.load('900 100px "Noto Sans KR"');
   await document.fonts.ready;
 
-  const project = exampleProject(locale, ratio);
+  const project = exampleProject(locale, ratio, preset, motionPreset);
   const snapshot = buildEditorSnapshot(project, resolveUrl);
   const request = createEditorRenderRequest(snapshot, {
     durationPreset: project.durationPreset,
@@ -215,10 +244,16 @@ window.__renderExample = async ({locale = 'ko', ratio = '9:16'}) => {
     profile: 'high',
   });
 
-  // The one substitution: VP9/WebM in place of H.264/AAC, because this container
-  // can encode neither H.264 nor AAC.
+  // Two deviations, both about this container rather than about the template:
+  // VP9/WebM in place of H.264/AAC (no H.264 encoder here), and an optional
+  // frame cap so a Hook-only still costs a second instead of a minute. The
+  // composition places every scene by absolute frame, so a capped render is the
+  // opening of the same 15s cut, not a different edit.
   const webRequest = {
     ...request,
+    ...(frames
+      ? {composition: {...request.composition, durationInFrames: frames}}
+      : {}),
     container: 'webm',
     videoCodec: 'vp9',
     audioCodec: null,

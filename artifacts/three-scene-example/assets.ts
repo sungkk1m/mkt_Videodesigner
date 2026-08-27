@@ -45,32 +45,39 @@ const roundRect = (
 const appIcon = () => {
   const {canvas, ctx} = canvasOf(512, 512);
   const background = ctx.createLinearGradient(0, 0, 512, 512);
-  background.addColorStop(0, '#3b2b7a');
-  background.addColorStop(1, '#c2417c');
+  background.addColorStop(0, '#e9f4fb');
+  background.addColorStop(0.55, '#5c9ad0');
+  background.addColorStop(1, '#1d3f6e');
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, 512, 512);
 
-  // A moon and a blade, so the icon reads as the same game as the clip.
-  ctx.fillStyle = 'rgba(255, 233, 189, 0.95)';
-  ctx.beginPath();
-  ctx.arc(330, 170, 96, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#3b2b7a';
-  ctx.beginPath();
-  ctx.arc(288, 140, 88, 0, Math.PI * 2);
-  ctx.fill();
+  // A six-armed snowflake behind a blade: the clip's two motifs.
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(256, 256);
+    ctx.lineTo(256 + Math.cos(a) * 170, 256 + Math.sin(a) * 170);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(256 + Math.cos(a) * 110, 256 + Math.sin(a) * 110);
+    ctx.lineTo(256 + Math.cos(a + 0.5) * 158, 256 + Math.sin(a + 0.5) * 158);
+    ctx.stroke();
+  }
 
   ctx.save();
-  ctx.translate(200, 330);
-  ctx.rotate(-0.6);
-  const blade = ctx.createLinearGradient(0, 0, 0, -240);
-  blade.addColorStop(0, '#9fb3ff');
+  ctx.translate(240, 350);
+  ctx.rotate(-0.5);
+  const blade = ctx.createLinearGradient(0, 0, 0, -260);
+  blade.addColorStop(0, '#a8cfe8');
   blade.addColorStop(1, '#ffffff');
   ctx.fillStyle = blade;
-  roundRect(ctx, -22, -250, 44, 250, 22);
+  roundRect(ctx, -24, -270, 48, 270, 24);
   ctx.fill();
-  ctx.fillStyle = '#f0c56a';
-  roundRect(ctx, -80, -10, 160, 30, 15);
+  ctx.fillStyle = '#7fd8d0';
+  roundRect(ctx, -86, -12, 172, 32, 16);
   ctx.fill();
   ctx.restore();
 
@@ -78,30 +85,50 @@ const appIcon = () => {
 };
 
 const logo = () => {
-  const {canvas, ctx} = canvasOf(1000, 260);
+  const {canvas, ctx} = canvasOf(1100, 300);
   ctx.textAlign = 'center';
-  ctx.font = `900 132px ${KO}`;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-  ctx.shadowBlur = 24;
-  const fill = ctx.createLinearGradient(0, 40, 0, 200);
+
+  // Cinzel stands in for the key visual's ornate display face.
+  ctx.font = '700 128px Cinzel, "Noto Sans KR", serif';
+  ctx.shadowColor = 'rgba(24, 52, 84, 0.55)';
+  ctx.shadowBlur = 26;
+  const fill = ctx.createLinearGradient(0, 30, 0, 190);
   fill.addColorStop(0, '#ffffff');
-  fill.addColorStop(1, '#ffd76a');
+  fill.addColorStop(1, '#cfe6f5');
   ctx.fillStyle = fill;
-  ctx.fillText('달빛 원정대', 500, 150);
+  ctx.fillText('SODA LEGEND', 550, 150);
   ctx.shadowBlur = 0;
-  ctx.font = `700 44px ${KO}`;
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-  ctx.fillText('MOONLIGHT EXPEDITION', 500, 215);
+
+  // A thin rule with a snowflake, the way the key visual splits title and band.
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(230, 196);
+  ctx.lineTo(500, 196);
+  ctx.moveTo(600, 196);
+  ctx.lineTo(870, 196);
+  ctx.stroke();
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(550, 196);
+    ctx.lineTo(550 + Math.cos(a) * 20, 196 + Math.sin(a) * 20);
+    ctx.stroke();
+  }
+
+  ctx.font = `700 46px ${KO}`;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+  ctx.fillText('소다 레전드', 550, 262);
 
   return canvas.toDataURL('image/png');
 };
 
 const storeBadge = () => {
   const {canvas, ctx} = canvasOf(900, 240);
-  ctx.fillStyle = '#0d0f16';
+  ctx.fillStyle = 'rgba(23, 48, 78, 0.92)';
   roundRect(ctx, 10, 10, 880, 220, 40);
   ctx.fill();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
   ctx.lineWidth = 5;
   roundRect(ctx, 10, 10, 880, 220, 40);
   ctx.stroke();
@@ -115,9 +142,9 @@ const storeBadge = () => {
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
-  ctx.font = `700 38px ${KO}`;
   ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.font = `700 38px ${KO}`;
   ctx.fillText('지금 스토어에서', 240, 100);
   ctx.fillStyle = '#ffffff';
   ctx.font = `900 66px ${KO}`;
@@ -168,6 +195,7 @@ declare global {
 window.__makeAssets = async () => {
   // Wait for the Korean face so the HUD text is not drawn in a fallback.
   await document.fonts.load(`900 132px ${KO}`);
+  await document.fonts.load('700 128px Cinzel');
   await document.fonts.ready;
 
   return {
