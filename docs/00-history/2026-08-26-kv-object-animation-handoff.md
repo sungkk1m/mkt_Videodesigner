@@ -12,7 +12,7 @@
 | M2 — `KvEffectsCanvas` + `KvScene` 통합 (카메라 추종) | ✅ | `432f538` · 프로덕션 경로로 M0 하네스 재실행 5/5 동일 |
 | M3 — 인스펙터 이펙트 섹션 + `KvEffectOverlay` (드래그 지정) | ✅ | `6ecca2b` |
 | M4 — 레퍼런스 실측으로 기본값 교정 | ✅ | 실측·교정 완료 — [m4-reference-measurement](../03-analysis/kv-object-animation.m4-reference-measurement.md). density 0.2 · speed 0.4(TRAVEL 0.03/0.32) · sizePx 8 · periodMs 1300 · glow center (0.5, 0.74). 계수 변경 후 하네스 5/5 PASS 동일 수치, 유닛 614 그린 |
-| **M5 — 실기기 렌더 게이트** | ⬜ 렌더 대기 | SC1~SC7 + 성능 게이트(M0 참고치: transform 하 ≈19~25ms/프레임). 절차: [kv-object-animation.m5-runbook](../01-plan/kv-object-animation.m5-runbook.md) — **Pages가 브랜치 빌드 `cd4de89`를 서빙 중**(run 33029140338). 이펙트 on/off 두 벌 렌더 mp4를 세션에 업로드하면 프레임 실측으로 판정. 통과 시 리포트 → main 병합 → Pages 원복 |
+| **M5 — 실기기 렌더 게이트** | ✅ | 실기기 on/off 렌더 프레임 실측으로 **SC1~SC7 전부 PASS**, D-05 확정(총 시간 차 −2.2% < 5%) — [m5-render-verification](../03-analysis/kv-object-animation.m5-render-verification.md). 사이클 완료: [report](../04-report/kv-object-animation.report.md). 다음 사이클 입력(클릭 지정·오브젝트 모션)은 report §5 |
 
 주의사항: 이 컨테이너에는 H.264가 없어 스파이크 렌더는 VP9로 한다. 소재는
 서버로 보내지 않는다는 앱의 약속 유지. `Math.random()` 금지 — 시드는 생성
