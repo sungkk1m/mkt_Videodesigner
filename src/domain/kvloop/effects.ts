@@ -34,15 +34,18 @@ export const kvHash01 = (seed: number, ...lanes: number[]): number => {
 };
 
 /**
- * The shape coefficients. Provisional values proven in the M0 spike; M4
- * replaces them with numbers measured off the reference (Plan S-08) — the
- * closed form is the design's fixed point, these are not.
+ * The shape coefficients, calibrated against the reference in M4
+ * (kv-object-animation.m4-reference-measurement §4). The travel range maps the
+ * speed slider onto the two ember populations the reference actually has:
+ * speed 0 ≈ the ambient drift (~26px/s at the mean life), speed 1 ≈ the fast
+ * risers near the flame (~300px/s). The closed form is the design's fixed
+ * point, these numbers are the measurement's.
  */
 const PARTICLE_POOL = 64;
 const LIFE_MIN_SEC = 1.5;
 const LIFE_SPAN_SEC = 1.5;
-const TRAVEL_BASE = 0.06;
-const TRAVEL_SPAN = 0.14;
+const TRAVEL_BASE = 0.03;
+const TRAVEL_SPAN = 0.32;
 const SWAY_MIN = 0.008;
 const SWAY_SPAN = 0.012;
 const FLICKER_HZ = 3;

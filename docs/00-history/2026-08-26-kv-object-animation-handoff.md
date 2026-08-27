@@ -11,8 +11,8 @@
 | M1 — 스키마·도메인(`effects.ts`)·커맨드 | ✅ | `81791df` · 유닛 610 그린 |
 | M2 — `KvEffectsCanvas` + `KvScene` 통합 (카메라 추종) | ✅ | `432f538` · 프로덕션 경로로 M0 하네스 재실행 5/5 동일 |
 | M3 — 인스펙터 이펙트 섹션 + `KvEffectOverlay` (드래그 지정) | ✅ | `6ecca2b` |
-| **M4 — 레퍼런스 실측으로 기본값 교정** | ⬜ 다음 | 파티클 밀도·속도·크기·글로우 주기를 언더다크 영상에서 실측해 `DEFAULT_KV_PARTICLES`/`DEFAULT_KV_GLOW`(project.ts)의 잠정값을 교정. 실측 방법 전례: [reference-measurement](../03-analysis/kv-loop-reference-motion.reference-measurement.md) — **레퍼런스 mp4를 세션에 다시 첨부해야 한다** (업로드는 컨테이너와 함께 사라진다) |
-| **M5 — 실기기 렌더 게이트** | ⬜ 다음 | SC1~SC7 + 성능 게이트(M0 참고치: transform 하 ≈19ms/프레임). 실기기 절차 전례: [m4-runbook](../01-plan/kv-loop-reference-motion.m4-runbook.md) — Pages 브랜치 배포(workflow_dispatch) 또는 로컬 dev. 렌더 mp4를 세션에 업로드하면 프레임 실측으로 판정 |
+| M4 — 레퍼런스 실측으로 기본값 교정 | ✅ | 실측·교정 완료 — [m4-reference-measurement](../03-analysis/kv-object-animation.m4-reference-measurement.md). density 0.2 · speed 0.4(TRAVEL 0.03/0.32) · sizePx 8 · periodMs 1300 · glow center (0.5, 0.74). 계수 변경 후 하네스 5/5 PASS 동일 수치, 유닛 614 그린 |
+| **M5 — 실기기 렌더 게이트** | ⬜ 다음 | SC1~SC7 + 성능 게이트(M0 참고치: transform 하 ≈19ms/프레임). 절차: [kv-object-animation.m5-runbook](../01-plan/kv-object-animation.m5-runbook.md) — 렌더 mp4를 세션에 업로드하면 프레임 실측으로 판정 |
 
 주의사항: 이 컨테이너에는 H.264가 없어 스파이크 렌더는 VP9로 한다. 소재는
 서버로 보내지 않는다는 앱의 약속 유지. `Math.random()` 금지 — 시드는 생성

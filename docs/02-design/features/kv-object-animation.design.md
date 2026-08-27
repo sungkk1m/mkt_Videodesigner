@@ -9,7 +9,7 @@
 > **Date**: 2026-08-26
 > **Status**: Confirmed — M0 스파이크 5/5 PASS(§4.3), 드로잉 시점 확정. M1 착수 가능
 > **Plan**: [kv-object-animation.plan.md](../../01-plan/features/kv-object-animation.plan.md)
-> **Measurements**: [reference-measurement §3](../../03-analysis/kv-loop-reference-motion.reference-measurement.md)
+> **Measurements**: [reference-measurement §3](../../03-analysis/kv-loop-reference-motion.reference-measurement.md) · [m4-reference-measurement](../../03-analysis/kv-object-animation.m4-reference-measurement.md) (M4 — 기본값·계수 확정)
 
 ---
 
@@ -378,3 +378,4 @@ H.264 렌더로 SC1~SC7 재판정 + 이펙트 on/off 렌더 시간 재측정 →
 |---------|------|--------|--------|
 | 0.1.0 | 2026-08-26 | 김성권 / Claude | 최초 작성 — D-01~D-06 반영, M0 게이트 정의 |
 | 0.2.0 | 2026-08-26 | 김성권 / Claude | M0 판정 기록(§4.3) — 5/5 PASS, 드로잉 시점 확정 |
+| 0.3.0 | 2026-08-27 | 김성권 / Claude | M4 — §2.2·§3의 잠정 계수를 레퍼런스 실측값으로 확정 (m4-reference-measurement §4) |

@@ -1799,25 +1799,28 @@ export const setKvDefaultMotion = (
 
 /**
  * kv-object-animation §5.1 — what "add an effect" drops on the slot. The
- * numbers are provisional pending the M4 reference measurement (Plan S-08);
- * the operator drags the designation into place right after adding anyway.
+ * numbers are the M4 reference measurement's
+ * (kv-object-animation.m4-reference-measurement §4): ~10 embers visible at
+ * once over the measured ember cloud, rising at the campfire pace, 4-8px
+ * dots; the operator drags the designation into place right after adding
+ * anyway.
  */
 const DEFAULT_KV_PARTICLES: Omit<KvParticlesEffect, 'id' | 'seed'> = {
   kind: 'particles',
-  region: {x: 0.3, y: 0.55, width: 0.4, height: 0.2},
+  region: {x: 0.25, y: 0.4, width: 0.5, height: 0.35},
   color: '#ffb14a',
-  density: 0.5,
-  speed: 0.5,
-  sizePx: 6,
+  density: 0.2,
+  speed: 0.4,
+  sizePx: 8,
 };
 
 const DEFAULT_KV_GLOW: Omit<KvGlowEffect, 'id'> = {
   kind: 'glow',
-  center: {x: 0.5, y: 0.62},
+  center: {x: 0.5, y: 0.74},
   radius: 0.18,
   color: '#ff9a3c',
   intensity: 0.6,
-  periodMs: 1500,
+  periodMs: 1300,
 };
 
 /**
