@@ -122,28 +122,124 @@ KV_AI_P0_CHROME=… node artifacts/kv-ai-p0/probe-mask.mjs   # 임계값 스윕
 `KV_AI_P0_CHROME`을 시스템 Chrome으로 바꾸면 실기기 GPU 경로가 같은 스크립트로
 재측정된다 — M0이 쓸 하네스가 이미 있다.
 
-## 다음 세션 프롬프트 (복사용 — 실제 키비주얼 4장 첨부와 함께)
+## 다음 세션 프롬프트 — 3단 분할 (복사용)
+
+한 세션에 Design→M5를 넣으면 컨텍스트가 터진다. 분할 기준은 **무엇이 필요한가**다:
+1단은 아무것도(모델·실소재·실기기 전부 불필요), 2단은 모델과 실소재, 3단은 실기기.
+1단은 M0을 기다리지 않아도 된다 — 스키마·도메인·렌더는 정확도와 무관하다.
+
+### 1단 — Design + M1 + M2 (모델·UI 없음)
 
 ```
 /bkit:pdca design kv-ai-designation
 
-kv-ai-designation의 Design과 M0을 진행합니다. 먼저 읽어주세요:
-- docs/00-history/2026-08-27-kv-ai-designation-handoff.md (현재 상태·병렬 항목)
-- docs/01-plan/features/kv-ai-designation.plan.md (D-A01~D-A10 확정, §1.5.2가
-  D-A03의 함의)
-- docs/03-analysis/kv-ai-designation.p0-designation-spike.md (기술 선택의 근거)
+kv-ai-designation의 Design과 M1·M2를 진행합니다. 모델·UI가 없는 층까지만 —
+이 범위는 실소재 정확도와 무관하므로 M0을 기다리지 않습니다.
 
-브랜치 claude/kv-ai-designation-plan-0a6o43에 Plan·증거가 커밋돼 있습니다
-(src 무변경, 유닛 618 그린).
+읽을 문서 (이 셋만, 컨텍스트 절약):
+- docs/00-history/2026-08-27-kv-ai-designation-handoff.md
+- docs/01-plan/features/kv-ai-designation.plan.md
+- docs/01-plan/conventions.md
 
-1. Design 문서 — 지정 형태 유니온의 정확한 스키마(D-A05), 마스크 RLE 인코딩과
-   이미지→프레임 매핑 함수 시그니처(D-A04·A06), ObjectDesignator 포트 계약,
-   지정 세션의 상태 모델. 자산 경로는 설정값으로, 기본값은 Google 핀 URL.
-2. 첨부한 키비주얼 4장으로 M0 — artifacts/kv-ai-p0/ 하네스를 실소재에 돌려
-   Plan §4.1.1의 유형 커버리지 표를 채우고 여유값 기본값을 실측한 뒤, D-A10의
-   기준을 같이 정해주세요. 못 짚는 유형이 사각형으로도 안 되면 Plan §5의 완화
-   순서대로 범위를 재조정.
-3. 병렬로 magic_touch 재배포 권리 확인 (모델 카드/라이선스). 가능하면 경로
-   상수를 같은-오리진으로 바꿔 D-A03을 완성, 불가하면 기본값 유지.
-4. 그다음 M1.
+브랜치 claude/kv-ai-designation-plan-0a6o43 (Plan v0.4.0 Approved, src 무변경).
+시작 전 npm install.
+
+1) Design 문서 (docs/02-design/features/kv-ai-designation.design.md)
+   D-A01~D-A10을 설계로 옮깁니다. 확정할 것:
+   - 지정 형태 유니온의 정확한 스키마 (D-A05 — region이 {shape:'rect'|'mask'},
+     이펙트 kind는 그대로)
+   - 마스크 RLE 인코딩 형식과 상한 상수 (D-A04)
+   - 이미지 정규 좌표 → 프레임 좌표 매핑 함수 시그니처 (D-A06 — objectFit
+     cover/contain × MediaReference의 width/height)
+   - 마스크 내부 셀 목록으로 파티클 방출점을 뽑는 닫힌 식 (Plan §1.3)
+   - 마스크 글로우의 드로잉 방식과, 흐림이 비쌀 때의 선회 경로
+   - ObjectDesignator 포트 계약 (구현은 M3, 계약은 지금)
+   - 지정 세션의 상태 모델 (제안 → 조절 → 승인/거절)
+   설계 확정 후 저에게 확인받고 M1로 가세요.
+
+2) M1 — 스키마·상수·커맨드 + domain/kvloop/mask.ts, lightRegions.ts
+   단위 테스트로 판정: RLE 왕복 동일성, bbox 닫힌 식, 같은 (시드, 프레임)이
+   같은 방출점, objectFit 매핑이 cover·contain × 종횡비 조합에서 정확,
+   밝은 영역 검출이 알려진 입력에 알려진 박스.
+
+3) M2 — 마스크 드로잉(KvEffectsCanvas) + KvScene 통합
+   artifacts/kv-ai-m2/ 하네스를 만들어 SC-A2(마스크 도달 범위 밖 무변화)와
+   렌더 비용을 VP9로 실측(전례: artifacts/kv-obj-m0/). 글로우 흐림이 비싸면
+   Plan §5의 "지정 시점에 한 번 구워 저장" 선회를 검토하고 수치를 문서에 남기세요.
+
+지켜야 할 것:
+- domain은 Remotion·DOM·모델 런타임을 임포트하지 않는다 (conventions §1)
+- Math.random()/Date.now() 금지 — 마스크 방출점도 kvHash01 색인으로 닫힌 식
+- 마스크 없는 기존 프로젝트는 프레임 단위로 동일 (FR-A13)
+- 이 세션에서 모델·UI는 건드리지 않는다 (M3·M4의 몫)
+- 완료 기준: npm test + npm run build 그린, 하네스 수치 문서화, 커밋·푸시
 ```
+
+### 2단 — M0 + M3 + M4 (실제 키비주얼 4장 첨부와 함께)
+
+```
+/bkit:pdca do kv-ai-designation
+
+kv-ai-designation의 M0·M3·M4를 진행합니다. 실제 키비주얼 4장을 첨부했습니다.
+
+읽을 문서 (이 셋만):
+- docs/00-history/2026-08-27-kv-ai-designation-handoff.md
+- docs/02-design/features/kv-ai-designation.design.md
+- docs/01-plan/features/kv-ai-designation.plan.md — §4.1.1, §5, §2.3
+
+브랜치 claude/kv-ai-designation-plan-0a6o43 (Design·M1·M2 완료). npm install.
+
+1) M0 — 실소재 정확도 게이트. 다른 무엇보다 먼저.
+   artifacts/kv-ai-p0/ 하네스를 첨부한 4장에 돌려 Plan §4.1.1의 유형 커버리지
+   표를 채우세요. 각 이미지에서 이펙트를 걸 만한 오브젝트를 짚고, 유형별로
+   "클릭 한 번 / 여유값까지 / 추가·제외 클릭까지 / 못 짚음"을 기록합니다.
+   여유값(임계값) 기본값도 여기서 실측으로 정합니다 — P0에서 캐릭터가 0.2에서
+   가장 좋았으므로(0.837→0.918) 0.5로 두면 안 됩니다.
+   → docs/03-analysis/kv-ai-designation.m0-real-asset-gate.md 로 쓰고, 기준을
+     저와 함께 확정한 뒤 M3으로. 못 짚는 유형이 사각형으로도 안 되면 Plan §5의
+     완화 순서로 범위를 재조정하고 멈춰서 확인받으세요.
+
+2) M3 — ObjectDesignator 포트·어댑터
+   src/infrastructure/vision/ 에 MediaPipe 어댑터. 로드·추론·취소(AbortSignal)·
+   실패 폴백. 자산 경로는 설정값(shared/config/models.ts)이고 기본값은 Google의
+   버전 고정 URL — 재배포 권리가 확인되면 같은-오리진으로 바꾸는 한 줄이 D-A03의
+   완성입니다(Plan §2.3). 가짜 어댑터로 실패·취소 경로까지 단위 테스트.
+
+3) M4 — UI
+   클릭 지정, 자동 후보(밝은 영역) 목록, 여유값 슬라이더, 추가/제외 클릭,
+   승인·거절. E2E는 지정 세션 상태와 **네트워크 관찰**까지 — SC-A9(AI 지정을
+   누르기 전 모델 관련 요청 0건), FR-A12(소재가 어떤 요청에도 실리지 않음).
+
+지켜야 할 것:
+- 모델 로드가 실패해도 편집·렌더·저장이 동작한다 (SC-A8)
+- 완료 기준: npm test + npm run build + npx playwright test 그린, 커밋·푸시
+```
+
+### 3단 — M5 실기기 게이트 + 리포트 (실기기 렌더 2벌 첨부와 함께)
+
+```
+/bkit:pdca check kv-ai-designation
+
+kv-ai-designation의 M5 실기기 게이트를 진행합니다. 마스크 이펙트 on/off 두 벌의
+실기기 렌더를 첨부했습니다(각 렌더 소요 시간은 본문에 적음).
+
+읽을 문서:
+- docs/00-history/2026-08-27-kv-ai-designation-handoff.md
+- docs/01-plan/features/kv-ai-designation.plan.md — §4 (SC-A1~SC-A10)
+- docs/03-analysis/kv-ai-designation.m0-real-asset-gate.md
+
+1) SC-A1~SC-A10을 프레임 실측으로 판정. 방법 전례: artifacts/kv-obj-m5/ 의
+   스캔·분석 파이프라인.
+2) 통과 시 리포트(docs/04-report/kv-ai-designation.report.md) → main 병합 →
+   Pages 원복(kv-object-animation.m5-runbook.md §5 절차). 미달 항목이 있으면
+   원인 분해와 수정 커밋 후 재판정 준비까지.
+3) 리포트 §5에 다음 사이클 입력을 남길 것 — D-A08(오브젝트 모션: 확대 전용이면
+   구멍이 없다)과 magic_touch 재배포 권리의 최종 상태.
+```
+
+### 순서를 바꿔도 되는 경우
+
+키비주얼 4장이 지금 준비돼 있다면 **2단의 M0만 먼저 떼어** 1단 앞에 돌리는 것도
+좋다 — M0이 크게 미달이면 M1·M2도 범위가 달라지므로, 그 경우엔 헛일을 줄인다.
+반대로 소재가 아직 없으면 1단은 그대로 진행해도 손해가 없다(스키마·도메인·렌더는
+정확도와 무관).
