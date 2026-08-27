@@ -4,7 +4,9 @@ import {describe, expect, it} from 'vitest';
 
 import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
 import {kvLoopProjectFixture, kvLoopSettingsOf} from '../../test/fixtures/project';
+import {MAX_KV_EFFECTS_PER_SLOT} from './constants';
 import {
+  addKvEffect,
   applyDurationPreset,
   buildEditorSnapshot,
   buildKvLoopProps,
@@ -12,6 +14,7 @@ import {
   kvLoopOf,
   moveKvImage,
   parseProject,
+  removeKvEffect,
   resetKvSlotTransform,
   setKvCount,
   setKvImage,
@@ -22,6 +25,7 @@ import {
   setKvTitleImage,
   switchTemplate,
   updateKvDisclaimerStyle,
+  updateKvEffect,
   updateKvLoopSettings,
   updateKvSlotTransform,
   updateKvTitleTransform,
@@ -679,5 +683,106 @@ describe('the reference-motion cycle', () => {
 
     expect(buildKvLoopProps(off, testUrlResolver())?.blurInFrames).toBe(0);
     expect(parseProject(off).ok).toBe(true);
+  });
+});
+
+// kv-object-animation — the designated objects on a slot. Design §7.1: the
+// schema default is the migration, the commands clamp, foreign templates no-op.
+describe('the effect-object commands', () => {
+  it('parses a stored slot with no effects field as an empty list — FR-O08', () => {
+    const project = kvLoopProjectFixture();
+    const {effects: _effects, ...storedSlot} = kvLoopSettingsOf(project)
+      .slots[0] as Record<string, unknown> & {effects: unknown};
+    const stored = {
+      ...project,
+      templateSettings: {
+        ...kvLoopSettingsOf(project),
+        slots: [storedSlot, ...kvLoopSettingsOf(project).slots.slice(1)],
+      },
+    };
+    const result = parseProject(stored);
+
+    if (!result.ok) {
+      throw new Error(result.error.message);
+    }
+
+    expect(kvLoopSettingsOf(result.value).slots[0]?.effects).toEqual([]);
+  });
+
+  it('adds each kind with a stored seed, and declines a full slot — FR-O01', () => {
+    const one = addKvEffect(kvLoopProjectFixture(), 0, 'particles');
+    const two = addKvEffect(one, 0, 'glow');
+    const effects = kvLoopSettingsOf(two).slots[0]?.effects ?? [];
+
+    expect(effects.map((effect) => effect.kind)).toEqual([
+      'particles',
+      'glow',
+    ]);
+    // D-03 — the one draw of randomness happens at creation and is persisted.
+    expect(effects[0]?.kind === 'particles' && effects[0].seed).toBeTypeOf(
+      'number',
+    );
+    expect(parseProject(two).ok).toBe(true);
+
+    let full = two;
+    for (let index = 0; index < 10; index += 1) {
+      full = addKvEffect(full, 0, 'glow');
+    }
+
+    expect(kvLoopSettingsOf(full).slots[0]?.effects).toHaveLength(
+      MAX_KV_EFFECTS_PER_SLOT,
+    );
+    // The untouched slots stay untouched.
+    expect(kvLoopSettingsOf(full).slots[1]?.effects).toEqual([]);
+  });
+
+  it('patches with clamps and ignores keys foreign to the kind — FR-O06/FR-O07', () => {
+    const project = addKvEffect(kvLoopProjectFixture(), 0, 'particles');
+    const id = kvLoopSettingsOf(project).slots[0]?.effects[0]?.id as string;
+    const patched = updateKvEffect(project, 0, id, {
+      region: {x: 0.9, y: 0.9, width: 0.5, height: 0.5},
+      density: 7,
+      sizePx: 999,
+      // Foreign to particles — must be ignored, not crash or leak in.
+      periodMs: 100,
+    });
+    const effect = kvLoopSettingsOf(patched).slots[0]?.effects[0];
+
+    expect(effect).toMatchObject({
+      kind: 'particles',
+      region: {x: 0.5, y: 0.5, width: 0.5, height: 0.5},
+      density: 1,
+      sizePx: 16,
+    });
+    expect(effect && 'periodMs' in effect).toBe(false);
+    expect(parseProject(patched).ok).toBe(true);
+  });
+
+  it('removes one object and reaches the render props — FR-O01/§2.3', () => {
+    const project = addKvEffect(kvLoopProjectFixture(), 0, 'glow');
+    const withImages = setKvImage(
+      setKvImage(project, 'ko', 0, kvImage('a')),
+      'ko',
+      1,
+      kvImage('b'),
+    );
+    const id = kvLoopSettingsOf(project).slots[0]?.effects[0]?.id as string;
+
+    expect(
+      buildKvLoopProps(withImages, testUrlResolver())?.slots[0]?.effects,
+    ).toHaveLength(1);
+
+    const removed = removeKvEffect(withImages, 0, id);
+
+    expect(kvLoopSettingsOf(removed).slots[0]?.effects).toEqual([]);
+    expect(removeKvEffect(withImages, 0, 'effect_missing')).toBe(withImages);
+  });
+
+  it('leaves another template’s project untouched', () => {
+    const project = createProject(15);
+
+    expect(addKvEffect(project, 0, 'particles')).toBe(project);
+    expect(updateKvEffect(project, 0, 'effect_x', {density: 1})).toBe(project);
+    expect(removeKvEffect(project, 0, 'effect_x')).toBe(project);
   });
 });

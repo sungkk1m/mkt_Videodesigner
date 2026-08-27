@@ -25,6 +25,14 @@ artifacts/m0/backdrops/
 artifacts/m0/results.json
 # kv-loop-reference-motion M0 spike output — a regenerable VP9 render.
 artifacts/kv-m0/out/
+# kv-object-animation M0 spike output — regenerable VP9 renders and fixtures.
+artifacts/kv-obj-m0/out/
+# kv-object-animation M4 measurement output — the 30MB reference copy and
+# regenerable scans; the scripts are committed, the numbers live in the doc.
+artifacts/kv-obj-m4/out/
+# kv-object-animation M5 gate output — the two 21MB device renders and
+# regenerable scans; the scripts are committed, the verdict lives in the doc.
+artifacts/kv-obj-m5/out/
 *.tsbuildinfo
 
 # bkit local session state. `pdca-status.json` is kept as project state; audit

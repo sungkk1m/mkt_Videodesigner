@@ -38,8 +38,13 @@ import {
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_KV_BLUR_PX,
+  MAX_KV_EFFECTS_PER_SLOT,
+  MAX_KV_PARTICLE_SIZE_PX,
+  MAX_KV_GLOW_PERIOD_MS,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
+  MIN_KV_EFFECT_SPAN,
+  MIN_KV_GLOW_PERIOD_MS,
   MEDIA_FITS,
   MIN_SCALE,
   MIN_SCENE_MS,
@@ -407,6 +412,53 @@ export const kvMotionSchema = z.discriminatedUnion('kind', [
   z.object({kind: z.literal('custom'), from: kvRectSchema, to: kvRectSchema}),
 ]);
 
+/**
+ * kv-object-animation Design Ref: §2.1 — a free-aspect rectangle in frame
+ * coordinates. Not `kvRectSchema`: that one is a camera position (square, its
+ * floor set by the zoom ceiling); this one is where an effect lives, and an
+ * ember source is wide, not square.
+ */
+export const kvEffectRegionSchema = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  width: z.number().min(MIN_KV_EFFECT_SPAN).max(1),
+  height: z.number().min(MIN_KV_EFFECT_SPAN).max(1),
+});
+
+/**
+ * kv-object-animation Design Ref: §2.1 — one designated object and its effect.
+ * A discriminated union so the next cycle's kinds (mask regions, light sweeps)
+ * are additions, not migrations. The particle `seed` is generated once when the
+ * object is added and stored (D-03): every frame everywhere derives from it,
+ * which is what makes scrubbing, re-rendering, and batch renders agree. Glow
+ * carries no seed — a pulse is periodic, nothing in it is random.
+ */
+export const kvEffectSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('particles'),
+    id: z.string().min(1),
+    seed: z.number().int().min(0).max(0xffffffff),
+    region: kvEffectRegionSchema,
+    color: hexColorSchema,
+    density: z.number().min(0).max(1),
+    speed: z.number().min(0).max(1),
+    sizePx: z.number().min(1).max(MAX_KV_PARTICLE_SIZE_PX),
+  }),
+  z.object({
+    kind: z.literal('glow'),
+    id: z.string().min(1),
+    center: z.object({
+      x: z.number().min(0).max(1),
+      y: z.number().min(0).max(1),
+    }),
+    /** Fraction of frame width — px-stable on this template's one canvas size. */
+    radius: z.number().min(MIN_KV_EFFECT_SPAN).max(1),
+    color: hexColorSchema,
+    intensity: z.number().min(0).max(1),
+    periodMs: z.number().min(MIN_KV_GLOW_PERIOD_MS).max(MAX_KV_GLOW_PERIOD_MS),
+  }),
+]);
+
 const ZOOM_IN_MOTION = {kind: 'preset', preset: 'zoomIn'} as const;
 const STILL_MOTION = {kind: 'preset', preset: 'still'} as const;
 
@@ -443,6 +495,13 @@ export const kvSlotSchema = z.preprocess((input) => {
   transform: mediaTransformSchema,
   /** Null follows the loop-wide default (D-04). */
   motion: kvMotionSchema.nullable(),
+  /**
+   * kv-object-animation FR-O01/FR-O08 — the slot's designated objects.
+   * `.default([])` is the migration: stored documents have no field, parse to
+   * an empty list, and an empty list mounts no canvas layer — the render tree
+   * is exactly what it was before this cycle.
+   */
+  effects: z.array(kvEffectSchema).max(MAX_KV_EFFECTS_PER_SLOT).default([]),
 }));
 
 export const kvLoopSettingsSchema = z.object({
@@ -896,5 +955,9 @@ export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
 export type KvSlot = z.infer<typeof kvSlotSchema>;
 export type KvRect = z.infer<typeof kvRectSchema>;
 export type KvMotion = z.infer<typeof kvMotionSchema>;
+export type KvEffect = z.infer<typeof kvEffectSchema>;
+export type KvEffectRegion = z.infer<typeof kvEffectRegionSchema>;
+export type KvParticlesEffect = Extract<KvEffect, {kind: 'particles'}>;
+export type KvGlowEffect = Extract<KvEffect, {kind: 'glow'}>;
 export type KvMotionPreset = (typeof KV_MOTION_PRESETS)[number];
 export type EditorScenes = ThreeSceneSettings['scenes'];

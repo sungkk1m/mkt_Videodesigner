@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-26T10:30:00.000Z",
+  "lastUpdated": "2026-08-27T02:21:00.000Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
@@ -741,20 +741,33 @@
       "notes": "Cycle complete. Match Rate 100%, SC 8/8 (7 measured on the real-device H.264 render, SC6 covered by schema-default unit tests). D-10 settled: intensity 0.5 stays (adjustable in UI). NFR-R02 passed (~2% blur overhead). Merged to main; next: kv-object-animation (draft plan + handoff doc docs/00-history/2026-08-26-kv-object-animation-handoff.md)."
     },
     "kv-object-animation": {
-      "phase": "plan",
-      "phaseNumber": 1,
-      "matchRate": null,
-      "iterationCount": 0,
-      "requirements": [],
+      "phase": "completed",
+      "phaseNumber": 6,
+      "matchRate": 100,
+      "iterationCount": 1,
+      "requirements": [
+        "direct-designation-first",
+        "particles-and-glow",
+        "rect-plus-point-regions",
+        "per-object-seed-determinism",
+        "camera-following-effects",
+        "inspector-plus-overlay-ui"
+      ],
       "documents": {
         "plan": "docs/01-plan/features/kv-object-animation.plan.md",
-        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md"
+        "handoff": "docs/00-history/2026-08-26-kv-object-animation-handoff.md",
+        "design": "docs/02-design/features/kv-object-animation.design.md",
+        "m0Evidence": "docs/03-analysis/kv-object-animation.m0-canvas-spike.md",
+        "m4Measurement": "docs/03-analysis/kv-object-animation.m4-reference-measurement.md",
+        "m5Runbook": "docs/01-plan/kv-object-animation.m5-runbook.md",
+        "m5Verification": "docs/03-analysis/kv-object-animation.m5-render-verification.md",
+        "report": "docs/04-report/kv-object-animation.report.md"
       },
       "timestamps": {
         "started": "2026-08-26T09:10:00.000Z",
-        "lastUpdated": "2026-08-26T09:10:00.000Z"
+        "lastUpdated": "2026-08-27T02:21:00.000Z"
       },
-      "notes": "Draft only — the template's confirmed end goal: objects designated by AI or by the user directly, with effects (particles, glow pulse, light sweep) rendered as a deterministic canvas layer. Gated behind kv-loop-reference-motion M4/M5. Not in activeFeatures (cap 5)."
+      "notes": "Cycle complete. Match Rate 100%, SC 7/7 measured on the real-device H.264 on/off pair (diff-domain pipeline in artifacts/kv-obj-m5/, codec-noise yardstick = same-phase cycle-repeat diff). D-05 settled: on/off total render time delta -2.2% < 5%, effect cost ~0.27ms/frame in createFrame. M4 defaults confirmed on device (embers ~7-12 concurrent, rise 138px/s median in the 101-202 model band; glow 1296-1313ms at phase 0). Merged to main. Next-cycle inputs recorded in report §5: one-click object designation (AI segmentation, Plan §1.4 reserved) and requester's new ask - object-level motion (zoom in/out on the designated object), which needs masks before it can move pixels."
     },
     "day1-label-effects": {
       "phase": "check",
@@ -1056,7 +1069,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-26T10:30:00.000Z"
+    "lastActivity": "2026-08-27T02:21:00.000Z"
   },
   "history": [
     {
@@ -1485,6 +1498,18 @@
       "feature": "day1-label-effects",
       "phase": "check",
       "action": "regression-clean-after-kv-loop-merge-zero-new-failures"
+    },
+    {
+      "timestamp": "2026-08-26T13:45:00.000Z",
+      "feature": "kv-object-animation",
+      "phase": "do",
+      "action": "m1-recovered-completed-tested"
+    },
+    {
+      "timestamp": "2026-08-27T02:21:00.000Z",
+      "feature": "kv-object-animation",
+      "phase": "completed",
+      "action": "m5-real-device-gate-sc1-7-pass-d05-settled-report-written"
     }
   ],
   "stateMachine": {

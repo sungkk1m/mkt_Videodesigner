@@ -15,6 +15,7 @@ import type {
 } from './constants';
 import type {
   HookMotionPreset,
+  KvEffect,
   KvMotionPreset,
   KvRect,
   MediaTransform,
@@ -54,9 +55,13 @@ export type {
   EditorScenes,
   HookMotionPreset,
   HookSceneSettings,
+  KvEffect,
+  KvEffectRegion,
+  KvGlowEffect,
   KvLoopSettings,
   KvMotion,
   KvMotionPreset,
+  KvParticlesEffect,
   KvRect,
   KvSlot,
   Locale,
@@ -88,6 +93,12 @@ export const SCENE_LABELS: Record<SceneKind, string> = {
  * because the section ids are generated from the key visual count.
  */
 export const kvSectionLabel = (index: number) => `KV ${index + 1}`;
+
+/** kv-object-animation §5.1 — the two designated-object types, spelled out. */
+export const KV_EFFECT_LABELS: Record<KvEffect['kind'], string> = {
+  particles: '파티클',
+  glow: '글로우',
+};
 
 /** kv-motion-effects §6.1 — direction is spelled out, never implied. */
 export const KV_MOTION_LABELS: Record<KvMotionPreset, string> = {
@@ -398,6 +409,12 @@ export interface KvSlotRenderProps {
   x: number;
   y: number;
   motion: KvMotionKeyframes;
+  /**
+   * kv-object-animation §2.3 — schema values verbatim: self-contained (no URL,
+   * no frame conversion), so the builder passes them through untouched and the
+   * one consumer (`KvScene`) derives every frame from them (D-03).
+   */
+  effects: readonly KvEffect[];
 }
 
 /** key-visual-looping Design Ref: §5.3 — absent is a normal state (Plan L5). */

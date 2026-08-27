@@ -122,6 +122,18 @@ export const MAX_KV_BLUR_PX = 100;
 export const DEFAULT_KV_BLUR_MS = 333;
 export const DEFAULT_KV_BLUR_PX = 30;
 
+/**
+ * kv-object-animation Design Ref: §2.2 — the effect-object bounds. The span
+ * floor keeps a region big enough for the overlay handle to grab; the particle
+ * size ceiling is where a 1080-wide frame stops reading a dot as a dot; the
+ * glow period window brackets a pulse that still reads as breathing.
+ */
+export const MAX_KV_EFFECTS_PER_SLOT = 8;
+export const MIN_KV_EFFECT_SPAN = 0.02;
+export const MAX_KV_PARTICLE_SIZE_PX = 16;
+export const MIN_KV_GLOW_PERIOD_MS = 500;
+export const MAX_KV_GLOW_PERIOD_MS = 8000;
+
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;
 /** The two mutually exclusive end-card treatments. Endcard-Video Design §3.1. */

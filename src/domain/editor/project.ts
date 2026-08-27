@@ -11,6 +11,7 @@ import {
   day1SectionDurations,
 } from '../day1/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
+import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
 import {
   kvLoopCombination,
@@ -68,8 +69,13 @@ import {
   MAX_SPLIT_LINE_WIDTH_PX,
   MAX_SUBTITLE_FONT_SIZE,
   MAX_KV_BLUR_PX,
+  MAX_KV_EFFECTS_PER_SLOT,
+  MAX_KV_GLOW_PERIOD_MS,
+  MAX_KV_PARTICLE_SIZE_PX,
   MAX_TRANSITION_MS,
   MIN_ICON_SCALE,
+  MIN_KV_EFFECT_SPAN,
+  MIN_KV_GLOW_PERIOD_MS,
   MIN_SCALE,
   MIN_SECTION_COUNT,
   MIN_SUBTITLE_FONT_SIZE,
@@ -102,9 +108,13 @@ import {
   type EditorSnapshot,
   type HookSceneSettings,
   type IconAdjust,
+  type KvEffect,
+  type KvEffectRegion,
+  type KvGlowEffect,
   type KvLoopProps,
   type KvLoopSettings,
   type KvMotion,
+  type KvParticlesEffect,
   type KvSegment,
   type KvSlotRenderProps,
   type Locale,
@@ -270,6 +280,7 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
     // D-04 — null follows the loop-wide preset, so raising the count does not
     // ask the operator to set the same motion again on every new slot.
     motion: null,
+    effects: [],
   })),
   images: {},
   loopCount: DEFAULT_KV_LOOPS,
@@ -1692,6 +1703,7 @@ const withKvCycle = (
           settings.slots[index] ?? {
             transform: {...DEFAULT_TRANSFORM},
             motion: null,
+            effects: [],
           },
       ),
       images: Object.fromEntries(
@@ -1792,6 +1804,186 @@ export const setKvDefaultMotion = (
   project: EditorProject,
   motion: KvMotion,
 ): EditorProject => mapKvLoop(project, (settings) => ({...settings, motion}));
+
+/**
+ * kv-object-animation §5.1 — what "add an effect" drops on the slot. The
+ * numbers are the M4 reference measurement's
+ * (kv-object-animation.m4-reference-measurement §4): ~10 embers visible at
+ * once over the measured ember cloud, rising at the campfire pace, 4-8px
+ * dots; the operator drags the designation into place right after adding
+ * anyway.
+ */
+const DEFAULT_KV_PARTICLES: Omit<KvParticlesEffect, 'id' | 'seed'> = {
+  kind: 'particles',
+  region: {x: 0.25, y: 0.4, width: 0.5, height: 0.35},
+  color: '#ffb14a',
+  density: 0.2,
+  speed: 0.4,
+  sizePx: 8,
+};
+
+const DEFAULT_KV_GLOW: Omit<KvGlowEffect, 'id'> = {
+  kind: 'glow',
+  center: {x: 0.5, y: 0.74},
+  radius: 0.18,
+  color: '#ff9a3c',
+  intensity: 0.6,
+  periodMs: 1300,
+};
+
+/**
+ * D-03 — randomness is allowed exactly once, here at creation. The drawn seed
+ * is stored on the object, and every frame afterwards is a pure function of it.
+ */
+const newKvEffectSeed = (): number =>
+  crypto.getRandomValues(new Uint32Array(1))[0] as number;
+
+/** FR-O01 — appends one designated object; full slots decline the add. */
+export const addKvEffect = (
+  project: EditorProject,
+  index: number,
+  kind: KvEffect['kind'],
+): EditorProject =>
+  mapKvLoop(project, (settings) => {
+    const slot = settings.slots[index];
+
+    if (!slot || slot.effects.length >= MAX_KV_EFFECTS_PER_SLOT) {
+      return settings;
+    }
+
+    const id = `effect_${crypto.randomUUID()}`;
+    const effect: KvEffect =
+      kind === 'particles'
+        ? {...DEFAULT_KV_PARTICLES, id, seed: newKvEffectSeed()}
+        : {...DEFAULT_KV_GLOW, id};
+
+    return {
+      ...settings,
+      slots: settings.slots.map((current, slotIndex) =>
+        slotIndex === index
+          ? {...current, effects: [...current.effects, effect]}
+          : current,
+      ),
+    };
+  });
+
+export const removeKvEffect = (
+  project: EditorProject,
+  index: number,
+  effectId: string,
+): EditorProject =>
+  mapKvLoop(project, (settings) => {
+    const slot = settings.slots[index];
+
+    if (!slot || !slot.effects.some((effect) => effect.id === effectId)) {
+      return settings;
+    }
+
+    return {
+      ...settings,
+      slots: settings.slots.map((current, slotIndex) =>
+        slotIndex === index
+          ? {
+              ...current,
+              effects: current.effects.filter(
+                (effect) => effect.id !== effectId,
+              ),
+            }
+          : current,
+      ),
+    };
+  });
+
+export type KvEffectPatch = Partial<{
+  region: KvEffectRegion;
+  center: {x: number; y: number};
+  radius: number;
+  color: string;
+  density: number;
+  speed: number;
+  sizePx: number;
+  intensity: number;
+  periodMs: number;
+}>;
+
+/**
+ * FR-O06/FR-O07 — clamp-patch like `updateKvLoopSettings`. One patch type for
+ * both kinds; keys foreign to the effect's kind are ignored, so the inspector
+ * and the overlay share a single call.
+ */
+export const updateKvEffect = (
+  project: EditorProject,
+  index: number,
+  effectId: string,
+  patch: KvEffectPatch,
+): EditorProject =>
+  mapKvLoop(project, (settings) => {
+    const slot = settings.slots[index];
+
+    if (!slot || !slot.effects.some((effect) => effect.id === effectId)) {
+      return settings;
+    }
+
+    const patched = (effect: KvEffect): KvEffect =>
+      effect.kind === 'particles'
+        ? {
+            ...effect,
+            ...(patch.region === undefined
+              ? {}
+              : {region: clampKvEffectRegion(patch.region)}),
+            ...(patch.color === undefined ? {} : {color: patch.color}),
+            ...(patch.density === undefined
+              ? {}
+              : {density: clamp(patch.density, 0, 1)}),
+            ...(patch.speed === undefined
+              ? {}
+              : {speed: clamp(patch.speed, 0, 1)}),
+            ...(patch.sizePx === undefined
+              ? {}
+              : {sizePx: clamp(patch.sizePx, 1, MAX_KV_PARTICLE_SIZE_PX)}),
+          }
+        : {
+            ...effect,
+            ...(patch.center === undefined
+              ? {}
+              : {
+                  center: {
+                    x: clamp(patch.center.x, 0, 1),
+                    y: clamp(patch.center.y, 0, 1),
+                  },
+                }),
+            ...(patch.radius === undefined
+              ? {}
+              : {radius: clamp(patch.radius, MIN_KV_EFFECT_SPAN, 1)}),
+            ...(patch.color === undefined ? {} : {color: patch.color}),
+            ...(patch.intensity === undefined
+              ? {}
+              : {intensity: clamp(patch.intensity, 0, 1)}),
+            ...(patch.periodMs === undefined
+              ? {}
+              : {
+                  periodMs: clamp(
+                    patch.periodMs,
+                    MIN_KV_GLOW_PERIOD_MS,
+                    MAX_KV_GLOW_PERIOD_MS,
+                  ),
+                }),
+          };
+
+    return {
+      ...settings,
+      slots: settings.slots.map((current, slotIndex) =>
+        slotIndex === index
+          ? {
+              ...current,
+              effects: current.effects.map((effect) =>
+                effect.id === effectId ? patched(effect) : effect,
+              ),
+            }
+          : current,
+      ),
+    };
+  });
 
 export type KvLoopPatch = Partial<{
   kenBurnsIntensity: number;
@@ -2372,6 +2564,9 @@ export const buildKvLoopProps = (
           settings.roundTrip,
         ),
       ),
+      // kv-object-animation §2.3 — schema values verbatim: self-contained, so
+      // the composition derives every frame from them and the seed (D-03).
+      effects: Object.freeze(slot.effects) as readonly KvEffect[],
     }),
   );
 
