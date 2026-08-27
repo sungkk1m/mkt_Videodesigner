@@ -199,8 +199,8 @@ kv-object-animation은 지정을 드래그 사각형까지 배송하고, AI 경�
 | 실제 게임 키비주얼에서의 정확도 | 컨테이너에 실소재가 없다. 합성 픽스처는 정답이 정확할 뿐 질감이 없다 | M0 — 요청자 키비주얼로, IoU가 아니라 **수정 없이 승인되는 비율**로 |
 | GPU/WebGPU 델리게이트 | GPU가 없다 (SwiftShader) | 실기기 |
 | 첫 사용 네트워크 시간 | 로컬 서버에서만 쟀다 | 실기기 |
-| transformers.js·SAM 계열 | 이그레스 정책이 HF·jsDelivr 차단(403) | 필요해지면 실기기. v1이 충분하면 불필요 |
-| `magic_touch` 모델 라이선스 | `ai.google.dev` 차단 | Plan 확정 전 확인 (런타임은 Apache-2.0) |
+| transformers.js·SAM 계열 | 이그레스 정책이 HF·jsDelivr 차단(403) | **재지 않는다** — 요청자가 v1으로 확정(Plan D-A02). M0에서 v1이 미달일 때만 다시 꺼낸다 |
+| `magic_touch` 모델 라이선스 | `ai.google.dev` 차단 | Plan 확정 전 확인 — **사용이 아니라 재배포 권리로**: 요청자가 모델을 배포본에 담기로 정했으므로(Plan D-A03) 우리 도메인이 이 파일을 서빙한다. 런타임은 Apache-2.0 확인됨 |
 | `InteractiveSegmenterLegacy` 폐기 위험 | v1은 `Legacy` 클래스로만 접근된다 | 버전 고정 + Design에서 어댑터 격리 |
 
 ## 6. 이 문서를 어디까지 믿을 것인가
