@@ -36,3 +36,7 @@ artifacts/kv-m0/out/
 artifacts/m0/
 artifacts/m1/*.png
 artifacts/m1/*.raw
+
+# 3장면 예시 생성기의 출력물 — 스크립트는 커밋하고, 재생성 가능한 미디어는 제외한다.
+artifacts/three-scene-example/assets/
+artifacts/three-scene-example/out/
