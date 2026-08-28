@@ -8,23 +8,24 @@
 ## 지금 상태
 
 - 브랜치 `claude/failure-video-template-plan-poq31c`, 전부 푸시됨. PR 없음(요청되지 않음).
-- PDCA: **Plan 완료 · Design 완료 · Do 완료(M1~M7)** — 남은 것은 실기기 렌더 검증과
-  아래 "사용자 판단 대기" 1건.
-- `npm test` 726/726 · `npm run build` 그린. 스키마 버전 **2 유지**, 마이그레이션 0건.
+- PDCA: **Plan 완료 · Design 완료 · Do 완료(M1~M7 + D-12)** — 남은 것은 실기기 렌더 검증
+  하나뿐이다.
+- `npm test` 727/727 · `npm run build` 그린. 스키마 버전 **2 유지**, 마이그레이션 0건.
 - 레퍼런스 영상(사용자 업로드 mp4, 360×640 @30fps, 50s)은 여전히 **이 저장소에 없다.**
   M4 게이트는 Plan §1.2/§1.4에 박제된 **수치**와 실제 컴포지션 프레임을 대조하는
   방식으로 통과했다(10/10) — Analysis §4, 산출물 `artifacts/failure/m4-review.png`.
 - 사용자 확정 결정 4건(Q1-Q4)은 Plan §2에, 설계 결정 12건(D-0~D-11)은 Design §13에.
   **하나도 뒤집지 않았다.** Design과 다르게 간 5곳은 Analysis §8에 근거와 함께 있다.
+- Do 중 발견 1건은 사용자 결정으로 확정돼 **D-12**로 들어갔다: FAIL 비트와 레벨 1의
+  아웃고잉 펀치가 마지막 8프레임에서 겹쳐(영상 줌 4.4배) **레벨 1 → 레벨 20 경계를
+  컷으로** 바꿨다. 영상에 남는 펀치는 레벨 20 → 레벨 99 하나다. Design §6.2·§13,
+  Analysis §9.
 
-## 남은 일
+## 남은 일 — 실기기 렌더 검증 하나
 
-1. **실기기 렌더 검증** — 아래 "이 환경에서 막히는 것" 참조. `npx playwright test failure`
-   5개 시나리오 중 2개는 컨테이너에서 이미 그린, 3개(업로드가 필요한 것)가 실기기 몫이다.
-2. **사용자 판단 대기 1건** — FAIL 비트와 레벨 1 아웃고잉 펀치가 마지막 8프레임에서
-   겹친다(영상 레이어 줌이 순간 4.4배). Design이 정의한 두 동작의 합성이라 사양대로
-   구현했고 실제로 깨져 보이지도 않지만, 레퍼런스에는 없는 상태다.
-   상세와 선택지는 **Analysis §9**.
+`npx playwright test failure` 5개 시나리오 중 **2개는 컨테이너에서 이미 그린**,
+3개(업로드가 필요한 것)가 실기기 몫이다. 끝나면 `docs/04-report/failure-video.report.md`를
+쓰고 사이클을 닫는다. 절차는 아래 "실기기에서 할 것".
 
 ## 이 사이클에서 나온 회귀 방어 (중요)
 
@@ -57,7 +58,7 @@ VP9 소스로 컨테이너에서 돌릴 수 있는 검증 (전부 그린):
 node artifacts/failure/verify-m1-extraction.mjs   # 추출이 순수 이동인가 (22건)
 node artifacts/failure/verify-m5-ui.mjs           # 전환→업로드→문구→비율 토글 (33건)
 node artifacts/failure/verify-ratio-guard.mjs     # 비율 가드 회귀 (21건)
-node artifacts/failure/run-gate.mjs               # M4 레퍼런스 수치 대조 (10건 + 프레임 13장)
+node artifacts/failure/run-gate.mjs               # M4 레퍼런스 수치 대조 (10건 + 프레임 14장)
 node artifacts/failure/run-bench.mjs              # SC7 성능
 node artifacts/m1/verify-*.mjs                    # 기존 템플릿 무변경
 npx playwright test --config artifacts/m1/playwright.container.ts failure  # 2/5 그린
@@ -106,4 +107,5 @@ H.264 MP4로 그대로 구워지는가" 하나다.
 | R-3 | 2.2× 확대의 업스케일 | 상한 2.2 고정. 실기기 실소재에서 확인 필요 |
 | R-5 | 컨테이너 코덱 부재 | 위 우회로로 대부분 대체 검증, MP4 픽셀만 실기기 |
 | R-6 → D-11 | 구간 1 하한 | refine 대신 창 압축 + 인스펙터 힌트. 유닛으로 전수 확인 |
-| — | 신규 | FAIL 비트 ↔ 펀치 전환 겹침 (Analysis §9, 사용자 판단 대기) |
+| — | 신규 | FAIL 비트 ↔ 펀치 전환 겹침 → **D-12로 해결**: 레벨 1 경계를 컷으로 (Analysis §9) |
+| — | 신규 | Batch 비율 체크박스가 스키마 거부값을 만들어 자동저장이 날아갔다 → `ratiosForTemplate`로 해결 (Analysis §5) |
