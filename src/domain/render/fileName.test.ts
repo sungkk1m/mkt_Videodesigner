@@ -38,6 +38,10 @@ describe('buildOutputFileName', () => {
       'ua-video_day1_ko_9x16_15s_60fps.mp4',
       'ua-video_day1x4_ko_9x16_15s_60fps.mp4',
       'ua-video_kvloop_ko_9x16_15s_60fps.mp4',
+      // failure-video Design §4.2. The 15s preset here is the fixture's, not
+      // one a failure project can hold — this asserts the segment, and the
+      // preset narrowing is the schema's job (§4.3).
+      'ua-video_fail_ko_9x16_15s_60fps.mp4',
     ]);
     // No two templates may collapse onto the same filename.
     expect(new Set(Object.values(TEMPLATE_FILE_SEGMENT)).size).toBe(

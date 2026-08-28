@@ -12,6 +12,8 @@ import type {
   DAY1_PANEL_SLOTS,
   DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
+  FAILURE_ORIENTATIONS,
+  FAILURE_PANEL_SLOTS,
 } from './constants';
 import type {
   HookMotionPreset,
@@ -53,6 +55,8 @@ export type {
   EditorProject,
   EditorScene,
   EditorScenes,
+  FailurePanels,
+  FailureSettings,
   HookMotionPreset,
   HookSceneSettings,
   KvEffect,
@@ -126,6 +130,25 @@ export const DAY1_QUAD_SECTION_LABELS = {
   'panel-d': '패널 D',
   endcard: '엔드카드',
 } as const;
+
+/**
+ * failure-video Design §5.1 — the failure sections share the quad's `panel-*`
+ * ids, so the timeline clip names are where the story shows: three levels, then
+ * the end card. The wording is the reference format's, not the default caption
+ * text, which the operator edits per locale.
+ */
+export const FAILURE_SECTION_LABELS = {
+  'panel-a': '레벨 1',
+  'panel-b': '레벨 20',
+  'panel-c': '레벨 99',
+  endcard: '엔드카드',
+} as const;
+
+/** failure-video Design §5.7 — a level segment's letter. */
+export type FailureSlot = (typeof FAILURE_PANEL_SLOTS)[number];
+
+/** failure-video Plan Q2 — which of the two source groups a render reads. */
+export type FailureOrientation = (typeof FAILURE_ORIENTATIONS)[number];
 
 /**
  * day1-quad Design §5.3 — a panel letter. `ActivePanel` stays the Day1-only

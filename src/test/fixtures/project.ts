@@ -7,6 +7,7 @@ import {
   type Day1Settings,
   type DurationPreset,
   type EditorProject,
+  type FailureSettings,
   type KvLoopSettings,
   type ThreeSceneSettings,
 } from '../../domain/editor/types';
@@ -54,6 +55,26 @@ export const day1QuadProjectFixture = (
   return {
     ...base,
     templateSettings: {...day1QuadSettingsOf(base), ...settings},
+  };
+};
+
+export const failureSettingsOf = (project: EditorProject): FailureSettings =>
+  project.templateSettings as FailureSettings;
+
+/**
+ * A valid failure project, built through the real command like the others.
+ * failure-video Design §4.3 — 30s is the template's own floor, so the default
+ * preset here is 30 rather than the 15 the other fixtures open on.
+ */
+export const failureProjectFixture = (
+  settings: Partial<FailureSettings> = {},
+  preset: DurationPreset = 30,
+): EditorProject => {
+  const base = switchTemplate(createProject(preset), 'failure');
+
+  return {
+    ...base,
+    templateSettings: {...failureSettingsOf(base), ...settings},
   };
 };
 

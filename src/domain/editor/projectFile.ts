@@ -95,24 +95,56 @@ const markSourceUnresolved = (project: EditorProject): EditorProject => {
     };
   }
 
+  // failure-video Design §5.2 — the level segments are this template's
+  // playback-critical sources, and there are six of them: both orientations,
+  // because an import that only reset the visible one would leave the other
+  // group claiming to be available until the operator toggled the ratio.
+  if (settings.template === 'failure') {
+    return {
+      ...project,
+      templateSettings: {
+        ...settings,
+        vertical: withMissingPanels(settings.vertical),
+        horizontal: withMissingPanels(settings.horizontal),
+        endCard: withMissingEndCardVideo(settings.endCard),
+      },
+    };
+  }
+
   return {
     ...project,
     templateSettings: {
       ...settings,
       panelA: withMissingSource(settings.panelA),
       panelB: withMissingSource(settings.panelB),
-      // Endcard-Video U-02 — the end-card video is playback-critical like the
-      // panel sources, so it follows the same rule. (banner/appIcon predate
-      // this cycle and keep their existing behaviour.)
-      endCard: settings.endCard.video
-        ? {
-            ...settings.endCard,
-            video: {...settings.endCard.video, status: 'missing'},
-          }
-        : settings.endCard,
+      endCard: withMissingEndCardVideo(settings.endCard),
     },
   };
 };
+
+/**
+ * Endcard-Video U-02 — the end-card video is playback-critical like the panel
+ * sources, so it follows the same rule. (banner/appIcon predate that cycle and
+ * keep their existing behaviour.)
+ */
+const withMissingEndCardVideo = <
+  TEndCard extends {video: {status: string} | null},
+>(
+  endCard: TEndCard,
+): TEndCard =>
+  endCard.video
+    ? {...endCard, video: {...endCard.video, status: 'missing' as const}}
+    : endCard;
+
+const withMissingPanels = <TPanels extends Record<string, unknown>>(
+  panels: TPanels,
+): TPanels =>
+  Object.fromEntries(
+    Object.entries(panels).map(([key, panel]) => [
+      key,
+      withMissingSource(panel as {source: {status: string} | null}),
+    ]),
+  ) as TPanels;
 
 /**
  * Marks every reference in a locale-keyed map missing, keeping the map's shape.

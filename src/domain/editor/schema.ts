@@ -17,6 +17,9 @@ import {
   DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DURATION_PRESETS,
+  FAILURE_DURATION_PRESETS,
+  FAILURE_RATIOS,
+  FAILURE_SECTION_ORDER,
   HOOK_MOTION_PRESETS,
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
@@ -25,6 +28,7 @@ import {
   KV_MOTION_PRESETS,
   LOCALES,
   MAX_BATCH_JOBS,
+  MAX_CAPTION_FONT_SIZE,
   MAX_COPY_LENGTH,
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
@@ -218,6 +222,14 @@ export const localizedCopySchema = z.object({
    * by either existing template parses untouched.
    */
   kvLoopDisclaimer: copyTextSchema.optional(),
+  /**
+   * failure-video Design §5.4 — the three caption bars' wording, per locale, for
+   * the same reason and in the same place as `day1Labels`. Optional so every
+   * copy block saved before this cycle parses untouched.
+   */
+  failureLabels: z
+    .object({a: copyTextSchema, b: copyTextSchema, c: copyTextSchema})
+    .optional(),
 });
 
 /**
@@ -381,6 +393,56 @@ export const day1QuadSettingsSchema = z.object({
   panelD: day1PanelSchema,
   split: day1SplitSchema,
   labelStyle: day1LabelStyleSchema,
+  endCard: day1EndCardSchema,
+});
+
+/**
+ * failure-video Design §5.2 — one orientation's three level segments. The panel
+ * shape is `day1PanelSchema` verbatim (D-0): source, trim, and per-ratio framing
+ * are exactly what a level segment needs, and reusing it is what keeps
+ * `activeTransform`, the trim strip, and the proxy plan unchanged.
+ */
+const failurePanelsSchema = z.object({
+  panelA: day1PanelSchema,
+  panelB: day1PanelSchema,
+  panelC: day1PanelSchema,
+});
+
+export const failureSettingsSchema = z.object({
+  template: z.literal('failure'),
+  /**
+   * Plan Q2 / D-0 — the orientation is structure, not a suffix on a key name. A
+   * 9:16 render reads `vertical`, a 16:9 render `horizontal`, and there is no
+   * fallback between them: the render preflight blocks instead.
+   */
+  vertical: failurePanelsSchema,
+  horizontal: failurePanelsSchema,
+  /** Wording lives in `copy.failureLabels`; only the styling is here. */
+  caption: z.object({
+    /**
+     * px against a 1920-high canvas. The composition scales by
+     * `frameHeight / 1920` so one number reads the same at both ratios (D-3).
+     */
+    fontSize: z.number().min(MIN_SUBTITLE_FONT_SIZE).max(MAX_CAPTION_FONT_SIZE),
+    textColor: hexColorSchema,
+    barColor: hexColorSchema,
+  }),
+  /**
+   * Plan D-5 — every part of the FAIL beat can be switched off, because the
+   * source game may already stage its own death zoom or desaturation (the
+   * reference is exactly that case) and stacking ours on top doubles it.
+   */
+  fail: z.object({
+    stampEnabled: z.boolean(),
+    zoomEnabled: z.boolean(),
+    desaturateEnabled: z.boolean(),
+    shakeEnabled: z.boolean(),
+    sfxEnabled: z.boolean(),
+    /** FR-12 — punch-zoom focus, as a % of the frame. Centre is (0, 0). */
+    focusX: z.number().min(-MAX_OFFSET_PERCENT).max(MAX_OFFSET_PERCENT),
+    focusY: z.number().min(-MAX_OFFSET_PERCENT).max(MAX_OFFSET_PERCENT),
+  }),
+  /** Plan FR-07 — the Day1 card whole, exactly as the quad template reuses it. */
   endCard: day1EndCardSchema,
 });
 
@@ -573,6 +635,7 @@ export const templateSettingsSchema = z.discriminatedUnion('template', [
   day1SettingsSchema,
   day1QuadSettingsSchema,
   kvLoopSettingsSchema,
+  failureSettingsSchema,
 ]);
 
 /**
@@ -600,7 +663,9 @@ export const expectedSectionIds = (
       ? DAY1_SECTION_ORDER
       : settings.template === 'day1-quad'
         ? DAY1_QUAD_SECTION_ORDER
-        : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
+        : settings.template === 'failure'
+          ? FAILURE_SECTION_ORDER
+          : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -780,6 +845,96 @@ const refineDay1Quad = (
 };
 
 /**
+ * failure-video Design §5.2 / §4.3 — the Day1 refinement over six panels (three
+ * per orientation), plus the two narrowings that make this template what it is:
+ * 30s or 60s only (Plan Q4) and 9:16 or 16:9 only (Plan 요청서).
+ *
+ * Missing panel sources stay a render preflight gate rather than a schema error,
+ * for the same reason as Day1 and the quad: saving mid-upload has to work. That
+ * matters more here — six slots means an operator is mid-upload far longer.
+ *
+ * Design D-11: there is deliberately no minimum length on segment 1. A timeline
+ * drag clamps at `MIN_SCENE_MS` whatever the template, so a floor stated only
+ * here would let a legal drag produce a document that cannot be parsed back —
+ * autosave restore would fail. The FAIL window compresses instead (§6.2).
+ */
+const refineFailure = (
+  project: SectionedProject & {
+    durationPreset: number;
+    render: {selectedRatios: readonly AspectRatio[]};
+    selectedRatio: AspectRatio;
+  },
+  settings: z.infer<typeof failureSettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  (['vertical', 'horizontal'] as const).forEach((orientation) => {
+    (['panelA', 'panelB', 'panelC'] as const).forEach((key) => {
+      const panel = settings[orientation][key];
+
+      if (panel.source && !panel.source.durationMs) {
+        context.addIssue({
+          code: 'custom',
+          path: ['templateSettings', orientation, key, 'source', 'durationMs'],
+          message: 'A failure segment source must be a video with a duration.',
+        });
+      }
+
+      refineTrimInSource(
+        panel.trim,
+        panel.source,
+        ['templateSettings', orientation, key, 'trim'],
+        context,
+      );
+    });
+  });
+
+  refineTrimInSource(
+    settings.endCard.videoTrim,
+    settings.endCard.video,
+    ['templateSettings', 'endCard', 'videoTrim'],
+    context,
+  );
+
+  // Plan Q4 / Design D-4 — narrowed here rather than in `durationPresetSchema`,
+  // so the other templates keep their presets. `switchTemplate` coerces on the
+  // way in, so the editor never reaches this; an imported JSON can.
+  if (
+    !(FAILURE_DURATION_PRESETS as readonly number[]).includes(
+      project.durationPreset,
+    )
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['durationPreset'],
+      message: `A failure project runs ${FAILURE_DURATION_PRESETS.join('s or ')}s only.`,
+    });
+  }
+
+  // Plan Q2 — a subset rather than the looping template's single fixed ratio,
+  // but the same three-point set: constant, refine, and switch coercion.
+  const allowed = FAILURE_RATIOS as readonly AspectRatio[];
+  const rejected = project.render.selectedRatios.filter(
+    (ratio) => !allowed.includes(ratio),
+  );
+
+  if (rejected.length > 0) {
+    context.addIssue({
+      code: 'custom',
+      path: ['render', 'selectedRatios'],
+      message: `A failure project renders ${allowed.join(' and ')} only, received ${rejected.join(', ')}.`,
+    });
+  }
+
+  if (!allowed.includes(project.selectedRatio)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['selectedRatio'],
+      message: `A failure project previews ${allowed.join(' and ')} only.`,
+    });
+  }
+};
+
+/**
  * key-visual-looping Design Ref: §3.4. Missing key visuals are *not* a schema
  * error, for the same reason a missing Day1 panel is not: saving mid-upload has
  * to work. FR-L13 is a render preflight gate instead (`kvLoopMissingImages`),
@@ -896,6 +1051,8 @@ export const editorProjectSchema = z
       refineDay1(project, settings, context);
     } else if (settings.template === 'day1-quad') {
       refineDay1Quad(project, settings, context);
+    } else if (settings.template === 'failure') {
+      refineFailure(project, settings, context);
     } else {
       refineKvLoop(project, settings, context);
     }
@@ -951,6 +1108,8 @@ export type ThreeSceneSettings = z.infer<typeof threeSceneSettingsSchema>;
 export type Day1Settings = z.infer<typeof day1SettingsSchema>;
 export type Day1QuadSettings = z.infer<typeof day1QuadSettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
+export type FailureSettings = z.infer<typeof failureSettingsSchema>;
+export type FailurePanels = z.infer<typeof failurePanelsSchema>;
 export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
 export type KvSlot = z.infer<typeof kvSlotSchema>;
 export type KvRect = z.infer<typeof kvRectSchema>;

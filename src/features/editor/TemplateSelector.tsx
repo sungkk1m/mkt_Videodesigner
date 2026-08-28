@@ -8,6 +8,7 @@ import {useState} from 'react';
 
 import {
   DAY1_QUAD_DURATION_PRESETS,
+  FAILURE_DURATION_PRESETS,
   TEMPLATE_KINDS,
   type DurationPreset,
   type TemplateKind,
@@ -19,6 +20,7 @@ const TEMPLATE_LABELS: Record<TemplateKind, string> = {
   // day1-quad Plan Q11 — the operator's own wording.
   'day1-quad': 'Day1(4 video)',
   'kv-loop': '키비주얼 루핑',
+  failure: '실패(FAIL)',
 };
 
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
@@ -26,7 +28,20 @@ const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
   'day1-quad': '패널 A~D 영상과 분할선·라벨·엔드카드 설정',
   'kv-loop': '키비주얼 이미지와 반복·모션·오버레이 설정',
+  failure: '구간별 세로·가로 영상과 캡션·FAIL 효과·엔드카드 설정',
 };
+
+/**
+ * failure-video Design §11 M2 — adding a kind to `TEMPLATE_KINDS` puts it in
+ * this dropdown immediately, which is how the quad template once shipped a
+ * half-built arm to the operator. The failure template stays out of the list
+ * until M5 wires its inspector and asset panel; M5 deletes this filter.
+ */
+const UNRELEASED_TEMPLATES: readonly TemplateKind[] = ['failure'];
+
+const SELECTABLE_TEMPLATES = TEMPLATE_KINDS.filter(
+  (template) => !UNRELEASED_TEMPLATES.includes(template),
+);
 
 export interface TemplateSelectorProps {
   current: TemplateKind;
@@ -44,6 +59,13 @@ export const TemplateSelector = ({
 }: TemplateSelectorProps) => {
   const [pending, setPending] = useState<TemplateKind | null>(null);
   const quadPresets = DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[];
+  const failurePresets = FAILURE_DURATION_PRESETS as readonly DurationPreset[];
+  const presetNote =
+    pending === 'day1-quad' && !quadPresets.includes(currentPreset)
+      ? `4분할은 15초·30초만 지원합니다. 현재 ${currentPreset}초 프로젝트는 30초로 바뀝니다.`
+      : pending === 'failure' && !failurePresets.includes(currentPreset)
+        ? `실패 템플릿은 30초·60초만 지원합니다. 현재 ${currentPreset}초 프로젝트는 30초로 바뀝니다.`
+        : null;
 
   return (
     <>
@@ -69,7 +91,7 @@ export const TemplateSelector = ({
         }}
         value={current}
       >
-        {TEMPLATE_KINDS.map((template) => (
+        {SELECTABLE_TEMPLATES.map((template) => (
           <option key={template} value={template}>
             {TEMPLATE_LABELS[template]}
           </option>
@@ -89,14 +111,28 @@ export const TemplateSelector = ({
             </p>
             {/* Plan Q8a / Design §4.4 — the quad template offers 15s and 30s, so
                 a 60s project is coerced on the way in. Say so before it happens,
-                the same contract the looping template's ratio note has. */}
-            {pending === 'day1-quad' && !quadPresets.includes(currentPreset) ? (
+                the same contract the looping template's ratio note has.
+
+                failure-video Design §4.2 — the failure template narrows the same
+                way (30s·60s), so the note is one block with the wording chosen
+                per template rather than a second copy of it. */}
+            {presetNote ? (
               <p
                 className="panel__hint"
                 data-testid="template-switch-preset-note"
               >
-                4분할은 15초·30초만 지원합니다. 현재 {currentPreset}초 프로젝트는
-                30초로 바뀝니다.
+                {presetNote}
+              </p>
+            ) : null}
+            {/* failure-video Plan Q2 — the ratios are coerced on the way in too,
+                so the dialog names that before it happens. */}
+            {pending === 'failure' ? (
+              <p
+                className="panel__hint"
+                data-testid="template-switch-failure-ratio-note"
+              >
+                실패 템플릿은 세로(9:16)·가로(16:9)만 지원합니다. 1:1은 해제되고,
+                구간별로 세로용·가로용 영상을 따로 올립니다.
               </p>
             ) : null}
             {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way

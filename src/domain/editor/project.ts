@@ -10,6 +10,7 @@ import {
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
+import {failureSectionDurations} from '../failure/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
 import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
@@ -44,6 +45,11 @@ import {
   DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
+  FAILURE_DURATION_PRESETS,
+  FAILURE_PANEL_KEYS,
+  FAILURE_RATIOS,
+  FAILURE_SECTION_LABELS,
+  FAILURE_SECTION_ORDER,
   DEFAULT_KV_COUNT,
   DEFAULT_KV_LOOPS,
   DEFAULT_KV_BLUR_MS,
@@ -106,6 +112,10 @@ import {
   type EditorScene,
   type EditorScenes,
   type EditorSnapshot,
+  type FailureOrientation,
+  type FailurePanels,
+  type FailureSettings,
+  type FailureSlot,
   type HookSceneSettings,
   type IconAdjust,
   type KvEffect,
@@ -267,6 +277,64 @@ const DAY1_QUAD_DEFAULT_LABELS = {
   d: 'Day7',
 } as const;
 
+/** The lossless starting panel every panelled template opens a slot on. */
+const emptyFailurePanels = (): FailurePanels => ({
+  panelA: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelB: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelC: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+});
+
+/**
+ * failure-video Design §5.5 — the documented starting values for a failure
+ * payload.
+ *
+ * `contain` rather than the reference's width-filling crop, for the day1-video
+ * reason: an upload must never crop before it has been looked at, and `cover` is
+ * one click away. The caption's 100px is the reference measurement (cap height
+ * 3.7% of a 1920-high frame ÷ 0.72), and every FAIL element starts on — a
+ * project made from this default reproduces the reference beat.
+ */
+export const DEFAULT_FAILURE_SETTINGS: FailureSettings = {
+  template: 'failure',
+  vertical: emptyFailurePanels(),
+  horizontal: emptyFailurePanels(),
+  caption: {fontSize: 100, textColor: '#ffffff', barColor: '#000000'},
+  fail: {
+    stampEnabled: true,
+    zoomEnabled: true,
+    desaturateEnabled: true,
+    shakeEnabled: true,
+    sfxEnabled: true,
+    focusX: 0,
+    focusY: 0,
+  },
+  endCard: structuredClone(DEFAULT_DAY1_SETTINGS.endCard),
+};
+
+/**
+ * failure-video Design §5.4 / Plan Q1 — the captions arrive filled, with the
+ * same English in every locale: `LEVEL 1` is a number, not copy to translate,
+ * and a value in every locale means switching the language tab never blanks the
+ * bar. Same reasoning as the quad's `DAY1_QUAD_DEFAULT_LABELS`.
+ */
+const FAILURE_DEFAULT_LABELS = {
+  a: 'LEVEL 1',
+  b: 'LEVEL 20',
+  c: 'LEVEL 99',
+} as const;
+
 /**
  * key-visual-looping Design Ref: §3.2 — the documented starting values for a
  * looping payload. Four key visuals repeated twice is the reference format
@@ -332,6 +400,12 @@ export const day1QuadOf = (
 
 export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
   project.templateSettings.template === 'kv-loop'
+    ? project.templateSettings
+    : null;
+
+/** The failure counterpart of `threeSceneOf`. failure-video Design §7.1. */
+export const failureOf = (project: EditorProject): FailureSettings | null =>
+  project.templateSettings.template === 'failure'
     ? project.templateSettings
     : null;
 
@@ -584,6 +658,12 @@ export const applyDurationPreset = (
         // `Sequence from=NaN` — a black preview and a failed render.
         settingsBefore.template === 'day1-quad'
         ? day1QuadSectionDurations(preset)
+        : // failure-video Design §5.6 — four sections on the reference's own
+          // 20/10/70 split. The comment above is the warning this arm exists
+          // for: without it the preset switch falls through to the three-scene
+          // lengths and the last sections become NaN.
+          settingsBefore.template === 'failure'
+        ? failureSectionDurations(preset)
         : settingsBefore.template === 'kv-loop'
         ? // The cycle is redivided evenly; the caller is expected to have
           // cleared `kvLoopCombination` first, exactly as the template switch
@@ -986,7 +1066,7 @@ const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1 | 2 | 3> = {
  * what lets a new template share them; the panel commands narrow further through
  * `day1PanelsOf` and keep their no-op contract.
  */
-type EndCardSettings = Day1Settings | Day1QuadSettings;
+type EndCardSettings = Day1Settings | Day1QuadSettings | FailureSettings;
 
 const withDay1 = (
   project: EditorProject,
@@ -1117,6 +1197,17 @@ const buildKvLoopSections = (
     durationMs,
   }));
 
+/** failure-video Design §6.1 — three level segments then the end card. */
+const buildFailureSections = (preset: DurationPreset): Sections => {
+  const durations = failureSectionDurations(preset);
+
+  return FAILURE_SECTION_ORDER.map((id, index) => ({
+    id,
+    label: FAILURE_SECTION_LABELS[id],
+    durationMs: durations[index] as number,
+  }));
+};
+
 /**
  * Day1 Design Ref: §6.1 — switching is destructive because per-scene settings and
  * panel settings cannot be carried across. The common fields (name, copy, audio,
@@ -1163,6 +1254,50 @@ export const switchTemplate = (
           {
             ...(project.copy[locale] as LocalizedCopy),
             day1Labels: {...DAY1_QUAD_DEFAULT_LABELS},
+          },
+        ]),
+      ) as Record<Locale, LocalizedCopy>,
+    };
+  }
+
+  // failure-video Design §4.3 — the same three-point set the quad and the loop
+  // use, over both axes: the preset is narrowed to 30/60 (Plan Q4) and the
+  // ratios to 9:16/16:9 (Plan 요청서), so entering the template coerces both
+  // rather than letting the schema reject a project the operator cannot see is
+  // wrong. The dialog says so before it happens.
+  if (template === 'failure') {
+    const preset = (
+      FAILURE_DURATION_PRESETS as readonly DurationPreset[]
+    ).includes(project.durationPreset)
+      ? project.durationPreset
+      : 30;
+    const allowed = FAILURE_RATIOS as readonly AspectRatio[];
+    const selectedRatios = project.render.selectedRatios.filter((ratio) =>
+      allowed.includes(ratio),
+    );
+
+    return {
+      ...project,
+      durationPreset: preset,
+      sections: buildFailureSections(preset),
+      templateSettings: structuredClone(DEFAULT_FAILURE_SETTINGS),
+      render: {
+        ...project.render,
+        // A batch that selected 1:1 only would be left with nothing, and
+        // `renderSettingsSchema` requires at least one ratio.
+        selectedRatios:
+          selectedRatios.length > 0 ? selectedRatios : [FAILURE_RATIOS[0]],
+      },
+      selectedRatio: allowed.includes(project.selectedRatio)
+        ? project.selectedRatio
+        : FAILURE_RATIOS[0],
+      // Plan Q1 — the captions arrive filled, in every locale.
+      copy: Object.fromEntries(
+        LOCALES.map((locale) => [
+          locale,
+          {
+            ...(project.copy[locale] as LocalizedCopy),
+            failureLabels: {...FAILURE_DEFAULT_LABELS},
           },
         ]),
       ) as Record<Locale, LocalizedCopy>,
@@ -1397,12 +1532,13 @@ export const updateDay1LabelStyle = (
  *
  * failure-video Design §4.1-3 — the four end-card commands narrow through this
  * rather than through `day1PanelsOf`, because "has panels" and "has an end card"
- * stopped being the same question. Today the two answers still coincide; the
- * failure payload joins here in M2 without touching a command body.
+ * stopped being the same question: a failure payload has an end card and no
+ * `Day1PanelKey` at all. Widening happened here, in one expression; the four
+ * command bodies read `settings.endCard` and did not move.
  */
 export const endCardSettingsOf = (
   project: EditorProject,
-): EndCardSettings | null => day1PanelsOf(project);
+): EndCardSettings | null => day1PanelsOf(project) ?? failureOf(project);
 
 // `videoTrim` is excluded so it cannot bypass reconciliation — the trim moves
 // only through `setDay1EndCardTrimInMs` (Endcard-Video Design D-04).
