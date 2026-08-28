@@ -14,7 +14,6 @@ import type {
   DAY1_ICON_ANIMATIONS,
 } from './constants';
 import type {
-  HookMotionPreset,
   KvEffect,
   KvMotionPreset,
   KvRect,
@@ -45,16 +44,11 @@ export type {
   AspectRatio,
   AudioMix,
   AudioTrack,
-  CtaSceneSettings,
   Day1Panel,
   Day1QuadSettings,
   Day1Settings,
   DurationPreset,
   EditorProject,
-  EditorScene,
-  EditorScenes,
-  HookMotionPreset,
-  HookSceneSettings,
   KvEffect,
   KvEffectRegion,
   KvGlowEffect,
@@ -78,7 +72,6 @@ export type {
   SubtitleStyle,
   TemplateKind,
   TemplateSettings,
-  ThreeSceneSettings,
   TransitionKind,
 } from './schema';
 
@@ -184,46 +177,10 @@ export interface SubtitleRenderProps {
   style: SubtitleStyle;
 }
 
+/** One boundary's transition, already converted to frames. */
 export interface TransitionRenderProps {
   kind: TransitionKind;
   durationInFrames: number;
-}
-
-export interface HookRenderProps {
-  motionPreset: HookMotionPreset;
-  headline: string;
-  subcopy: string;
-  dimBackground: boolean;
-}
-
-export interface CtaRenderProps {
-  text: string;
-  subcopy: string;
-  appIconUrl: string | null;
-  logoUrl: string | null;
-  storeBadgeUrl: string | null;
-  /** Dedicated CTA footage; null uses the frozen gameplay frame instead. */
-  mediaUrl: string | null;
-  /** Source frame to freeze when no dedicated CTA media exists. */
-  freezeSourceFrame: number | null;
-  backgroundBlur: number;
-  backgroundDim: number;
-}
-
-export interface SceneRenderProps {
-  kind: SceneKind;
-  fromFrame: number;
-  durationInFrames: number;
-  trimBeforeFrames: number;
-  trimAfterFrames: number;
-  scale: number;
-  x: number;
-  y: number;
-  subtitle: SubtitleRenderProps | null;
-  transitionIn: TransitionRenderProps;
-  transitionOut: TransitionRenderProps;
-  hook?: HookRenderProps;
-  cta?: CtaRenderProps;
 }
 
 export interface NarrationRenderProps {
@@ -247,14 +204,6 @@ export interface AudioRenderProps {
   narration: NarrationRenderProps[];
   ducking: DuckingEnvelope;
 }
-
-// A type alias (not an interface) so Remotion's `Record<string, unknown>` props
-// constraint is satisfied without a manual index signature.
-export type ThreeSceneProps = {
-  src: string | null;
-  scenes: SceneRenderProps[];
-  audio: AudioRenderProps;
-};
 
 /** Day1 Design Ref: §5.2 — one half of the split frame, with a resolved URL. */
 export interface Day1PanelRenderProps {
@@ -467,7 +416,6 @@ export type KvLoopProps = {
  * a structural guess.
  */
 export type EditorSnapshot =
-  | {template: 'three-scene'; props: ThreeSceneProps}
   | {template: 'day1'; props: Day1Props}
   | {template: 'day1-quad'; props: Day1QuadProps}
   | {template: 'kv-loop'; props: KvLoopProps};

@@ -5,14 +5,12 @@ import {renderMediaOnWeb} from '@remotion/web-renderer';
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
-import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {outputDimensions} from '../../domain/editor/project';
 import type {
   Day1Props,
   Day1QuadProps,
   EditorSnapshot,
   KvLoopProps,
-  ThreeSceneProps,
 } from '../../domain/editor/types';
 import {DEFAULT_PROFILE, PROFILE_SPECS} from '../../domain/render/profile';
 import {renderLogLevel} from './logLevel';
@@ -31,7 +29,6 @@ export type {EditorRenderConfig, EditorRenderMetrics};
  * arm landed with its composition rather than with its schema.
  */
 export type EditorRenderRequest =
-  | WebRenderRequest<ThreeSceneProps>
   | WebRenderRequest<Day1Props>
   | WebRenderRequest<Day1QuadProps>
   | WebRenderRequest<KvLoopProps>;
@@ -50,7 +47,7 @@ export const createEditorRenderRequest = (
   onProgress?: (progress: RenderProgress) => void,
 ): EditorRenderRequest => {
   const profile = PROFILE_SPECS[config.profile ?? DEFAULT_PROFILE];
-  // Identical for both templates: the container, codecs, and output target are
+  // Identical for every template: the container, codecs, and output target are
   // properties of the browser renderer, not of the composition.
   const encoding = {
     container: 'mp4',
@@ -98,23 +95,10 @@ export const createEditorRenderRequest = (
     };
   }
 
-  if (snapshot.template === 'kv-loop') {
-    return {
-      composition: {
-        id: 'kv-loop-editor',
-        component: KvLoopComposition,
-        ...timing,
-        defaultProps: snapshot.props,
-      },
-      inputProps: snapshot.props,
-      ...encoding,
-    };
-  }
-
   return {
     composition: {
-      id: 'three-scene-editor',
-      component: ThreeSceneComposition,
+      id: 'kv-loop-editor',
+      component: KvLoopComposition,
       ...timing,
       defaultProps: snapshot.props,
     },

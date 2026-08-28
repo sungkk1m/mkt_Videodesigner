@@ -4,13 +4,10 @@
 // This runs the real production build behind a `/mkt_Videodesigner` prefix, the
 // same shape GitHub Pages uses, so the deployment layout is verified before any
 // deployment happens. Only the hosting is simulated; the bundle is the real one.
-import {resolve, dirname} from 'node:path';
-import {fileURLToPath} from 'node:url';
-
 import {expect, test, type Page} from '@playwright/test';
 
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
+import {uploadDay1Panels} from './helpers/day1Source';
+
 const SUBPATH_URL = 'http://127.0.0.1:4190/mkt_Videodesigner/';
 
 /** Console errors and failed requests must both stay empty. */
@@ -78,24 +75,11 @@ test.describe('GitHub Pages subpath layout', () => {
     expect(consoleErrors).toEqual([]);
   });
 
-  test('runs the Worker and a real render from the subpath build', async ({
-    page,
-  }) => {
+  test('runs a real render from the subpath build', async ({page}) => {
     const {failedRequests} = collectFailures(page);
 
     await page.goto(SUBPATH_URL);
-    await page.getByTestId('source-input').setInputFiles(fixturePath);
-    await expect(page.getByTestId('source-metadata')).toContainText(
-      'gameplay-sample.mp4',
-    );
-
-    // The Hook analyzer worker is bundled as its own chunk; a wrong base path
-    // breaks it and nothing else.
-    await page.getByTestId('tab-hook').click();
-    await page.getByTestId('hook-analyze').click();
-    await expect(page.getByTestId('hook-candidates')).toBeVisible({
-      timeout: 2 * 60 * 1000,
-    });
+    await uploadDay1Panels(page);
 
     // A real MP4 render from the production bundle.
     const downloadPromise = page.waitForEvent('download', {
@@ -108,7 +92,7 @@ test.describe('GitHub Pages subpath layout', () => {
     await page.getByRole('button', {name: '다운로드'}).click();
 
     expect((await downloadPromise).suggestedFilename()).toBe(
-      'ua-video_3scene_ko_9x16_15s_30fps.mp4',
+      'ua-video_day1_ko_9x16_15s_30fps.mp4',
     );
     expect(failedRequests).toEqual([]);
   });

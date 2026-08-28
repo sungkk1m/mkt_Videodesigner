@@ -1,13 +1,10 @@
 // Day1 Design Ref: §7 RENDER_PREFLIGHT_FAILED and FR-D03 — the Batch gate has to
-// branch on the template, because Day1 needs two videos where three-scene needs
-// one. Design §8.1 lists this under the Day1 invariants.
+// branch on the template, because a panelled template needs one video per panel
+// where a loop needs key visuals. Design §8.1 lists this under the Day1
+// invariants.
 import {describe, expect, it} from 'vitest';
 
-import {
-  applySourceToAllScenes,
-  createProject,
-  setDay1PanelSource,
-} from '../../domain/editor/project';
+import {setDay1PanelSource} from '../../domain/editor/project';
 import type {EditorProject} from '../../domain/editor/types';
 import {
   day1ProjectFixture,
@@ -17,9 +14,6 @@ import {
 import {testMediaReference} from '../../test/fixtures/media';
 import {preflightIssues} from './useRenderQueue';
 import type {Day1PanelKey} from '../../domain/editor/project';
-
-const threeSceneLoaded = () =>
-  applySourceToAllScenes(createProject(15), testMediaReference());
 
 const quadWith = (panels: Day1PanelKey[]): EditorProject =>
   panels.reduce(
@@ -42,21 +36,6 @@ const day1With = (panels: ('panelA' | 'panelB')[]): EditorProject =>
       ),
     day1ProjectFixture(),
   );
-
-describe('preflightIssues — three-scene', () => {
-  it('blocks an empty project and passes a loaded one', () => {
-    expect(preflightIssues(createProject(15), false, true)).toContain(
-      '영상 소재가 없습니다.',
-    );
-    expect(preflightIssues(threeSceneLoaded(), true, true)).toEqual([]);
-  });
-
-  it('asks for a relink when the source is present but unresolved', () => {
-    expect(preflightIssues(threeSceneLoaded(), false, true)).toEqual([
-      '원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.',
-    ]);
-  });
-});
 
 describe('preflightIssues — Day1 (FR-D03)', () => {
   it('names both missing panels', () => {
@@ -83,9 +62,8 @@ describe('preflightIssues — Day1 (FR-D03)', () => {
     ).toEqual(['패널 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.']);
   });
 
-  // Day1 never reports a three-scene blocker, and never asks for narration it
-  // cannot have (Plan §2.2 keeps narration out of Day1).
-  // Day1 Trim UX FR-S03/S04. The 15s preset gives each panel a 6s section, and
+  // Day1 never asks for narration it cannot have (Plan §2.2 keeps narration out
+  // of Day1). Day1 Trim UX FR-S03/S04. The 15s preset gives each panel a 6s section, and
   // the fixture sources are 30s, so shortening one is what trips the gate.
   it('blocks a render when a panel source cannot fill its section (FR-S03)', () => {
     const short = setDay1PanelSource(
@@ -134,14 +112,9 @@ describe('preflightIssues — Day1 (FR-D03)', () => {
     ]);
   });
 
-  it('never reports a short panel for a three-scene project', () => {
-    expect(preflightIssues(threeSceneLoaded(), true, true)).toEqual([]);
-  });
-
-  it('does not leak three-scene blockers into a Day1 project', () => {
+  it('reports the renderer blocker without inventing a narration one', () => {
     const issues = preflightIssues(day1ProjectFixture(), false, false);
 
-    expect(issues).not.toContain('영상 소재가 없습니다.');
     expect(issues).toContain('이 브라우저에서는 렌더를 실행할 수 없습니다.');
     expect(issues.some((issue) => issue.includes('나레이션'))).toBe(false);
   });

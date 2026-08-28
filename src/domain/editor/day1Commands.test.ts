@@ -26,7 +26,6 @@ import {
   setDay1TrimInMs,
   setDay1TrimOutMs,
   switchTemplate,
-  threeSceneOf,
   updateDay1EndCard,
   updateDay1LabelStyle,
   updateDay1Split,
@@ -65,27 +64,26 @@ const withPanels = (): EditorProject => {
 
 describe('switchTemplate', () => {
   it('replaces the payload and the section axis with the Day1 defaults', () => {
-    const project = switchTemplate(createProject(), 'day1');
+    const project = switchTemplate(createProject(), 'day1-quad');
 
-    expect(project.sections.map((section) => section.id)).toEqual([
+    expect(switchTemplate(project, 'day1').sections.map((section) => section.id)).toEqual([
       'panel-a',
       'panel-b',
       'endcard',
     ]);
-    expect(day1(project)).toEqual(DEFAULT_DAY1_SETTINGS);
-    expect(threeSceneOf(project)).toBeNull();
+    expect(day1(switchTemplate(project, 'day1'))).toEqual(DEFAULT_DAY1_SETTINGS);
   });
 
   it('produces a document the v2 schema accepts in both directions', () => {
-    const toDay1 = switchTemplate(createProject(), 'day1');
-    const back = switchTemplate(toDay1, 'three-scene');
+    const toQuad = switchTemplate(createProject(), 'day1-quad');
+    const back = switchTemplate(toQuad, 'day1');
 
-    expect(parseProject(toDay1).ok).toBe(true);
+    expect(parseProject(toQuad).ok).toBe(true);
     expect(parseProject(back).ok).toBe(true);
     expect(back.sections.map((section) => section.id)).toEqual([
-      'hook',
-      'gameplay',
-      'cta',
+      'panel-a',
+      'panel-b',
+      'endcard',
     ]);
   });
 
@@ -108,7 +106,7 @@ describe('switchTemplate', () => {
   });
 
   it('splits the preset evenly with a three second end card', () => {
-    const durations = switchTemplate(createProject(30), 'day1').sections.map(
+    const durations = createProject(30).sections.map(
       (section) => section.durationMs,
     );
 
@@ -119,7 +117,7 @@ describe('switchTemplate', () => {
   it('is a no-op when the project already uses that template', () => {
     const project = createProject();
 
-    expect(switchTemplate(project, 'three-scene')).toBe(project);
+    expect(switchTemplate(project, 'day1')).toBe(project);
   });
 });
 
@@ -170,7 +168,9 @@ describe('Day1 panel sources', () => {
       ),
     ).toEqual(['panelB']);
     expect(day1MissingPanels(withPanels())).toEqual([]);
-    expect(day1MissingPanels(createProject())).toEqual([]);
+    expect(
+      day1MissingPanels(switchTemplate(createProject(), 'kv-loop')),
+    ).toEqual([]);
   });
 
   // Day1 Trim UX FR-S01. The 15s preset gives each panel a 6s section, so a 12s
@@ -222,8 +222,10 @@ describe('Day1 panel sources', () => {
     ).toEqual(['panelA', 'panelB']);
   });
 
-  it('never reports anything for a three-scene project', () => {
-    expect(day1PanelsShorterThanSection(createProject())).toEqual([]);
+  it('never reports anything for a template without panels', () => {
+    expect(
+      day1PanelsShorterThanSection(switchTemplate(createProject(), 'kv-loop')),
+    ).toEqual([]);
   });
 
   // Shrinking the section is the escape hatch the warning points at (Plan SC5),
@@ -663,11 +665,11 @@ describe('Day1 split, labels, and end card', () => {
 });
 
 describe('template isolation', () => {
-  it('leaves a three-scene project untouched', () => {
-    const project = createProject();
+  it('leaves a looping project untouched', () => {
+    const project = switchTemplate(createProject(), 'kv-loop');
 
     // `setDay1PanelSource` runs the shared reconcile pass, which rebuilds the
-    // three-scene payload, so this one is compared by value rather than identity.
+    // payload, so this one is compared by value rather than identity.
     expect(
       setDay1PanelSource(project, 'panelA', testMediaReference()),
     ).toStrictEqual(project);
@@ -681,13 +683,6 @@ describe('template isolation', () => {
     expect(updateDay1LabelStyle(project, {fontSize: 80})).toBe(project);
     expect(updateDay1EndCard(project, {iconAnimation: 'none'})).toBe(project);
     expect(day1Of(project)).toBeNull();
-  });
-
-  it('leaves a Day1 project untouched by three-scene commands', () => {
-    const project = day1ProjectFixture();
-
-    expect(threeSceneOf(project)).toBeNull();
-    expect(day1Of(project)).not.toBeNull();
   });
 });
 
@@ -839,7 +834,9 @@ describe('Day1 commands over four panels', () => {
   });
 
   it('returns no panel keys for templates that have none', () => {
-    expect(panelKeysOf(createProject().templateSettings)).toEqual([]);
+    expect(
+      panelKeysOf(switchTemplate(createProject(), 'kv-loop').templateSettings),
+    ).toEqual([]);
   });
 
   it('moves a quad panel trim and reframes it like a Day1 panel', () => {

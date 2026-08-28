@@ -3,11 +3,11 @@ import {describe, expect, it} from 'vitest';
 import {testMediaReference} from '../../test/fixtures/media';
 import {
   createProject,
+  day1Of,
   day1QuadOf,
   kvLoopOf,
   parseProject,
   switchTemplate,
-  threeSceneOf,
 } from './project';
 import {
   day1ProjectFixture,
@@ -15,7 +15,7 @@ import {
   kvLoopProjectFixture,
 } from '../../test/fixtures/project';
 import {MAX_LABEL_GLOW_PX} from './constants';
-import type {EditorProject, Section, ThreeSceneSettings} from './types';
+import type {Day1Settings, EditorProject, Section} from './types';
 
 const valid = (): EditorProject => createProject(15);
 
@@ -23,9 +23,9 @@ const valid = (): EditorProject => createProject(15);
 const sectionAt = (project: EditorProject, index: number) =>
   project.sections[index] as Section;
 
-/** Every test here builds a three-scene project, so narrowing is unconditional. */
-const scenesOf = (project: EditorProject) =>
-  (project.templateSettings as ThreeSceneSettings).scenes;
+/** `valid()` is a Day1 project, so narrowing its payload is unconditional. */
+const panelsOf = (project: EditorProject) =>
+  project.templateSettings as Day1Settings;
 
 const issuePaths = (project: unknown) => {
   const result = parseProject(project);
@@ -73,11 +73,12 @@ describe('parseProject', () => {
     const project = valid();
 
     // key-visual-looping Design Ref: §3.1 — the axis takes 2-8 sections now, so
-    // the three-scene count is pinned by the refinement rather than by the shape.
-    // The two sections still total the preset, so the count is the only breach.
+    // a template's own count is pinned by the refinement rather than by the
+    // shape. The two sections still total the preset, so the count is the only
+    // breach.
     project.sections = [
       sectionAt(project, 0),
-      {...sectionAt(project, 1), durationMs: 13_000},
+      {...sectionAt(project, 1), durationMs: 9000},
     ];
 
     expect(issuePaths(project)).toEqual(['sections']);
@@ -85,36 +86,27 @@ describe('parseProject', () => {
 
   it('rejects section ids that do not match the template order', () => {
     const project = valid();
-    sectionAt(project, 0).id = 'cta';
+    sectionAt(project, 0).id = 'endcard';
 
     expect(issuePaths(project)).toContain('sections.0.id');
   });
 
-  it('rejects a reordered scene list', () => {
-    const project = valid();
-    scenesOf(project)[0].kind = 'cta';
-
-    expect(issuePaths(project)).toContain('templateSettings.scenes.0.kind');
-  });
-
   it('rejects a transform outside the supported range', () => {
     const project = valid();
-    scenesOf(project)[1].transforms.base.scale = 12;
+    panelsOf(project).panelB.transforms.base.scale = 12;
 
     expect(issuePaths(project)).toContain(
-      'templateSettings.scenes.1.transforms.base.scale',
+      'templateSettings.panelB.transforms.base.scale',
     );
   });
 
   it('rejects a trim window that leaves the source', () => {
     const project = valid();
-    const settings = threeSceneOf(project) as ThreeSceneSettings;
-    settings.source = testMediaReference({durationMs: 5000});
-    settings.scenes[1].trim = {inMs: 0, outMs: 9000};
+    const settings = panelsOf(project);
+    settings.panelB.source = testMediaReference({durationMs: 5000});
+    settings.panelB.trim = {inMs: 0, outMs: 9000};
 
-    expect(issuePaths(project)).toContain(
-      'templateSettings.scenes.1.trim.outMs',
-    );
+    expect(issuePaths(project)).toContain('templateSettings.panelB.trim.outMs');
   });
 
   it('returns an actionable error rather than throwing on garbage input', () => {
@@ -386,9 +378,9 @@ describe('parseProject — Day1 payload', () => {
     expect(parseProject(project).ok).toBe(false);
   });
 
-  it('rejects three-scene section ids on a Day1 project', () => {
+  it('rejects a foreign section id on a Day1 project', () => {
     const project = day1Project();
-    sectionAt(project, 0).id = 'hook';
+    sectionAt(project, 0).id = 'kv-0';
 
     expect(issuePaths(project)).toContain('sections.0.id');
   });
@@ -607,14 +599,12 @@ describe('parseProject — motion migration (kv-motion-effects §3.2)', () => {
     });
   });
 
-  it('leaves a three-scene document untouched — U-14', () => {
+  it('leaves a document from another template untouched — U-14', () => {
     const parsed = parseProject(
       JSON.parse(JSON.stringify(createProject(15))) as unknown,
     );
 
     expect(parsed.ok).toBe(true);
-    expect(parsed.ok ? parsed.value.templateSettings.template : null).toBe(
-      'three-scene',
-    );
+    expect(parsed.ok ? day1Of(parsed.value) : null).not.toBeNull();
   });
 });

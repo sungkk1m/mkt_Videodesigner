@@ -2,8 +2,8 @@
 // render path, measured on the output MP4 rather than on the preview DOM.
 //
 // Day1 Design Ref: §8.2 Test Plan. Plan SC1 (three ratios), SC2 (grayscale),
-// SC4 (split line colour), SC5 (icon overlay within 2px), SC3 (three-scene
-// regression), FR-D03 (both panels required), FR-D14 (Batch reuse).
+// SC4 (split line colour), SC5 (icon overlay within 2px), FR-D03 (both panels
+// required), FR-D14 (Batch reuse).
 //
 // Sources are the generated colour-per-second fixtures, so a sampled pixel says
 // both *which source second* is on screen and *whether it was desaturated*.
@@ -27,7 +27,7 @@ import {
   saturation,
   type Rgb,
 } from './helpers/videoSampling';
-import {switchTemplate} from './helpers/template';
+import {ensureTemplate} from './helpers/template';
 
 const execFileAsync = promisify(execFile);
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -159,7 +159,7 @@ const colorBoundingBox = async (
 
 /** Selects Day1 through the real confirmation dialog. */
 const selectDay1 = async (page: Page) => {
-  await switchTemplate(page, 'day1');
+  await ensureTemplate(page, 'day1');
   await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 };
 
@@ -442,11 +442,10 @@ test.describe('module-6 Day1 render integration', () => {
     });
   }
 
-  // Panel restore parity with the three-scene path: a dropzone upload leaves no
-  // handle, so a reload has to land on the relink prompt and the relink has to
-  // keep the panel's trim. The stored-handle path itself needs the OS file
-  // picker, which Playwright cannot drive — the same gap the three-scene source
-  // has in `persistence-recovery.spec.ts`.
+  // A dropzone upload leaves no handle, so a reload has to land on the relink
+  // prompt and the relink has to keep the panel's trim. The stored-handle path
+  // itself needs the OS file picker, which Playwright cannot drive — the same
+  // gap `persistence-recovery.spec.ts` records.
   test('restores Day1 panels after a reload through the relink prompt', async ({
     page,
   }) => {
@@ -578,51 +577,5 @@ test.describe('module-6 Day1 render integration', () => {
       'ua-video_day1_ko_1x1_15s_30fps.mp4',
       'ua-video_day1_ko_9x16_15s_30fps.mp4',
     ]);
-  });
-
-  // Plan SC3 — the regression half the field-level v1 import test cannot cover:
-  // a v1 document still reaches a real MP4 through the three-scene path.
-  test('renders a migrated v1 project through the three-scene path', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await page.getByTestId('project-menu-toggle').click();
-    await page
-      .getByTestId('project-import-input')
-      .setInputFiles(fixture('project-v1.json'));
-
-    await expect(page.getByLabel('프로젝트 이름')).toHaveValue('v1-regression');
-    // The three-scene inspector, not the Day1 one.
-    await expect(page.getByTestId('inspector-scene')).toBeVisible();
-    await expect(page.getByTestId('inspector-template')).toHaveCount(0);
-
-    // An import carries metadata only, so the source has to be relinked.
-    await page.getByTestId('relink-input').setInputFiles(PANEL_A_SOURCE);
-    await expect(page.getByTestId('source-repair')).toHaveCount(0);
-
-    await page.getByTestId('ratio-9:16').click();
-
-    const {outputPath, renderMs, suggestedFilename} = await renderAndSave(
-      page,
-      'v1-migrated-9x16.mp4',
-    );
-
-    // The v1 fixture stores fps 60, and a stored document keeps its own fps
-    // (day1-render-fps D-07) — so this stays 60fps while new projects are 30.
-    expect(suggestedFilename).toBe('v1-regression_3scene_ko_9x16_15s_60fps.mp4');
-
-    // The three-scene baseline through the same harness and output settings, so
-    // the Day1 number logged above is comparable. Design §2.3.
-    console.log(
-      `[module-6] three-scene 9:16 render wall clock — ${(
-        renderMs / 1000
-      ).toFixed(2)}s`,
-    );
-
-    const probe = await probeVideo(outputPath);
-
-    expect(
-      probe.streams.find((stream) => stream.codec_type === 'video'),
-    ).toMatchObject({codec_name: 'h264', width: 1080, height: 1920});
   });
 });

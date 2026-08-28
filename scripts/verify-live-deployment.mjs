@@ -11,10 +11,11 @@ import {resolve} from 'node:path';
 
 const URL_UNDER_TEST =
   process.env.DEPLOY_URL ?? 'https://sungkk1m.github.io/mkt_Videodesigner/';
-const fixture = resolve(
+const panelA = resolve(
   import.meta.dirname,
   '../tests/fixtures/gameplay-sample.mp4',
 );
+const panelB = resolve(import.meta.dirname, '../tests/fixtures/day1-panel-b.mp4');
 
 console.log(`\nverifying ${URL_UNDER_TEST}\n`);
 
@@ -69,25 +70,17 @@ await step('capability probe completes', async () => {
   if (status === '렌더 불가') throw new Error('renderer reported unavailable');
 });
 
-await step('upload and probe a real file', async () => {
-  await page.getByTestId('source-input').setInputFiles(fixture);
+await step('upload and probe real files', async () => {
+  // A new project opens on Day1, which needs both panels before it can render.
+  await page.getByTestId('day1-panel-a-input').setInputFiles(panelA);
+  await page.getByTestId('day1-panel-b-input').setInputFiles(panelB);
   await page
-    .getByTestId('source-metadata')
+    .getByTestId('day1-panel-a-metadata')
     .getByText('gameplay-sample.mp4')
     .waitFor({timeout: 30_000});
-});
-
-await step('Hook analyzer worker chunk runs', async () => {
-  // The Hook drawer moved into the left-rail tabs; the button only exists on
-  // the hook tab (mirrors tests/e2e/hook-analysis.spec.ts).
-  await page.getByTestId('tab-hook').click();
-  await page.getByTestId('hook-analyze').click();
-  await page.getByTestId('hook-candidates').waitFor({timeout: 120_000});
-  const count = await page
-    .getByTestId('hook-candidates')
-    .getByRole('button')
-    .count();
-  console.log(`        candidates: ${count}`);
+  await page
+    .getByTestId('day1-panels-blocker')
+    .waitFor({state: 'detached', timeout: 30_000});
 });
 
 await step('real MP4 render and download', async () => {
@@ -112,7 +105,7 @@ await step('autosave then reload restores the project', async () => {
       throw new Error(`save state was "${text}"`);
     });
   await page.reload({waitUntil: 'networkidle'});
-  await page.getByTestId('source-repair').waitFor({timeout: 20_000});
+  await page.getByTestId('day1-panel-a-repair').waitFor({timeout: 20_000});
 });
 
 console.log(`\n  failed requests: ${failed.length}`);

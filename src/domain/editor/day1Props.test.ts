@@ -5,7 +5,6 @@ import {APP_ICON_RECT, appIconRect} from '../day1/endCard';
 import {quadLayout, splitLayout} from '../day1/layout';
 import {
   DEFAULT_DAY1_SETTINGS,
-  buildCompositionProps,
   buildDay1Props,
   buildDay1QuadProps,
   buildEditorSnapshot,
@@ -14,6 +13,7 @@ import {
   setDay1PanelSource,
   updateDay1LabelStyle,
   parseProject,
+  switchTemplate,
   updateDay1Transform,
 } from './project';
 import {
@@ -62,8 +62,10 @@ describe('day1 project fixture', () => {
 });
 
 describe('buildDay1Props', () => {
-  it('returns null for a three-scene project', () => {
-    expect(buildDay1Props(createProject(), testUrlResolver())).toBeNull();
+  it('returns null for a template that is not Day1', () => {
+    expect(
+      buildDay1Props(switchTemplate(createProject(), 'kv-loop'), testUrlResolver()),
+    ).toBeNull();
   });
 
   it('lays the three sections end to end across the full preset', () => {
@@ -369,15 +371,6 @@ describe('buildDay1Props end card', () => {
   });
 });
 
-describe('buildCompositionProps on a Day1 project', () => {
-  it('stays a harmless empty snapshot rather than reading Day1 fields', () => {
-    const props = buildCompositionProps(loadedDay1(), testUrlResolver());
-
-    expect(props.src).toBeNull();
-    expect(props.scenes).toEqual([]);
-  });
-});
-
 // day1-quad Design §6.4 — the four-panel render snapshot.
 describe('buildDay1QuadProps', () => {
   const withFourPanels = (): EditorProject =>
@@ -470,8 +463,12 @@ describe('buildDay1QuadProps', () => {
     // The other templates still resolve to their own arms.
     expect(buildEditorSnapshot(day1ProjectFixture(), testUrlResolver()).template)
       .toBe('day1');
-    expect(buildEditorSnapshot(createProject(), testUrlResolver()).template)
-      .toBe('three-scene');
+    expect(
+      buildEditorSnapshot(
+        switchTemplate(createProject(), 'kv-loop'),
+        testUrlResolver(),
+      ).template,
+    ).toBe('kv-loop');
   });
 
   it('reuses the Day1 end card untouched (Q7)', () => {

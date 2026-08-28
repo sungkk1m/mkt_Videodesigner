@@ -8,7 +8,6 @@ import {
   day1MissingPanels,
   day1PanelsShorterThanSection,
   panelKeysOf,
-  threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
 import {narrationBlockers} from '../../domain/audio/mix';
@@ -76,11 +75,11 @@ const DAY1_PANEL_LABEL: Record<Day1PanelKey, string> = {
  * Design Ref: §5.5 Preflight list — every blocking condition is reported before a
  * single frame is rendered.
  *
- * Day1 Design Ref: §7 RENDER_PREFLIGHT_FAILED — Day1 needs two videos rather than
- * one, and a loop needs two key visuals, so the source check branches on the
- * template. Narration is out of Day1's
- * scope (Plan §2.2) and `narrationBlockers` already returns nothing for it, so the
- * loop below stays template-agnostic.
+ * Day1 Design Ref: §7 RENDER_PREFLIGHT_FAILED — a panelled template needs one
+ * video per panel and a loop needs two key visuals, so the source check branches
+ * on the template. Narration is out of every current template's scope (Day1 Plan
+ * §2.2, key-visual-looping Plan L9) and `narrationBlockers` already returns
+ * nothing for them, so the loop below stays template-agnostic.
  */
 export const preflightIssues = (
   project: EditorProject,
@@ -125,7 +124,7 @@ export const preflightIssues = (
           .join(' · ')}`,
       );
     }
-  } else if (project.templateSettings.template === 'kv-loop') {
+  } else {
     // key-visual-looping FR-L13 — two key visuals are the floor for a loop, and
     // the overlays are deliberately not part of this count (Plan L5 / SC5).
     const missingImages = kvLoopMissingImages(project);
@@ -139,10 +138,6 @@ export const preflightIssues = (
         '키비주얼 이미지가 연결되지 않았습니다. 파일을 다시 올려주세요.',
       );
     }
-  } else if (!threeSceneOf(project)?.source) {
-    issues.push('영상 소재가 없습니다.');
-  } else if (!sourceResolved) {
-    issues.push('원본 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
   }
 
   if (!rendererReady) {

@@ -2,8 +2,8 @@ import {describe, expect, it} from 'vitest';
 
 import {testMediaReference} from '../../test/fixtures/media';
 import {
-  applySourceToAllScenes,
   createProject,
+  setDay1PanelSource,
   setDay1EndCardVideo,
   switchTemplate,
   updateDay1EndCard,
@@ -15,11 +15,15 @@ import {
   projectFileName,
   serializeProjectFile,
 } from './projectFile';
-import {scenesOf, sourceOf} from '../../test/fixtures/project';
-import type {EditorProject, KvLoopSettings, Section} from './types';
+import type {
+  Day1Settings,
+  EditorProject,
+  KvLoopSettings,
+  Section,
+} from './types';
 
 const projectWithSource = () =>
-  applySourceToAllScenes(createProject(30), testMediaReference());
+  setDay1PanelSource(createProject(30), 'panelA', testMediaReference());
 
 describe('serializeProjectFile', () => {
   it('round-trips a project without losing data', () => {
@@ -29,11 +33,16 @@ describe('serializeProjectFile', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       // The source cannot resolve in a new session, so it comes back missing.
+      const settings = project.templateSettings as Day1Settings;
+
       expect(result.value).toEqual({
         ...project,
         templateSettings: {
-          ...project.templateSettings,
-          source: {...testMediaReference(), status: 'missing'},
+          ...settings,
+          panelA: {
+            ...settings.panelA,
+            source: {...testMediaReference(), status: 'missing'},
+          },
         },
       });
     }
@@ -161,7 +170,7 @@ describe('parseProjectFile', () => {
     });
   });
 
-  it('rejects a project whose scenes break the timeline invariant', () => {
+  it('rejects a project whose sections break the timeline invariant', () => {
     const project = createProject(15);
     (project.sections[0] as Section).durationMs = 9000;
 

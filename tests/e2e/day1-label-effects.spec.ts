@@ -15,7 +15,7 @@ import {fileURLToPath} from 'node:url';
 
 import {expect, test, type Page} from '@playwright/test';
 
-import {switchTemplate} from './helpers/template';
+import {ensureTemplate, switchTemplate} from './helpers/template';
 import {hexToRgb, sampleRegion, type Rgb} from './helpers/videoSampling';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -76,7 +76,7 @@ const countYellowDominant = (pixels: Rgb[]) =>
 
 const openDay1WithLabel = async (page: Page) => {
   await page.goto('/');
-  await switchTemplate(page, 'day1');
+  await ensureTemplate(page, 'day1');
   // Each upload probes its source; the quad spec learned the hard way that a
   // second `setInputFiles` before the first has landed loses one of them.
   await page.getByTestId('day1-panel-a-input').setInputFiles(PANEL_A_SOURCE);
@@ -125,7 +125,7 @@ test.describe('day1-label-effects — inspector (L2)', () => {
     page,
   }) => {
     await page.goto('/');
-    await switchTemplate(page, 'day1');
+    await ensureTemplate(page, 'day1');
     await page.getByTestId('section-day1-label').click();
 
     // FR-01/FR-03 — both effects start off, so neither carries settings yet.

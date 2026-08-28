@@ -9,20 +9,20 @@ const CONFIG: EditorRenderConfig = {
   fps: 60,
   ratio: '9:16',
   locale: 'ko',
-  template: 'three-scene',
+  template: 'day1',
   outputTarget: 'web-fs',
 };
 
 describe('buildOutputFileName', () => {
   it('follows the confirmed naming pattern', () => {
     expect(buildOutputFileName('ua-video', CONFIG)).toBe(
-      'ua-video_3scene_ko_9x16_15s_60fps.mp4',
+      'ua-video_day1_ko_9x16_15s_60fps.mp4',
     );
   });
 
   it('sanitizes unsafe characters and collapses separators', () => {
     expect(buildOutputFileName('  여름 //이벤트  ', CONFIG)).toBe(
-      '여름-이벤트_3scene_ko_9x16_15s_60fps.mp4',
+      '여름-이벤트_day1_ko_9x16_15s_60fps.mp4',
     );
   });
 
@@ -34,7 +34,6 @@ describe('buildOutputFileName', () => {
     );
 
     expect(names).toEqual([
-      'ua-video_3scene_ko_9x16_15s_60fps.mp4',
       'ua-video_day1_ko_9x16_15s_60fps.mp4',
       'ua-video_day1x4_ko_9x16_15s_60fps.mp4',
       'ua-video_kvloop_ko_9x16_15s_60fps.mp4',
@@ -47,7 +46,7 @@ describe('buildOutputFileName', () => {
 
   it('falls back to a default name when the project name is empty', () => {
     expect(buildOutputFileName('   ', {...CONFIG, durationPreset: 60})).toBe(
-      'ua-video_3scene_ko_9x16_60s_60fps.mp4',
+      'ua-video_day1_ko_9x16_60s_60fps.mp4',
     );
   });
 });

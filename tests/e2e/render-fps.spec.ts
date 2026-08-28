@@ -2,20 +2,9 @@
 // that used to hardcode "60fps" is now the control itself, so these tests pin
 // the two things that used to be able to disagree: what the header shows and
 // what the project will actually render.
-import {dirname, resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {expect, test} from '@playwright/test';
 
-import {expect, test, type Page} from '@playwright/test';
-
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
-
-const uploadFixture = async (page: Page) => {
-  await page.getByTestId('source-input').setInputFiles(fixturePath);
-  await expect(page.getByTestId('source-metadata')).toContainText(
-    'gameplay-sample.mp4',
-  );
-};
+import {uploadDay1Panels} from './helpers/day1Source';
 
 test.describe('header fps control', () => {
   test('defaults to 30fps and toggles to 60 (L2 #1-2, §5.4)', async ({page}) => {
@@ -83,7 +72,7 @@ test.describe('header fps control', () => {
     page,
   }) => {
     await page.goto('/');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
 
     await page.getByRole('button', {name: 'MP4 렌더'}).click();
     await expect(page.getByTestId('stage-fps-30')).toBeDisabled();

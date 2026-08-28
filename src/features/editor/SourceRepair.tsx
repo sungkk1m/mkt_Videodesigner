@@ -16,11 +16,12 @@ export interface SourceRepairProps {
   /** Present only when a stored file handle can be re-authorised. */
   onGrantPermission: (() => void) | null;
   /**
-   * Day1 Design Ref: §6.2 — two panels each need their own repair block, so the
-   * ids are overridable. The defaults are the three-scene ids the E2E suite uses.
+   * Day1 Design Ref: §6.2 — every panel needs its own repair block, so the
+   * caller names them. There is no default: a shared id would make two blocks on
+   * screen indistinguishable to the E2E suite.
    */
-  testId?: string;
-  inputTestId?: string;
+  testId: string;
+  inputTestId: string;
 }
 
 const STATUS_MESSAGE: Record<string, string> = {
@@ -37,8 +38,8 @@ export const SourceRepair = ({
   busy,
   onRelink,
   onGrantPermission,
-  testId = 'source-repair',
-  inputTestId = 'relink-input',
+  testId,
+  inputTestId,
 }: SourceRepairProps) => {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

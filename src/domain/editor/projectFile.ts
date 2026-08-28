@@ -17,8 +17,9 @@ export const PROJECT_FILE_KIND = 'mkt-videodesigner/project';
 export const MAX_PROJECT_FILE_BYTES = 1_000_000;
 
 /**
- * Envelope versions this build can read. v1 files are upgraded by
- * `migrateProject`. Day1 Design Ref: §3.6.
+ * Envelope versions this build can open. v1 is still accepted here so that
+ * `migrateProject` is the one place that explains why a v1 file — always a
+ * three-scene project — can no longer be opened. Day1 Design Ref: §3.6.
  */
 export const SUPPORTED_PROJECT_FILE_VERSIONS: readonly number[] = [
   1,
@@ -64,18 +65,6 @@ const invalid = (message: string, details?: Record<string, unknown>) =>
  */
 const markSourceUnresolved = (project: EditorProject): EditorProject => {
   const settings = project.templateSettings;
-
-  if (settings.template === 'three-scene') {
-    return settings.source
-      ? {
-          ...project,
-          templateSettings: {
-            ...settings,
-            source: {...settings.source, status: 'missing'},
-          },
-        }
-      : project;
-  }
 
   // key-visual-looping — the key visuals are this template's playback-critical
   // sources, so they follow the panel rule. The title overlay goes with them:

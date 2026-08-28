@@ -184,8 +184,9 @@ test.describe('day1-quad — the four-panel template', () => {
   });
 
   test('leaves the two-panel template untouched (SC6)', async ({page}) => {
+    // Day1 is the default template, so a new project already is the two-panel
+    // one — there is nothing to switch to.
     await page.goto('/');
-    await switchTemplate(page, 'day1');
 
     await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
     await expect(page.getByTestId('section-day1-panel-a')).toBeVisible();

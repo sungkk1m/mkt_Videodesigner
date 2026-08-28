@@ -2,7 +2,6 @@
 // documents are validated on the way out so a corrupted or hand-edited record
 // can never enter the editor as a valid project.
 import {migrateProject} from '../../domain/editor/migrate';
-import {threeSceneOf} from '../../domain/editor/project';
 import type {EditorProject} from '../../domain/editor/types';
 import type {
   ProjectRepository,
@@ -39,7 +38,12 @@ const toRecord = (project: EditorProject): ProjectRecord => ({
   id: project.id,
   name: project.name,
   updatedAt: project.updatedAt,
-  sourceName: threeSceneOf(project)?.source?.name ?? null,
+  // The one template with a single project-wide source is gone, and the
+  // remaining ones hold several (panels, key visuals) with no one of them
+  // standing for the project. Every current template already stored null here,
+  // so the project list is unchanged; picking a representative source would be
+  // a new decision, not part of removing a template.
+  sourceName: null,
   project,
 });
 

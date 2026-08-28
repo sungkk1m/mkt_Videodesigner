@@ -187,7 +187,7 @@ export const Panel = ({
           trimAfter={panel.trimAfterFrames}
           trimBefore={panel.trimBeforeFrames}
           // Plan D7 / Design §5.2: the live panel carries the original sound
-          // through the same ducking curve the three-scene path uses.
+          // through the shared ducking curve (`domain/audio/ducking.ts`).
           volume={liveVolume}
         />
       ) : (

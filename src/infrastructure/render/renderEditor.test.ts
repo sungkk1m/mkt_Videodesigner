@@ -2,15 +2,13 @@ import {describe, expect, it, vi} from 'vitest';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
-import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
-  applySourceToAllScenes,
   buildEditorSnapshot,
   createProject,
   setDay1PanelSource,
   switchTemplate,
 } from '../../domain/editor/project';
-import type {EditorSnapshot, ThreeSceneProps} from '../../domain/editor/types';
+import type {Day1Props, EditorSnapshot} from '../../domain/editor/types';
 import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
 import {kvLoopProjectFixture} from '../../test/fixtures/project';
 import type {EditorRenderConfig} from '../../domain/render/types';
@@ -25,14 +23,9 @@ const CONFIG: EditorRenderConfig = {
   fps: 60,
   ratio: '9:16',
   locale: 'ko',
-  template: 'three-scene',
+  template: 'day1',
   outputTarget: 'web-fs',
 };
-
-const snapshot = buildEditorSnapshot(
-  applySourceToAllScenes(createProject(15), testMediaReference()),
-  testUrlResolver(),
-);
 
 /** A Day1 project with both panels filled, so the snapshot is renderable. */
 const day1Snapshot = (ratio: EditorRenderConfig['ratio'] = '9:16') => {
@@ -55,6 +48,9 @@ const day1Snapshot = (ratio: EditorRenderConfig['ratio'] = '9:16') => {
   );
 };
 
+/** The default snapshot the encoding assertions below run against. */
+const snapshot = day1Snapshot();
+
 /** A looping project with its key visuals filled. */
 const kvLoopSnapshot = () =>
   buildEditorSnapshot(
@@ -73,10 +69,10 @@ const kvLoopSnapshot = () =>
     testUrlResolver(),
   );
 
-/** Narrows the union so a test can assert on three-scene props. */
-const threeSceneProps = (input: EditorSnapshot): ThreeSceneProps => {
-  if (input.template !== 'three-scene') {
-    throw new Error(`expected a three-scene snapshot, got ${input.template}`);
+/** Narrows the union so a test can assert on Day1 props. */
+const day1Props = (input: EditorSnapshot): Day1Props => {
+  if (input.template !== 'day1') {
+    throw new Error(`expected a Day1 snapshot, got ${input.template}`);
   }
 
   return input.props;
@@ -101,8 +97,9 @@ describe('createEditorRenderRequest', () => {
     const request = createEditorRenderRequest(snapshot, CONFIG);
 
     expect(request.inputProps).toBe(snapshot.props);
-    // The snapshot was built at the project's default 30fps: the 2s Hook is 60 frames.
-    expect(threeSceneProps(snapshot).scenes[0]?.durationInFrames).toBe(60);
+    // The snapshot was built at the project's default 30fps: the 6s panel A
+    // section is 180 frames.
+    expect(day1Props(snapshot).sections[0]?.durationInFrames).toBe(180);
   });
 
   it('maps the profile to its bitrate tier (day1-render-fps FR-05)', () => {
@@ -145,13 +142,6 @@ describe('createEditorRenderRequest', () => {
   });
 
   // Day1 Design Ref: §2.1 / Plan SC1 — a Day1 job must reach Day1Composition.
-  it('routes a three-scene snapshot to ThreeSceneComposition', () => {
-    const request = createEditorRenderRequest(snapshot, CONFIG);
-
-    expect(request.composition.id).toBe('three-scene-editor');
-    expect(request.composition.component).toBe(ThreeSceneComposition);
-  });
-
   it('routes a Day1 snapshot to Day1Composition', () => {
     const request = createEditorRenderRequest(day1Snapshot(), CONFIG);
 
@@ -169,10 +159,6 @@ describe('createEditorRenderRequest', () => {
   });
 
   it('keeps encoding settings identical across templates', () => {
-    const {composition: _three, ...threeScene} = createEditorRenderRequest(
-      snapshot,
-      CONFIG,
-    );
     const {composition: _day1, ...day1} = createEditorRenderRequest(
       day1Snapshot(),
       CONFIG,
@@ -183,12 +169,8 @@ describe('createEditorRenderRequest', () => {
       CONFIG,
     );
 
-    expect({...day1, inputProps: null}).toEqual({
-      ...threeScene,
-      inputProps: null,
-    });
     expect({...kvLoop, inputProps: null}).toEqual({
-      ...threeScene,
+      ...day1,
       inputProps: null,
     });
   });

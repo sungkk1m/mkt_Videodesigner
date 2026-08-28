@@ -1,7 +1,7 @@
 // Day1 Design Ref: §6.3 Day1 인스펙터 — panel A/B framing, the split line with an
 // eyedropper, the four-locale panel labels with their styling, and the end card.
-// Reuses the three-scene accordion and field primitives so both inspectors feel
-// identical to operate.
+// Built on the shared accordion and field primitives in `inspectorFields.tsx`,
+// so every inspector feels identical to operate.
 import type {Day1PanelKey} from '../../domain/editor/project';
 import {
   DAY1_CARD_MOTIONS,
@@ -276,10 +276,9 @@ const PanelSection = ({
         {formatSeconds(durationMs)}s
         {sourceMs > 0 ? ` · 원본 ${formatSeconds(sourceMs)}s` : ''}
       </p>
-      {/* Day1 Trim UX FR-S02 — the three-scene inspector has said this since the
-          start; Day1 was the one template where it went unsaid. Unlike the
-          three-scene wording this names both ways out, because a Day1 section is
-          resized by dragging the timeline boundary (Plan SC5). */}
+      {/* Day1 Trim UX FR-S02 — a source that runs out mid-section renders black
+          for the remainder, silently. This names both ways out, because a Day1
+          section is resized by dragging the timeline boundary (Plan SC5). */}
       {isShortSource ? (
         <p className="notice notice--warning" data-testid={`day1-${key}-trim-short`}>
           원본이 구간보다 짧아 남은 시간은 검은 화면으로 출력됩니다. 구간 길이를

@@ -13,9 +13,10 @@ import {promisify} from 'node:util';
 
 import {expect, test, type Page} from '@playwright/test';
 
+import {uploadDay1Panels} from './helpers/day1Source';
+
 const execFileAsync = promisify(execFile);
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
 const outputDirectory = resolve(projectRoot, 'artifacts/render-fps');
 
 const RENDER_TIMEOUT = 10 * 60 * 1000;
@@ -72,13 +73,6 @@ const asFps = (rational: string) => {
   return (numerator ?? 0) / (denominator || 1);
 };
 
-const uploadFixture = async (page: Page) => {
-  await page.getByTestId('source-input').setInputFiles(fixturePath);
-  await expect(page.getByTestId('source-metadata')).toContainText(
-    'gameplay-sample.mp4',
-  );
-};
-
 const renderAtFps = async (page: Page, fps: 30 | 60, fileName: string) => {
   await page.getByTestId(`stage-fps-${fps}`).click();
   await expect(page.getByTestId(`stage-fps-${fps}`)).toHaveAttribute(
@@ -121,7 +115,7 @@ test.describe('rendered MP4 honours the selected frame rate', () => {
     page,
   }) => {
     await page.goto('/');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
 
     // --- 30fps (the new default) --------------------------------------------
     const thirty = await renderAtFps(page, 30, 'render-30fps.mp4');

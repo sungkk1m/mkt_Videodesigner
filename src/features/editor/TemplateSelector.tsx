@@ -1,6 +1,6 @@
 // Day1 Design Ref: §6.1 Template Selector — a dropdown in the header
-// (day1-quad Design §4.3; it was a segmented control until four templates made
-// the button row too wide).
+// (day1-quad Design §4.3; it was a segmented control until the button row grew
+// too wide).
 // Switching is destructive: per-scene settings and panel settings cannot be
 // carried across, so the confirmation dialog is part of the control rather than
 // something the caller is trusted to remember.
@@ -14,7 +14,6 @@ import {
 } from '../../domain/editor/types';
 
 const TEMPLATE_LABELS: Record<TemplateKind, string> = {
-  'three-scene': '3장면',
   day1: 'Day1 비교',
   // day1-quad Plan Q11 — the operator's own wording.
   'day1-quad': 'Day1(4 video)',
@@ -22,8 +21,7 @@ const TEMPLATE_LABELS: Record<TemplateKind, string> = {
 };
 
 const TEMPLATE_LOSS: Record<TemplateKind, string> = {
-  'three-scene': '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
-  day1: 'Hook·Gameplay·CTA 장면 설정과 업로드한 영상',
+  day1: '패널 A·B 영상과 분할선·라벨·엔드카드 설정',
   'day1-quad': '패널 A~D 영상과 분할선·라벨·엔드카드 설정',
   'kv-loop': '키비주얼 이미지와 반복·모션·오버레이 설정',
 };
@@ -49,7 +47,7 @@ export const TemplateSelector = ({
     <>
       {/*
         day1-quad Design §4.3 — a dropdown rather than one button per template:
-        four buttons already crowd the header and the list is meant to grow.
+        the buttons already crowded the header and the list is meant to grow.
 
         Deliberately controlled on `current`. Choosing an option only opens the
         dialog, so React re-renders with `value={current}` and the select snaps

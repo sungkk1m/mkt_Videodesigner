@@ -12,10 +12,8 @@ import {
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
-import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   activeTransform,
-  buildCompositionProps,
   buildEditorSnapshot,
   buildDay1Props,
   buildDay1QuadProps,
@@ -32,12 +30,10 @@ import {
   kvLoopOf,
   outputDimensions,
   projectTotalFrames,
-  threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
 import {
   ASPECT_RATIOS,
-  DEFAULT_TRANSFORM,
   durationPresetsForTemplate,
   KV_LOOP_RATIO,
   kvSectionId,
@@ -45,7 +41,6 @@ import {
   type EditorProject,
   type LocalizedCopy,
   type MediaReference,
-  type SceneKind,
 } from '../../domain/editor/types';
 import {narrationBlockers} from '../../domain/audio/mix';
 import {
@@ -58,11 +53,9 @@ import {
   isKvMotionStill,
   resolveKvMotion,
 } from '../../domain/kvloop/motion';
-import {hookCandidateDurationMs} from '../../domain/hook/scoring';
 import type {TtsProvider} from '../../domain/tts/types';
 import type {
   FrameSampler,
-  HookAnalyzer,
   MediaHandleStore,
   MediaResolver,
   OutputWriter,
@@ -77,7 +70,7 @@ import type {
   EditorRenderConfig,
   EditorRenderMetrics,
 } from '../../domain/render/types';
-import {msToFrames, sceneIndexOf} from '../../domain/timeline/timeline';
+import {msToFrames} from '../../domain/timeline/timeline';
 import {AudioPanel} from './AudioPanel';
 import {BatchDialog} from './BatchDialog';
 import './editor.css';
@@ -88,12 +81,8 @@ import {KvLoopAssetPanel} from './KvLoopAssetPanel';
 import {KvEffectOverlay} from './KvEffectOverlay';
 import {KvLoopInspector} from './KvLoopInspector';
 import {KvMotionOverlay} from './KvMotionOverlay';
-import {Dropzone} from './Dropzone';
-import {HookCandidateDrawer} from './HookCandidateDrawer';
 import {ProjectMenu} from './ProjectMenu';
 import {useProjectStore} from './projectStore';
-import {SceneInspector} from './SceneInspector';
-import {SourceRepair} from './SourceRepair';
 import {TemplateSelector} from './TemplateSelector';
 import {Timeline} from './Timeline';
 import {useDay1Assets, type Day1AssetCommands} from './useDay1Assets';
@@ -103,7 +92,6 @@ import {
   type EditorAudioCommands,
   type TtsCacheGateway,
 } from './useEditorAudio';
-import {useEditorSource, type EditorSourceCommands} from './useEditorSource';
 import {usePanelProxies} from './usePanelProxies';
 import {useRenderQueue} from './useRenderQueue';
 import {useMediaSession} from './useMediaSession';
@@ -121,29 +109,25 @@ const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} 
 /** How often a scrub may actually seek the Player. See `seekToMs`. */
 const SCRUB_SEEK_WINDOW_MS = 150;
 
-type LeftTab = 'assets' | 'copy' | 'audio' | 'hook';
+type LeftTab = 'assets' | 'copy' | 'audio';
 
-// Design Ref: §5.1 — the Hook drawer used to own a permanent full-width band.
-// Folding it into the rail returns that vertical space to the preview.
 const LEFT_TABS: {kind: LeftTab; icon: string; label: string}[] = [
   {kind: 'assets', icon: '🎬', label: '소재'},
   {kind: 'copy', icon: '🅣', label: '카피'},
   {kind: 'audio', icon: '🔊', label: '오디오'},
-  {kind: 'hook', icon: '✨', label: 'Hook'},
 ];
 
 /**
- * Day1 Plan §2.2 puts Hook analysis and narration out of scope, and every field in
- * the copy panel (headline, CTA text, per-scene subtitles) is a three-scene
- * concept — Day1 wording is the two panel labels, which live in the inspector.
- * So Day1 keeps only the tabs that do something.
+ * Day1 Plan §2.2 puts narration out of scope, and Day1 wording is the panel
+ * labels, which live in the inspector. So Day1 keeps only the tabs that do
+ * something.
  */
 const DAY1_LEFT_TABS: LeftTab[] = ['assets', 'audio'];
 
 /**
- * key-visual-looping FR-L15 — Hook analysis has no meaning for stills (Plan
- * §2.2), and narration is out of scope (Plan L9). The copy tab stays because the
- * disclaimer lives there, as the only field it shows for this template.
+ * key-visual-looping FR-L15 — narration is out of scope (Plan L9). The copy tab
+ * stays because the disclaimer lives there, as the only field it shows for this
+ * template.
  */
 const KV_LOOP_LEFT_TABS: LeftTab[] = ['assets', 'copy', 'audio'];
 
@@ -151,7 +135,6 @@ const LEFT_TAB_TITLES: Record<LeftTab, string> = {
   assets: '소재',
   copy: '카피',
   audio: '오디오',
-  hook: 'Hook 후보',
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -167,7 +150,6 @@ export interface EditorWorkspaceProps {
   videoRenderer: VideoRenderer;
   /** Day1 render speed — crops panel sources to the visible area before a render. */
   sourceProxyBuilder: SourceProxyBuilder;
-  hookAnalyzer: HookAnalyzer;
   /** Day1 Trim UX Design Ref: §3.1 — feeds the trim strip's thumbnails. */
   frameSampler: FrameSampler;
   ttsProvider: TtsProvider;
@@ -193,7 +175,6 @@ export const EditorWorkspace = ({
   mediaResolver,
   videoRenderer,
   sourceProxyBuilder,
-  hookAnalyzer,
   frameSampler,
   ttsProvider,
   ttsCache,
@@ -205,7 +186,6 @@ export const EditorWorkspace = ({
   loadInitialProject,
 }: EditorWorkspaceProps) => {
   const project = useProjectStore((state) => state.project);
-  const [selectedKind, setSelectedKind] = useState<SceneKind>('hook');
   // Day1 shows both panels in one inspector, so the selection only drives the
   // timeline highlight. Day1 Design Ref: §6.3.
   const [selectedDay1Section, setSelectedDay1Section] = useState('panel-a');
@@ -239,16 +219,6 @@ export const EditorWorkspace = ({
     (reference: MediaReference | null | undefined) =>
       session.urlFor(reference?.id),
     [session],
-  );
-
-  const sourceCommands = useMemo<EditorSourceCommands>(
-    () => ({
-      applySource: (reference) => store().applySource(reference),
-      relink: (reference) => store().relink(reference),
-      setSourceStatus: (status) => store().setSourceStatus(status),
-      setCtaAsset: (slot, reference) => store().setCtaAsset(slot, reference),
-    }),
-    [store],
   );
 
   const audioCommands = useMemo<EditorAudioCommands>(
@@ -287,20 +257,11 @@ export const EditorWorkspace = ({
     [store],
   );
 
-  const source = useEditorSource({
-    resolver: mediaResolver,
-    handleStore: mediaHandleStore,
-    session,
-    project,
-    commands: sourceCommands,
-  });
-
   const totalFrames = projectTotalFrames(project);
   const totalMs = project.durationPreset * 1000;
   const currentMs = (currentFrame / project.fps) * 1000;
   // Day1 Design Ref: §3.2 — the one place the template discriminant is read in the
-  // editor. Everything below narrows through `threeScene` or `day1`.
-  const threeScene = threeSceneOf(project);
+  // editor. Everything below narrows through `panelled` or `kvLoop`.
   const day1 = day1Of(project);
   const day1Quad = day1QuadOf(project);
   /**
@@ -310,10 +271,6 @@ export const EditorWorkspace = ({
    */
   const panelled = day1PanelsOf(project);
   const kvLoop = kvLoopOf(project);
-  const selectedIndex = sceneIndexOf(selectedKind);
-  const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
-  const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
-  const projectSource = threeScene?.source ?? null;
   const isRendering = renderState.status === 'rendering';
 
   const day1Assets = useDay1Assets({
@@ -400,13 +357,7 @@ export const EditorWorkspace = ({
   });
 
   // Design Ref: §7 — revoke object URLs the project no longer references.
-  const ctaAssets = threeScene?.scenes[2].cta;
   const referencedIds = [
-    projectSource?.id,
-    ctaAssets?.media?.id,
-    ctaAssets?.appIcon?.id,
-    ctaAssets?.logo?.id,
-    ctaAssets?.storeBadge?.id,
     // Day1 Design Ref: §6.2 — panel and end card media are retained the same way.
     // day1-quad Design §7.1 — driven by the payload's own key list, so the quad
     // template's panels C and D are retained too. Listing only A and B here made
@@ -442,11 +393,6 @@ export const EditorWorkspace = ({
 
   const narrationTooLong = narrationBlockers(project);
 
-  const compositionProps = useMemo(
-    () => buildCompositionProps(project, resolveUrl),
-    [project, resolveUrl],
-  );
-
   // Day1 Design Ref: §2.2 — the Player and the render job consume one snapshot.
   const day1Props = useMemo(
     () => buildDay1Props(project, resolveUrl),
@@ -463,9 +409,6 @@ export const EditorWorkspace = ({
   );
 
   const output = outputDimensions(project.selectedRatio);
-  const selectedTransform = selectedScene
-    ? activeTransform(selectedScene, project.selectedRatio)
-    : DEFAULT_TRANSFORM;
 
   // FR-D03 / FR-Q02 — a panelled render needs every panel present *and*
   // decodable. day1-quad Design §7.1 — the key list comes from the payload, so
@@ -489,15 +432,11 @@ export const EditorWorkspace = ({
     (reference, index) =>
       reference !== null && kvAssets.imageUrl(index) === null ? [index] : [],
   );
-  // day1-quad Design §7.1 — gate on either panelled payload. Branching on
-  // `day1` here dropped a quad project into the three-scene arm, whose source
-  // a quad project never has, so the render button stayed disabled with all
-  // four panels uploaded.
+  // day1-quad Design §7.1 — gate on either panelled payload rather than on
+  // `day1`, or a quad project stays unrenderable with all four panels uploaded.
   const renderableSource = panelled
     ? unresolvedPanels.length === 0
-    : kvLoop
-      ? missingKvImages === 0 && unresolvedKvImages.length === 0
-      : source.sourceUrl !== null;
+    : missingKvImages === 0 && unresolvedKvImages.length === 0;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
   // or it only half-applies.
@@ -601,28 +540,16 @@ export const EditorWorkspace = ({
     [project.fps, totalFrames],
   );
 
-  const handleUpload = async (file: File) => {
-    await source.upload(file);
-    setSelectedKind('hook');
-    seekToMs(0);
-  };
-
-  const handlePickFile = async () => {
-    await source.pickAndUpload();
-    setSelectedKind('hook');
-    seekToMs(0);
-  };
-
   const handleNewProject = () => {
     store().replaceProject(createProject(project.durationPreset));
-    setSelectedKind('hook');
+    setSelectedDay1Section('panel-a');
     setRenderState({status: 'idle'});
     seekToMs(0);
   };
 
   const handleOpenProject = (opened: EditorProject) => {
     store().replaceProject(opened);
-    setSelectedKind('hook');
+    setSelectedDay1Section(opened.sections[0]?.id ?? 'panel-a');
     setRenderState({status: 'idle'});
     seekToMs(0);
   };
@@ -745,9 +672,8 @@ export const EditorWorkspace = ({
       warnings: capabilities?.warnings ?? null,
       outputTarget: capabilities?.preferredOutputTarget ?? null,
       // The discriminant itself, not a guess reassembled from the narrowing
-      // helpers. Reading `day1 ? 'day1' : 'three-scene'` reported every looping
-      // render as three-scene, because the looping arm was never added to that
-      // ternary — and a header naming the wrong template sends the next
+      // helpers: a ternary over those helpers went stale the moment a template
+      // was added, and a header naming the wrong template sends the next
       // diagnosis to the wrong code. The discriminant cannot drift again.
       template: project.templateSettings.template,
       // key-visual-looping — the two numbers that say what the loop is, plus how
@@ -814,7 +740,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene && !panelled && !kvLoop) {
+  if (!panelled && !kvLoop) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -825,16 +751,11 @@ export const EditorWorkspace = ({
     );
   }
 
-  const allowedTabs = panelled
-    ? DAY1_LEFT_TABS
-    : kvLoop
-      ? KV_LOOP_LEFT_TABS
-      : null;
-  const visibleTabs = allowedTabs
-    ? LEFT_TABS.filter((tab) => allowedTabs.includes(tab.kind))
-    : LEFT_TABS;
-  const activeTab =
-    allowedTabs && !allowedTabs.includes(leftTab) ? 'assets' : leftTab;
+  const allowedTabs = panelled ? DAY1_LEFT_TABS : KV_LOOP_LEFT_TABS;
+  const visibleTabs = LEFT_TABS.filter((tab) =>
+    allowedTabs.includes(tab.kind),
+  );
+  const activeTab = allowedTabs.includes(leftTab) ? leftTab : 'assets';
 
   return (
     <div
@@ -872,7 +793,6 @@ export const EditorWorkspace = ({
             disabled={isRendering}
             onSwitch={(template) => {
               store().switchTemplate(template);
-              setSelectedKind('hook');
               // The section selection is shared by Day1 and the looping
               // template, so it resets to whichever axis is arriving.
               setSelectedDay1Section(
@@ -1079,19 +999,6 @@ export const EditorWorkspace = ({
             supportsFilePicker={kvAssets.supportsFilePicker}
             uploadError={kvAssets.uploadError}
           />
-        ) : activeTab === 'hook' ? (
-          <HookCandidateDrawer
-            analyzer={hookAnalyzer}
-            candidateDurationMs={hookCandidateDurationMs(project.durationPreset)}
-            disabled={isRendering}
-            onSelect={(startMs) => {
-              setSelectedKind('hook');
-              store().setTrimIn('hook', startMs);
-            }}
-            selectedStartMs={threeScene?.scenes[0].trim.inMs ?? 0}
-            sourceDurationMs={projectSource?.durationMs ?? null}
-            sourceUrl={source.sourceUrl}
-          />
         ) : activeTab === 'audio' ? (
           <AudioPanel
             // Plan L9 — a loop has no original sound and no narration.
@@ -1139,118 +1046,7 @@ export const EditorWorkspace = ({
             onLocale={(locale) => store().setLocale(locale)}
             onSubtitle={(kind, value) => store().setSubtitleText(kind, value)}
           />
-        ) : (
-          <>
-            <Dropzone
-              disabled={isRendering}
-              fileName={projectSource?.name ?? null}
-              hint="영상을 끌어다 놓거나 클릭해 선택"
-              inputTestId="source-input"
-              kind="video"
-              onFile={(file) => void handleUpload(file)}
-              previewUrl={source.sourceUrl}
-              prompt="게임플레이 영상"
-            />
-
-            {source.supportsFilePicker ? (
-              <>
-                <button
-                  className="button button--secondary"
-                  data-testid="source-picker"
-                  disabled={isRendering}
-                  onClick={() => void handlePickFile()}
-                  type="button"
-                >
-                  파일 선택 (다음 실행에서도 복구)
-                </button>
-                <p className="panel__hint">
-                  이 버튼으로 선택하면 파일 접근 권한이 저장되어 새로고침 후에도
-                  같은 영상을 다시 연결할 수 있습니다.
-                </p>
-              </>
-            ) : null}
-
-            <p className="panel__hint">
-              영상 1개를 업로드하면 Hook · Gameplay · CTA에 함께 적용됩니다.
-            </p>
-
-            {source.busy ? <p className="panel__hint">확인 중…</p> : null}
-
-            {source.uploadError ? (
-              <p className="notice notice--error" data-testid="source-error">
-                {source.uploadError.message}
-              </p>
-            ) : null}
-
-            {projectSource && projectSource.status !== 'available' ? (
-              <SourceRepair
-                busy={source.busy}
-                error={source.relinkError}
-                onGrantPermission={
-                  source.canGrantPermission
-                    ? () => void source.grantPermission()
-                    : null
-                }
-                onRelink={(file) => void source.relinkFromFile(file)}
-                reference={projectSource}
-                verdict={source.relinkVerdict}
-              />
-            ) : null}
-
-            {persistence.saveState.status === 'failed' ? (
-              <p className="notice notice--error" data-testid="autosave-error">
-                {persistence.saveState.error.message}
-              </p>
-            ) : null}
-
-            {projectSource ? (
-              <dl className="metadata" data-testid="source-metadata">
-                <div>
-                  <dt>이름</dt>
-                  <dd>{projectSource.name}</dd>
-                </div>
-                <div>
-                  <dt>형식</dt>
-                  <dd>{projectSource.mimeType}</dd>
-                </div>
-                <div>
-                  <dt>길이</dt>
-                  <dd>
-                    {((projectSource.durationMs ?? 0) / 1000).toFixed(2)}초
-                  </dd>
-                </div>
-                <div>
-                  <dt>해상도</dt>
-                  <dd>
-                    {projectSource.width ?? '-'}×{projectSource.height ?? '-'}
-                  </dd>
-                </div>
-                <div>
-                  <dt>재생</dt>
-                  <dd>{source.sourceUrl ? '디코딩 확인됨' : '연결 필요'}</dd>
-                </div>
-              </dl>
-            ) : null}
-
-            <button
-              className="button button--secondary"
-              disabled={!projectSource || isRendering}
-              onClick={() => store().reapplySource()}
-              type="button"
-            >
-              세 장면에 다시 적용
-            </button>
-            <p className="panel__hint">
-              다시 적용하면 모든 장면의 Trim이 0초로 돌아갑니다.
-            </p>
-
-            {capabilities?.blockers.map((message) => (
-              <p className="notice notice--error" key={message}>
-                {message}
-              </p>
-            ))}
-          </>
-        )}
+        ) : null}
         </div>
       </aside>
 
@@ -1375,19 +1171,7 @@ export const EditorWorkspace = ({
               ref={playerRef}
               style={{height: '100%', width: '100%'}}
             />
-          ) : (
-            <Player
-              acknowledgeRemotionLicense
-              component={ThreeSceneComposition}
-              compositionHeight={output.height}
-              compositionWidth={output.width}
-              durationInFrames={totalFrames}
-              fps={project.fps}
-              inputProps={compositionProps}
-              ref={playerRef}
-              style={{height: '100%', width: '100%'}}
-            />
-          )}
+          ) : null}
 
           {/* §6.2 — visible precisely when the selected key visual's motion is a
               drawn pair, so the rectangles are on screen exactly when they are
@@ -1531,33 +1315,6 @@ export const EditorWorkspace = ({
           resolvePanelUrl={(panel) => day1Assets.panelUrl(panel)}
           settings={panelled}
         />
-      ) : selectedScene ? (
-      <SceneInspector
-        disabled={isRendering}
-        hasRatioOverride={
-          selectedScene
-            ? hasRatioOverride(selectedScene, project.selectedRatio)
-            : false
-        }
-        onCta={(patch) => store().setCta(patch)}
-        onCtaAsset={(slot, file) => void source.setCtaAsset(slot, file)}
-        onHook={(patch) => store().setHook(patch)}
-        onResetTransform={() => store().resetTransform(selectedKind)}
-        onSubtitle={(patch) => store().setSubtitleStyle(selectedKind, patch)}
-        onToggleRatioOverride={(enabled) =>
-          store().toggleRatioOverride(selectedKind, enabled)
-        }
-        onTransform={(patch) => store().setTransform(selectedKind, patch)}
-        onTransition={(patch) => store().setTransition(selectedKind, patch)}
-        onTrimInMs={(ms) => store().setTrimIn(selectedKind, ms)}
-        onTrimOutMs={(ms) => store().setTrimOut(selectedKind, ms)}
-        ratio={project.selectedRatio}
-        resolveCtaAssetUrl={(slot) => resolveUrl(selectedScene?.cta?.[slot])}
-        scene={selectedScene}
-        sceneDurationMs={selectedSectionMs}
-        sourceDurationMs={projectSource?.durationMs ?? null}
-        transform={selectedTransform}
-      />
       ) : null}
 
       {batchOpen ? (
@@ -1609,20 +1366,14 @@ export const EditorWorkspace = ({
         }
         onSeek={seekToMs}
         onSeekFrame={(frame) => seekToMs((frame / project.fps) * 1000)}
-        onSelect={(sectionId) =>
-          // day1-quad — the quad template selects on the shared section axis
-          // exactly like Day1 and the loop; `day1 || kvLoop` sent its clip
-          // clicks down the three-scene arm.
-          panelled || kvLoop
-            ? setSelectedDay1Section(sectionId)
-            : setSelectedKind(sectionId as SceneKind)
-        }
+        // Every template selects on the shared section axis.
+        onSelect={(sectionId) => setSelectedDay1Section(sectionId)}
         onTogglePlay={() => playerRef.current?.toggle()}
         // key-visual-looping §6.4 — the axis is one cycle here, so the track is
         // told how many times it plays. Every other template passes nothing.
         repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={panelled || kvLoop ? selectedSectionId : selectedKind}
+        selectedId={selectedSectionId}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

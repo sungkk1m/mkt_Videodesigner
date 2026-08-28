@@ -6,7 +6,7 @@ import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {expect, test, type Page} from '@playwright/test';
-import {switchTemplate} from './helpers/template';
+import {ensureTemplate} from './helpers/template';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
@@ -16,7 +16,7 @@ const PANEL_A_SOURCE = fixture('gameplay-sample.mp4');
 const ENDCARD_LONG = fixture('day1-panel-b.mp4');
 
 const selectDay1 = async (page: Page) => {
-  await switchTemplate(page, 'day1');
+  await ensureTemplate(page, 'day1');
   await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 };
 

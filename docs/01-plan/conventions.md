@@ -71,8 +71,9 @@ Day1 Design §3.2 split the project into a template-agnostic part and a payload.
 - `sections` (length and order) and `copy`/`audio`/`render` are common to every
   template. Anything template-specific goes under `templateSettings`, a Zod
   discriminated union on `template`.
-- Narrow through `threeSceneOf(project)` or `day1Of(project)`. Do not read
-  `templateSettings` fields directly outside those helpers.
+- Narrow through `day1Of(project)`, `day1QuadOf(project)`, `day1PanelsOf(project)`,
+  or `kvLoopOf(project)`. Do not read `templateSettings` fields directly outside
+  those helpers.
 - A template command no-ops on a foreign template rather than throwing.
 - Adding a template means two arms, not a schema change: one in
   `templateSettings`, and one in `buildEditorSnapshot()` — the single place the
@@ -106,7 +107,7 @@ Day1 Design §3.2 split the project into a template-agnostic part and a payload.
 
 | Target | Rule | Example |
 |--------|------|---------|
-| Components | PascalCase | `SceneInspector.tsx` |
+| Components | PascalCase | `Day1Inspector.tsx` |
 | Hooks | `use` + camelCase | `useProjectStore.ts` |
 | Pure functions | camelCase | `moveBoundary()` |
 | Constants | UPPER_SNAKE_CASE | `MIN_SCENE_MS` |

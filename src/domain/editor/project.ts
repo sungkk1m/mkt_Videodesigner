@@ -28,13 +28,10 @@ import {
 } from '../../shared/errors/appError';
 import {
   allocateSceneFrames,
-  createSceneDurations,
-  isTrimShorterThanScene,
   moveBoundary,
   msToFrames,
   reconcileTrim,
   sectionDurationsOf,
-  sceneIndexOf,
   type BoundaryIndex,
 } from '../timeline/timeline';
 import {
@@ -51,14 +48,12 @@ import {
   DEFAULT_KV_TRANSITION_MS,
   DEFAULT_LOCALE,
   DEFAULT_RATIO,
-  DEFAULT_SUBTITLE,
   DEFAULT_TRANSFORM,
   EDITOR_FPS,
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
   LOCALES,
-  MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
   MAX_LABEL_GLOW_PX,
@@ -79,18 +74,13 @@ import {
   MIN_SCALE,
   MIN_SECTION_COUNT,
   MIN_SUBTITLE_FONT_SIZE,
-  MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
-  SCENE_LABELS,
-  SCENE_ORDER,
   kvSectionId,
   kvSectionLabel,
   type ActivePanel,
   type AspectRatio,
   type AudioRenderProps,
-  type CtaRenderProps,
-  type CtaSceneSettings,
   type Day1Panel,
   type Day1PanelSlot,
   type Day1QuadProps,
@@ -103,10 +93,7 @@ import {
   type Day1Settings,
   type DurationPreset,
   type EditorProject,
-  type EditorScene,
-  type EditorScenes,
   type EditorSnapshot,
-  type HookSceneSettings,
   type IconAdjust,
   type KvEffect,
   type KvEffectRegion,
@@ -124,13 +111,8 @@ import {
   type NarrationRenderProps,
   type RatioTransforms,
   type SceneKind,
-  type SceneRenderProps,
   type Sections,
-  type SubtitleStyle,
   type TemplateKind,
-  type ThreeSceneProps,
-  type ThreeSceneSettings,
-  type TransitionRenderProps,
 } from './types';
 import {editorProjectSchema} from './schema';
 
@@ -153,26 +135,9 @@ const createCopy = (): Record<Locale, LocalizedCopy> =>
     LocalizedCopy
   >;
 
-const DEFAULT_HOOK: HookSceneSettings = {
-  motionPreset: 'impact',
-  emphasizedText: '',
-  dimBackground: true,
-};
-
-const DEFAULT_CTA: CtaSceneSettings = {
-  media: null,
-  appIcon: null,
-  logo: null,
-  storeBadge: null,
-  useGeneratedBackground: true,
-  backgroundBlur: 16,
-  backgroundDim: 0.35,
-};
-
 /**
- * Day1 Design Ref: §3.2 — the documented starting values for a Day1 payload,
- * kept next to the three-scene defaults above. Module 5's template switch is the
- * first command that writes one; until then only the render path and tests read it.
+ * Day1 Design Ref: §3.2 — the documented starting values for a Day1 payload.
+ * A new project and the template switch both start from this.
  */
 export const DEFAULT_DAY1_SETTINGS: Day1Settings = {
   template: 'day1',
@@ -304,25 +269,17 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
 };
 
 /**
- * Narrows a project to its three-scene payload, or null for any other template.
+ * Narrows a project to its Day1 payload, or null for any other template.
  *
  * Day1 Design Ref: §3.2 — this is the single place the `templateSettings`
- * discriminant is checked. Three-scene commands below no-op on a foreign
- * template rather than throwing, matching how the other commands in this file
- * already return the project unchanged when an edit does not apply.
+ * discriminant is checked. A command below no-ops on a foreign template rather
+ * than throwing, matching how the other commands in this file already return
+ * the project unchanged when an edit does not apply.
  */
-export const threeSceneOf = (
-  project: EditorProject,
-): ThreeSceneSettings | null =>
-  project.templateSettings.template === 'three-scene'
-    ? project.templateSettings
-    : null;
-
-/** The Day1 counterpart of `threeSceneOf`. Day1 Design Ref: §3.2. */
 export const day1Of = (project: EditorProject): Day1Settings | null =>
   project.templateSettings.template === 'day1' ? project.templateSettings : null;
 
-/** The looping counterpart of `threeSceneOf`. */
+/** The four-panel counterpart of `day1Of`. */
 export const day1QuadOf = (
   project: EditorProject,
 ): Day1QuadSettings | null =>
@@ -335,27 +292,16 @@ export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
     ? project.templateSettings
     : null;
 
-/** Day1 Design Ref: §3.1 — the three-scene view of the shared time axis. */
-const buildSections = (preset: DurationPreset): Sections => {
-  const durations = createSceneDurations(preset);
+/** Day1 Design Ref: §3.1 — the Day1 view of the shared time axis. */
+const buildDay1Sections = (preset: DurationPreset): Sections => {
+  const durations = day1SectionDurations(preset);
 
-  return SCENE_ORDER.map((kind, index) => ({
-    id: kind,
-    label: SCENE_LABELS[kind],
+  return DAY1_SECTION_ORDER.map((id, index) => ({
+    id,
+    label: DAY1_SECTION_LABELS[id],
     durationMs: durations[index] as number,
   }));
 };
-
-const buildScenes = (): EditorScenes =>
-  SCENE_ORDER.map((kind) => ({
-    kind,
-    trim: {inMs: 0, outMs: 0},
-    transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
-    subtitle: {...DEFAULT_SUBTITLE},
-    transitionOut: {kind: 'cut' as const, durationMs: 300},
-    ...(kind === 'hook' ? {hook: {...DEFAULT_HOOK}} : {}),
-    ...(kind === 'cta' ? {cta: {...DEFAULT_CTA}} : {}),
-  })) as EditorScenes;
 
 export interface CreateProjectOptions {
   id?: string;
@@ -376,12 +322,8 @@ export const createProject = (
     updatedAt: timestamp,
     durationPreset: preset,
     fps: EDITOR_FPS,
-    sections: buildSections(preset),
-    templateSettings: {
-      template: 'three-scene',
-      source: null,
-      scenes: buildScenes(),
-    },
+    sections: buildDay1Sections(preset),
+    templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
     copy: createCopy(),
     audio: structuredClone(DEFAULT_AUDIO_MIX),
     render: {
@@ -463,17 +405,6 @@ export const touchProject = (
   updatedAt: string = new Date().toISOString(),
 ): EditorProject => ({...project, updatedAt});
 
-const withScenes = (
-  project: EditorProject,
-  scenes: EditorScenes,
-): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  return settings
-    ? {...project, templateSettings: {...settings, scenes}}
-    : project;
-};
-
 const withSectionDurations = (
   project: EditorProject,
   durations: readonly number[],
@@ -485,78 +416,8 @@ const withSectionDurations = (
   })),
 });
 
-const mapScene = (
-  project: EditorProject,
-  kind: SceneKind,
-  update: (scene: EditorScene) => EditorScene,
-): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  if (!settings) {
-    return project;
-  }
-
-  const index = sceneIndexOf(kind);
-
-  return withScenes(
-    project,
-    settings.scenes.map((scene, currentIndex) =>
-      currentIndex === index ? update(scene) : scene,
-    ) as EditorScenes,
-  );
-};
-
-/** Re-clamps every trim after a duration or source change. */
-const reconcileAllTrims = (project: EditorProject): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  if (!settings) {
-    return project;
-  }
-
-  return withScenes(
-    project,
-    settings.scenes.map((scene, index) => ({
-      ...scene,
-      trim: reconcileTrim(
-        scene.trim,
-        settings.source?.durationMs ?? 0,
-        project.sections[index]?.durationMs ?? 0,
-      ),
-    })) as EditorScenes,
-  );
-};
-
-/** A transition may never exceed half of its own section. Design Ref: §3.5. */
-const reconcileTransitions = (project: EditorProject): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  if (!settings) {
-    return project;
-  }
-
-  return withScenes(
-    project,
-    settings.scenes.map((scene, index) => ({
-      ...scene,
-      transitionOut: {
-        ...scene.transitionOut,
-        durationMs: clamp(
-          scene.transitionOut.durationMs,
-          MIN_TRANSITION_MS,
-          Math.max(
-            MIN_TRANSITION_MS,
-            Math.floor((project.sections[index]?.durationMs ?? 0) / 2),
-          ),
-        ),
-      },
-    })) as EditorScenes,
-  );
-};
-
 /** Each step no-ops on a template it does not own, so this is template-agnostic. */
-const reconcile = (project: EditorProject) =>
-  reconcileDay1Trims(reconcileTransitions(reconcileAllTrims(project)));
+const reconcile = (project: EditorProject) => reconcileDay1Trims(project);
 
 export const renameProject = (
   project: EditorProject,
@@ -564,107 +425,37 @@ export const renameProject = (
 ): EditorProject => ({...project, name});
 
 /**
- * Reloads the approved scene lengths. Trims restart at zero because the previous
- * source interval belonged to a different scene length. Framing, copy, and scene
- * settings are preserved.
+ * Reloads the approved section lengths for the project's own template. Framing,
+ * copy, and panel settings are preserved; the trims are re-clamped against the
+ * lengths that arrive.
  */
 export const applyDurationPreset = (
   project: EditorProject,
   preset: DurationPreset,
 ): EditorProject => {
   const settingsBefore = project.templateSettings;
-  const resized = withSectionDurations(
-    {...project, durationPreset: preset},
-    settingsBefore.template === 'day1'
-      ? day1SectionDurations(preset)
-      : // day1-quad — five sections, not three. Without this arm the preset
-        // switch fell through to `createSceneDurations`, laying the
-        // three-scene lengths [3s, 24s, 3s] over a five-section axis: panel D
-        // and the end card became NaN, and the composition crashed on
-        // `Sequence from=NaN` — a black preview and a failed render.
-        settingsBefore.template === 'day1-quad'
-        ? day1QuadSectionDurations(preset)
-        : settingsBefore.template === 'kv-loop'
-        ? // The cycle is redivided evenly; the caller is expected to have
-          // cleared `kvLoopCombination` first, exactly as the template switch
-          // is expected to have been confirmed. Plan L8 forbids quietly
-          // correcting a combination that does not fit.
-          kvLoopCycleDurations(
-            preset,
-            settingsBefore.loopCount,
-            settingsBefore.slots.length,
-          )
-        : createSceneDurations(preset),
-  );
-  const settings = threeSceneOf(resized);
 
   return reconcile(
-    settings
-      ? withScenes(
-          resized,
-          settings.scenes.map((scene) => ({
-            ...scene,
-            trim: {inMs: 0, outMs: 0},
-          })) as EditorScenes,
-        )
-      : resized,
+    withSectionDurations(
+      {...project, durationPreset: preset},
+      settingsBefore.template === 'day1'
+        ? day1SectionDurations(preset)
+        : // day1-quad — five sections, not three, and the quad lengths are not
+          // the Day1 ones. Getting this arm wrong made panel D and the end card
+          // NaN, and the composition crashed on `Sequence from=NaN`.
+          settingsBefore.template === 'day1-quad'
+          ? day1QuadSectionDurations(preset)
+          : // The cycle is redivided evenly; the caller is expected to have
+            // cleared `kvLoopCombination` first, exactly as the template switch
+            // is expected to have been confirmed. Plan L8 forbids quietly
+            // correcting a combination that does not fit.
+            kvLoopCycleDurations(
+              preset,
+              settingsBefore.loopCount,
+              settingsBefore.slots.length,
+            ),
+    ),
   );
-};
-
-/** Upload applies the same footage to Hook, Gameplay, and CTA at once. */
-export const applySourceToAllScenes = (
-  project: EditorProject,
-  source: MediaReference,
-): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  if (!settings) {
-    return project;
-  }
-
-  return reconcile({
-    ...project,
-    templateSettings: {
-      ...settings,
-      source,
-      scenes: settings.scenes.map((scene) => ({
-        ...scene,
-        trim: {inMs: 0, outMs: 0},
-      })) as EditorScenes,
-    },
-  });
-};
-
-/**
- * Restores a missing source with a file the user picked. Trims are re-clamped
- * because the replacement may be shorter. Design Ref: §3.6 assisted relinking.
- */
-export const relinkSource = (
-  project: EditorProject,
-  source: MediaReference,
-): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  return settings
-    ? reconcile({...project, templateSettings: {...settings, source}})
-    : project;
-};
-
-export const setSourceStatus = (
-  project: EditorProject,
-  status: MediaStatus,
-): EditorProject => {
-  const settings = threeSceneOf(project);
-
-  return settings?.source
-    ? {
-        ...project,
-        templateSettings: {
-          ...settings,
-          source: {...settings.source, status},
-        },
-      }
-    : project;
 };
 
 /** Template-agnostic: boundaries move the shared section axis. */
@@ -679,38 +470,6 @@ export const moveTimelineBoundary = (
       moveBoundary(sectionDurationsOf(project.sections), boundary, positionMs),
     ),
   );
-
-export const setSceneTrimInMs = (
-  project: EditorProject,
-  kind: SceneKind,
-  inMs: number,
-): EditorProject => {
-  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
-  const sourceMs = threeSceneOf(project)?.source?.durationMs ?? 0;
-
-  return mapScene(project, kind, (scene) => ({
-    ...scene,
-    trim: reconcileTrim({inMs, outMs: inMs}, sourceMs, sectionMs),
-  }));
-};
-
-/**
- * Trim out is the same interval seen from its end, so setting it moves the in
- * point by the scene length. This keeps the window equal to the scene duration.
- */
-export const setSceneTrimOutMs = (
-  project: EditorProject,
-  kind: SceneKind,
-  outMs: number,
-): EditorProject => {
-  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
-  const windowMs = Math.min(
-    sectionMs,
-    threeSceneOf(project)?.source?.durationMs ?? sectionMs,
-  );
-
-  return setSceneTrimInMs(project, kind, outMs - windowMs);
-};
 
 export const setSelectedLocale = (
   project: EditorProject,
@@ -793,105 +552,6 @@ const writeRatioOverride = <T extends {transforms: RatioTransforms}>(
   return {...target, transforms: {...target.transforms, overrides}};
 };
 
-export const updateSceneTransform = (
-  project: EditorProject,
-  kind: SceneKind,
-  ratio: AspectRatio,
-  patch: Partial<Omit<MediaTransform, 'fit'>>,
-): EditorProject =>
-  mapScene(project, kind, (scene) => writeTransform(scene, ratio, patch));
-
-export const resetSceneTransform = (
-  project: EditorProject,
-  kind: SceneKind,
-  ratio: AspectRatio,
-): EditorProject => updateSceneTransform(project, kind, ratio, DEFAULT_TRANSFORM);
-
-/** Design Ref: §5.5 "Toggle: use ratio-specific transform override". */
-export const setRatioOverride = (
-  project: EditorProject,
-  kind: SceneKind,
-  ratio: AspectRatio,
-  enabled: boolean,
-): EditorProject =>
-  mapScene(project, kind, (scene) =>
-    writeRatioOverride(scene, ratio, enabled),
-  );
-
-export const updateSubtitleStyle = (
-  project: EditorProject,
-  kind: SceneKind,
-  patch: Partial<SubtitleStyle>,
-): EditorProject =>
-  mapScene(project, kind, (scene) => ({
-    ...scene,
-    subtitle: {
-      ...scene.subtitle,
-      ...patch,
-      fontSize: clamp(
-        patch.fontSize ?? scene.subtitle.fontSize,
-        MIN_SUBTITLE_FONT_SIZE,
-        MAX_SUBTITLE_FONT_SIZE,
-      ),
-      backgroundOpacity: clamp(
-        patch.backgroundOpacity ?? scene.subtitle.backgroundOpacity,
-        0,
-        1,
-      ),
-    },
-  }));
-
-export const setSceneTransition = (
-  project: EditorProject,
-  kind: SceneKind,
-  patch: Partial<EditorScene['transitionOut']>,
-): EditorProject => {
-  const sectionMs = project.sections[sceneIndexOf(kind)]?.durationMs ?? 0;
-
-  return mapScene(project, kind, (scene) => ({
-    ...scene,
-    transitionOut: {
-      kind: patch.kind ?? scene.transitionOut.kind,
-      durationMs: clamp(
-        patch.durationMs ?? scene.transitionOut.durationMs,
-        MIN_TRANSITION_MS,
-        Math.min(MAX_TRANSITION_MS, Math.floor(sectionMs / 2)),
-      ),
-    },
-  }));
-};
-
-export const updateHookSettings = (
-  project: EditorProject,
-  patch: Partial<HookSceneSettings>,
-): EditorProject =>
-  mapScene(project, 'hook', (scene) => ({
-    ...scene,
-    hook: {...(scene.hook ?? DEFAULT_HOOK), ...patch},
-  }));
-
-export const updateCtaSettings = (
-  project: EditorProject,
-  patch: Partial<CtaSceneSettings>,
-): EditorProject =>
-  mapScene(project, 'cta', (scene) => {
-    const current = scene.cta ?? DEFAULT_CTA;
-
-    return {
-      ...scene,
-      cta: {
-        ...current,
-        ...patch,
-        backgroundBlur: clamp(
-          patch.backgroundBlur ?? current.backgroundBlur,
-          0,
-          MAX_CTA_BACKGROUND_BLUR,
-        ),
-        backgroundDim: clamp(patch.backgroundDim ?? current.backgroundDim, 0, 1),
-      },
-    };
-  });
-
 type CopyTextField =
   | 'hook'
   | 'hookSubcopy'
@@ -935,7 +595,8 @@ export const setSceneSubtitleText = (
 
 // ---------------------------------------------------------------------------
 // Day1 commands. Day1 Design Ref: §6.1 template switch, §6.3 inspector.
-// Each one no-ops on a foreign template, matching the three-scene commands above.
+// Each one no-ops on a foreign template, the same way the shared commands above
+// return the project unchanged when an edit does not apply.
 // ---------------------------------------------------------------------------
 
 /**
@@ -1071,17 +732,6 @@ const reconcileDay1Trims = (project: EditorProject): EditorProject => {
   return withDay1(project, {...settings, ...reconciled});
 };
 
-/** Day1 Design Ref: §3.1 — the Day1 view of the shared time axis. */
-const buildDay1Sections = (preset: DurationPreset): Sections => {
-  const durations = day1SectionDurations(preset);
-
-  return DAY1_SECTION_ORDER.map((id, index) => ({
-    id,
-    label: DAY1_SECTION_LABELS[id],
-    durationMs: durations[index] as number,
-  }));
-};
-
 /** day1-quad Design §6.1 — four panels then the end card. */
 const buildDay1QuadSections = (preset: DurationPreset): Sections => {
   const durations = day1QuadSectionDurations(preset);
@@ -1123,14 +773,6 @@ export const switchTemplate = (
 ): EditorProject => {
   if (project.templateSettings.template === template) {
     return project;
-  }
-
-  if (template === 'day1') {
-    return {
-      ...project,
-      sections: buildDay1Sections(project.durationPreset),
-      templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
-    };
   }
 
   if (template === 'day1-quad') {
@@ -1180,12 +822,8 @@ export const switchTemplate = (
 
   return {
     ...project,
-    sections: buildSections(project.durationPreset),
-    templateSettings: {
-      template: 'three-scene',
-      source: null,
-      scenes: buildScenes(),
-    },
+    sections: buildDay1Sections(project.durationPreset),
+    templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
   };
 };
 
@@ -2165,141 +1803,6 @@ export const parseProject = (input: unknown): Result<EditorProject> => {
 export const projectTotalFrames = (project: EditorProject) =>
   project.durationPreset * project.fps;
 
-export const scenesShorterThanSource = (project: EditorProject) =>
-  (threeSceneOf(project)?.scenes ?? []).filter((scene, index) =>
-    isTrimShorterThanScene(
-      scene.trim,
-      project.sections[index]?.durationMs ?? 0,
-    ),
-  );
-
-const NO_TRANSITION: TransitionRenderProps = {kind: 'cut', durationInFrames: 0};
-
-/**
- * Deep-frozen snapshot consumed by the Player and by an active render job, so
- * later edits cannot mutate a running job. Design Ref: §4.3.
- *
- * Playable URLs are session state, not project data, so the caller resolves them.
- */
-export const buildCompositionProps = (
-  project: EditorProject,
-  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
-): ThreeSceneProps => {
-  const settings = threeSceneOf(project);
-
-  // Day1 renders through its own composition and prop builder (module 3). The
-  // editor gates on the template before it gets here, so this is a guard, not
-  // a code path a user can reach.
-  if (!settings) {
-    return Object.freeze({
-      src: null,
-      scenes: Object.freeze([] as SceneRenderProps[]) as SceneRenderProps[],
-      audio: buildAudioRenderProps(project, [], resolveUrl),
-    });
-  }
-
-  const frames = allocateSceneFrames(
-    sectionDurationsOf(project.sections),
-    project.durationPreset,
-    project.fps,
-  );
-  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
-  const gameplay = settings.scenes[1];
-  const sourceUrl = resolveUrl(settings.source);
-  let cursor = 0;
-
-  const transitionOf = (index: number): TransitionRenderProps => {
-    const scene = settings.scenes[index];
-
-    // Only the two inner boundaries carry a transition.
-    if (!scene || index > 1 || scene.transitionOut.kind === 'cut') {
-      return NO_TRANSITION;
-    }
-
-    return {
-      kind: scene.transitionOut.kind,
-      durationInFrames: Math.max(
-        1,
-        msToFrames(scene.transitionOut.durationMs, project.fps),
-      ),
-    };
-  };
-
-  const scenes: SceneRenderProps[] = settings.scenes.map((scene, index) => {
-    const durationInFrames = frames[index] as number;
-    const trimBeforeFrames = msToFrames(scene.trim.inMs, project.fps);
-    const transform = activeTransform(scene, project.selectedRatio);
-    const subtitleText = copy.sceneSubtitles[scene.kind] ?? '';
-
-    const props: SceneRenderProps = {
-      kind: scene.kind,
-      fromFrame: cursor,
-      durationInFrames,
-      trimBeforeFrames,
-      trimAfterFrames: Math.max(
-        trimBeforeFrames + 1,
-        msToFrames(scene.trim.outMs, project.fps),
-      ),
-      scale: transform.scale,
-      x: transform.x,
-      y: transform.y,
-      subtitle: subtitleText
-        ? Object.freeze({
-            text: subtitleText,
-            emphasizedText:
-              scene.kind === 'hook' ? (scene.hook?.emphasizedText ?? '') : '',
-            style: Object.freeze({...scene.subtitle}),
-          })
-        : null,
-      transitionIn: index > 0 ? transitionOf(index - 1) : NO_TRANSITION,
-      transitionOut: transitionOf(index),
-      ...(scene.kind === 'hook' && scene.hook
-        ? {
-            hook: Object.freeze({
-              motionPreset: scene.hook.motionPreset,
-              headline: copy.hook,
-              subcopy: copy.hookSubcopy,
-              dimBackground: scene.hook.dimBackground,
-            }),
-          }
-        : {}),
-      ...(scene.kind === 'cta' && scene.cta
-        ? {
-            cta: Object.freeze({
-              text: copy.ctaText,
-              subcopy: copy.ctaSubcopy,
-              appIconUrl: resolveUrl(scene.cta.appIcon),
-              logoUrl: resolveUrl(scene.cta.logo),
-              storeBadgeUrl: resolveUrl(scene.cta.storeBadge),
-              mediaUrl: resolveUrl(scene.cta.media),
-              // Design Ref: §1.3 — with no dedicated CTA media the background is
-              // generated from the last gameplay frame.
-              freezeSourceFrame:
-                scene.cta.media || !scene.cta.useGeneratedBackground
-                  ? null
-                  : Math.max(
-                      0,
-                      msToFrames(gameplay.trim.outMs, project.fps) - 1,
-                    ),
-              backgroundBlur: scene.cta.backgroundBlur,
-              backgroundDim: scene.cta.backgroundDim,
-            }) as CtaRenderProps,
-          }
-        : {}),
-    };
-
-    cursor += durationInFrames;
-
-    return Object.freeze(props);
-  });
-
-  return Object.freeze({
-    src: settings.source ? sourceUrl : null,
-    scenes: Object.freeze(scenes) as SceneRenderProps[],
-    audio: buildAudioRenderProps(project, scenes, resolveUrl),
-  });
-};
-
 /**
  * Endcard-Video Design §3.3 — both treatments resolved side by side; `mode` is
  * what the composition branches on. The fps conversion happens only here, so
@@ -2335,14 +1838,14 @@ const buildEndCardProps = (
 };
 
 /**
- * Day1 counterpart of `buildCompositionProps`. Day1 Design Ref: §2.2 — the split
+ * Day1 Design Ref: §2.2 — the split
  * geometry, the section frame layout, and the resolved URLs are all baked in here
  * so the composition is presentational and the Player and the render job consume
  * one identical snapshot.
  *
- * Returns null for a foreign template rather than an empty snapshot: unlike
- * three-scene there is no meaningful Day1 frame to draw without a payload, and a
- * nullable return makes the caller's template check the compiler's problem.
+ * Returns null for a foreign template: there is no meaningful Day1 frame to draw
+ * without a payload, and a nullable return makes the caller's template check the
+ * compiler's problem.
  */
 export const buildDay1Props = (
   project: EditorProject,
@@ -2531,8 +2034,8 @@ export const buildKvLoopProps = (
   const copy = project.copy[project.selectedLocale] as LocalizedCopy;
 
   // A crossfade lives inside the segment it fades into, so half of the shortest
-  // segment is the ceiling — the same "never longer than half its own section"
-  // rule the three-scene transitions follow.
+  // segment is the ceiling — a transition is never longer than half its own
+  // section.
   const shortestFrames = segments.reduce(
     (shortest, segment) => Math.min(shortest, segment.durationInFrames),
     Number.POSITIVE_INFINITY,
@@ -2605,16 +2108,15 @@ export const buildKvLoopProps = (
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
  *
- * Plan SC1: a Day1 job must reach `Day1Composition`, never a three-scene snapshot,
- * and key-visual-looping SC1 asks the same of a looping job.
+ * Plan SC1: a Day1 job must reach `Day1Composition`, never another template's
+ * snapshot, and key-visual-looping SC1 asks the same of a looping job.
  */
 export const buildEditorSnapshot = (
   project: EditorProject,
   resolveUrl: (reference: MediaReference | null | undefined) => string | null,
 ): EditorSnapshot => {
-  // Each builder returns non-null exactly for its own payload, and
-  // `buildCompositionProps` already degrades a foreign template to an empty
-  // three-scene snapshot. So this stays total without a cast.
+  // Each builder returns non-null exactly for its own payload, and the schema
+  // admits no fourth template, so this stays total without a cast.
   const day1Props = buildDay1Props(project, resolveUrl);
 
   if (day1Props) {
@@ -2627,17 +2129,29 @@ export const buildEditorSnapshot = (
     return {template: 'day1-quad', props: day1QuadProps};
   }
 
-  const kvLoopProps = buildKvLoopProps(project, resolveUrl);
-
-  return kvLoopProps
-    ? {template: 'kv-loop', props: kvLoopProps}
-    : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
+  return {
+    template: 'kv-loop',
+    props: buildKvLoopProps(project, resolveUrl) as KvLoopProps,
+  };
 };
 
-/** Design Ref: §3.3 — original, BGM, and per-scene narration with ducking. */
+/**
+ * A section a narration track can be placed over. Structural rather than tied to
+ * one template's render contract, so a template that wants narration hands in
+ * its own sections. Every current template passes none — Day1 Plan §2.2 and
+ * key-visual-looping Plan L9 both keep narration out — so their mixes are BGM
+ * and the live panel's own audio.
+ */
+interface NarrationSection {
+  kind: SceneKind;
+  fromFrame: number;
+  durationInFrames: number;
+}
+
+/** Design Ref: §3.3 — original, BGM, and per-section narration with ducking. */
 const buildAudioRenderProps = (
   project: EditorProject,
-  scenes: readonly SceneRenderProps[],
+  scenes: readonly NarrationSection[],
   resolveUrl: (reference: MediaReference | null | undefined) => string | null,
 ): AudioRenderProps => {
   const {audio, fps} = project;

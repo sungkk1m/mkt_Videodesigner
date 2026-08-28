@@ -80,7 +80,7 @@ describe('expandRenderJobs', () => {
 
     expect(jobs[0]?.outputName).toBe(
       // day1-quad Design §4.2 — the template segment sits after the prefix.
-      '여름-이벤트_3scene_ja_16x9_15s_30fps.mp4',
+      '여름-이벤트_day1_ja_16x9_15s_30fps.mp4',
     );
     expect(jobs[0]?.profile).toBe('fast');
   });

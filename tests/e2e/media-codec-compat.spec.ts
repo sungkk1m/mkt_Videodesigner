@@ -44,11 +44,19 @@ test.describe('media codec compatibility', () => {
   ]) {
     test(`accepts and renders a ${label} source end to end`, async ({page}) => {
       await page.goto('/');
-      await page.getByTestId('source-input').setInputFiles(fixture(file));
+      // The default template is Day1, so the codec under test goes into panel A
+      // and a known-good H.264 source fills panel B: what is being measured is
+      // whether the odd codec decodes and reaches the encoder, not the layout.
+      await page.getByTestId('day1-panel-a-input').setInputFiles(fixture(file));
+      await page
+        .getByTestId('day1-panel-b-input')
+        .setInputFiles(fixture('gameplay-sample.mp4'));
 
-      await expect(page.getByTestId('source-metadata')).toContainText(file, {
-        timeout: 30_000,
-      });
+      await expect(page.getByTestId('day1-panel-a-metadata')).toContainText(
+        file,
+        {timeout: 30_000},
+      );
+      await expect(page.getByTestId('day1-panels-blocker')).toHaveCount(0);
 
       await page.getByTestId('ratio-1:1').click();
 
@@ -88,7 +96,7 @@ test.describe('media codec compatibility', () => {
   test('names the codec when rejecting an undecodable source', async ({page}) => {
     await page.goto('/');
     await page
-      .getByTestId('source-input')
+      .getByTestId('day1-panel-a-input')
       .setInputFiles(fixture('codec-mp4v.mp4'));
 
     const error = page.getByText(/디코딩하지 못합니다|열지 못했습니다/);
@@ -101,19 +109,11 @@ test.describe('media codec compatibility', () => {
     await expect(error).not.toContainText('영상 트랙이 있는 파일');
   });
 
-  // FR-M06. The audio panel needs a source loaded before it opens.
+  // FR-M06.
   test('names the codec when rejecting an undecodable audio file', async ({
     page,
   }) => {
     await page.goto('/');
-    await page
-      .getByTestId('source-input')
-      .setInputFiles(fixture('gameplay-sample.mp4'));
-    await expect(page.getByTestId('source-metadata')).toContainText(
-      'gameplay-sample.mp4',
-      {timeout: 30_000},
-    );
-
     await page.getByTestId('tab-audio').click();
     await page
       .getByTestId('audio-bgm-input')

@@ -1,16 +1,14 @@
 // Day1 Design Ref: §3.6 — every stored or imported document passes through here
-// before it becomes an `EditorProject`, so v1 records keep opening after the
-// v2 split into `sections` + `templateSettings`.
+// before it becomes an `EditorProject`.
 //
-// Plan SC3: existing three-scene projects must open and render with no
-// regression. Plan risk 1: a failed migration must never destroy the original,
-// so this module only ever reads — the caller decides what to do with a failure.
+// Plan risk 1: a failed migration must never destroy the original, so this
+// module only ever reads — the caller decides what to do with a failure.
 import {
   createAppError,
   fail,
   type Result,
 } from '../../shared/errors/appError';
-import {PROJECT_SCHEMA_VERSION, SCENE_LABELS, type EditorProject} from './types';
+import {PROJECT_SCHEMA_VERSION, type EditorProject} from './types';
 import {parseProject} from './project';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -29,64 +27,49 @@ const unsupported = (schemaVersion: unknown) =>
   );
 
 /**
- * Splits a v1 document into the v2 shape. Field values are copied verbatim —
- * `durationMs` moves from each scene to its section and nothing else changes,
- * which is what makes the round trip lossless.
+ * The three-scene template was removed, so a document that carries one can no
+ * longer be opened. It fails here with its own message rather than falling into
+ * `parseProject`, where the discriminated union would report an unreadable list
+ * of per-field issues for a document that is not corrupt at all.
  *
- * Best-effort by design: anything malformed is passed through untouched so the
- * v2 schema produces the real diagnostic instead of this function throwing.
+ * v1 predates the `sections` + `templateSettings` split and only ever described
+ * a three-scene project, so it takes the same exit.
  */
-const upgradeV1 = (input: Record<string, unknown>): Record<string, unknown> => {
-  const {scenes, source, schemaVersion: _version, ...rest} = input;
-  const list = Array.isArray(scenes) ? scenes : [];
+const threeSceneRemoved = (schemaVersion: unknown) =>
+  fail<EditorProject>(
+    createAppError(
+      'SCHEMA_UNSUPPORTED',
+      '3장면 템플릿은 더 이상 지원하지 않습니다. 이 프로젝트는 열 수 없으며, 원본은 그대로 두었습니다.',
+      {
+        details: {schemaVersion, template: 'three-scene'},
+        action: {label: '문제 항목 보기', target: 'diagnostics'},
+      },
+    ),
+  );
 
-  return {
-    ...rest,
-    schemaVersion: PROJECT_SCHEMA_VERSION,
-    sections: list.map((entry) => {
-      const scene = isRecord(entry) ? entry : {};
-      const kind = scene.kind;
+const isThreeScene = (input: Record<string, unknown>) => {
+  const settings = input.templateSettings;
 
-      return {
-        id: kind,
-        label:
-          typeof kind === 'string' && kind in SCENE_LABELS
-            ? SCENE_LABELS[kind as keyof typeof SCENE_LABELS]
-            : kind,
-        durationMs: scene.durationMs,
-      };
-    }),
-    templateSettings: {
-      template: 'three-scene',
-      source: source ?? null,
-      scenes: list.map((entry) => {
-        if (!isRecord(entry)) {
-          return entry;
-        }
-
-        const {durationMs: _moved, ...settings} = entry;
-
-        return settings;
-      }),
-    },
-  };
+  return isRecord(settings) && settings.template === 'three-scene';
 };
 
 /**
- * Reads a project of any supported schema version. v1 is upgraded in memory
- * first; v2 is validated as-is. Anything else fails with `SCHEMA_UNSUPPORTED`.
+ * Reads a project of any supported schema version. Anything else — an older
+ * version, or a three-scene payload — fails without touching the input.
  */
 export const migrateProject = (input: unknown): Result<EditorProject> => {
   if (!isRecord(input)) {
     return unsupported(undefined);
   }
 
-  if (input.schemaVersion === PROJECT_SCHEMA_VERSION) {
-    return parseProject(input);
+  if (input.schemaVersion === 1) {
+    return threeSceneRemoved(1);
   }
 
-  if (input.schemaVersion === 1) {
-    return parseProject(upgradeV1(input));
+  if (input.schemaVersion === PROJECT_SCHEMA_VERSION) {
+    return isThreeScene(input)
+      ? threeSceneRemoved(PROJECT_SCHEMA_VERSION)
+      : parseProject(input);
   }
 
   return unsupported(input.schemaVersion);

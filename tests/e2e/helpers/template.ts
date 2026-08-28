@@ -20,3 +20,17 @@ export const switchTemplate = async (page: Page, kind: TemplateKind) => {
   await chooseTemplate(page, kind);
   await page.getByTestId('template-switch-confirm').click();
 };
+
+/**
+ * Selects a template only when the project is not already on it. A new project
+ * opens on Day1, and the selector fires no change event for the value it is
+ * already showing — so an unconditional `switchTemplate(page, 'day1')` waits
+ * forever for a dialog that will never open.
+ */
+export const ensureTemplate = async (page: Page, kind: TemplateKind) => {
+  const current = await page.getByTestId('template-selector').inputValue();
+
+  if (current !== kind) {
+    await switchTemplate(page, kind);
+  }
+};

@@ -1,6 +1,6 @@
-// Day1 Design Ref: §3.2 — `scenes` and `source` moved under `templateSettings`
-// in schema v2. Tests that only ever build three-scene projects narrow through
-// these helpers instead of repeating the discriminant check.
+// Day1 Design Ref: §3.2 — the payload lives under `templateSettings`. Tests that
+// only ever build one template's project narrow through these helpers instead of
+// repeating the discriminant check.
 import {createProject, switchTemplate} from '../../domain/editor/project';
 import {
   type Day1QuadSettings,
@@ -8,14 +8,7 @@ import {
   type DurationPreset,
   type EditorProject,
   type KvLoopSettings,
-  type ThreeSceneSettings,
 } from '../../domain/editor/types';
-
-export const scenesOf = (project: EditorProject): ThreeSceneSettings['scenes'] =>
-  (project.templateSettings as ThreeSceneSettings).scenes;
-
-export const sourceOf = (project: EditorProject): ThreeSceneSettings['source'] =>
-  (project.templateSettings as ThreeSceneSettings).source;
 
 /** Section durations, which schema v2 moved off the individual scenes. */
 export const sectionDurations = (project: EditorProject): number[] =>

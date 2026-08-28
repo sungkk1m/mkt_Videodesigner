@@ -4,18 +4,12 @@
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test} from '@playwright/test';
+
+import {uploadDay1Panels} from './helpers/day1Source';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
 const longNarration = resolve(projectRoot, 'tests/fixtures/narration-long.wav');
-
-const uploadFixture = async (page: Page) => {
-  await page.getByTestId('source-input').setInputFiles(fixturePath);
-  await expect(page.getByTestId('source-metadata')).toContainText(
-    'gameplay-sample.mp4',
-  );
-};
 
 test.describe('module-7 batch render', () => {
   test.setTimeout(15 * 60 * 1000);
@@ -24,7 +18,7 @@ test.describe('module-7 batch render', () => {
     page,
   }) => {
     await page.goto('/');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
     await page.getByTestId('open-batch').click();
 
     // Standard allows both frame rates; new projects default to 30fps
@@ -71,11 +65,11 @@ test.describe('module-7 batch render', () => {
 
   test('blocks the batch when preflight fails', async ({page}) => {
     await page.goto('/');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
 
-    // 4s narration in the 2s Hook scene.
+    // 4s narration in the 3s end-card section.
     await page.getByTestId('tab-audio').click();
-    await page.getByTestId('narration-upload-hook').setInputFiles(longNarration);
+    await page.getByTestId('narration-upload-cta').setInputFiles(longNarration);
 
     await page.getByTestId('open-batch').click();
     await page.getByTestId('batch-start').click();
@@ -90,7 +84,7 @@ test.describe('module-7 batch render', () => {
     page,
   }) => {
     await page.goto('/');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
     await page.getByLabel('프로젝트 이름').fill('배치-테스트');
     await page.getByTestId('open-batch').click();
 
@@ -118,12 +112,12 @@ test.describe('module-7 batch render', () => {
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toContainText('완료');
     await expect(rows.nth(1)).toContainText('완료');
-    await expect(rows.nth(0)).toContainText('배치-테스트_3scene_ko_9x16_15s_30fps.mp4');
-    await expect(rows.nth(1)).toContainText('배치-테스트_3scene_ko_1x1_15s_30fps.mp4');
+    await expect(rows.nth(0)).toContainText('배치-테스트_day1_ko_9x16_15s_30fps.mp4');
+    await expect(rows.nth(1)).toContainText('배치-테스트_day1_ko_1x1_15s_30fps.mp4');
 
     expect(downloads).toEqual([
-      '배치-테스트_3scene_ko_9x16_15s_30fps.mp4',
-      '배치-테스트_3scene_ko_1x1_15s_30fps.mp4',
+      '배치-테스트_day1_ko_9x16_15s_30fps.mp4',
+      '배치-테스트_day1_ko_1x1_15s_30fps.mp4',
     ]);
   });
 });

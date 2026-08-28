@@ -34,9 +34,14 @@ export interface CopyPanelProps {
   ) => void;
   onSubtitle: (kind: SceneKind, value: string) => void;
   /**
-   * key-visual-looping FR-L15 — present only for the looping template, where
-   * every other field on this panel is a three-scene concept. Its presence is
-   * what turns the panel into the single disclaimer field.
+   * key-visual-looping FR-L15 — its presence turns the panel into the single
+   * disclaimer field.
+   *
+   * The looping template is the only one that opens the copy tab today, so the
+   * other arm is currently unreachable. It is kept because the fields it edits
+   * are still live project data: `sceneSubtitles` is the text the narration
+   * generator reads, and a template that opens the copy tab gets them back with
+   * no work.
    */
   kvLoop?: {onDisclaimer: (value: string) => void};
 }

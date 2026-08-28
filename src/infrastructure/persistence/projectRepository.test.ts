@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {applySourceToAllScenes, createProject} from '../../domain/editor/project';
+import {createProject, setDay1PanelSource} from '../../domain/editor/project';
 import {testMediaReference} from '../../test/fixtures/media';
 
 const store = new Map<string, unknown>();
@@ -30,7 +30,7 @@ const {createProjectRepository, loadLatestProject} = await import(
 const repository = createProjectRepository();
 
 const projectAt = (updatedAt: string, name: string) => ({
-  ...applySourceToAllScenes(createProject(15), testMediaReference()),
+  ...setDay1PanelSource(createProject(15), 'panelA', testMediaReference()),
   id: `project_${name}`,
   name,
   updatedAt,
@@ -81,7 +81,9 @@ describe('projectRepository', () => {
         'newer',
         'older',
       ]);
-      expect(result.value[0]?.sourceName).toBe('gameplay.mp4');
+      // No template names a single source for the whole project any more, so
+      // the summary carries none. See `toRecord`.
+      expect(result.value[0]?.sourceName).toBeNull();
     }
   });
 

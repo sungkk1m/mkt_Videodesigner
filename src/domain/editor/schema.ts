@@ -1,9 +1,9 @@
 // Design Ref: §10.2 — Zod schemas are the runtime source of truth for project
 // data and the inferred types are what the rest of the app consumes.
 //
-// Scope note: this covers modules 1-4 (persisted source reference, three scenes,
-// four locales, three ratios, subtitles, transitions, Hook motion, CTA assets).
-// Audio mix, narration, and Hook analysis join the schema with modules 5-6.
+// Scope note: this covers the persisted media references, the shared section
+// axis, four locales, three ratios, and the per-template payloads. Audio mix and
+// narration join the schema with modules 5-6.
 import {z} from 'zod';
 
 import {mediaReferenceSchema} from '../media/reference';
@@ -17,7 +17,6 @@ import {
   DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DURATION_PRESETS,
-  HOOK_MOTION_PRESETS,
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
@@ -26,7 +25,6 @@ import {
   LOCALES,
   MAX_BATCH_JOBS,
   MAX_COPY_LENGTH,
-  MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
   MAX_LABEL_GLOW_PX,
@@ -67,7 +65,6 @@ export const templateKindSchema = z.enum(TEMPLATE_KINDS);
 export const localeSchema = z.enum(LOCALES);
 export const aspectRatioSchema = z.enum(ASPECT_RATIOS);
 export const transitionKindSchema = z.enum(TRANSITION_KINDS);
-export const hookMotionPresetSchema = z.enum(HOOK_MOTION_PRESETS);
 
 export const durationPresetSchema = z.union([
   z.literal(DURATION_PRESETS[0]),
@@ -120,23 +117,6 @@ export const subtitleStyleSchema = z.object({
 export const sceneTransitionSchema = z.object({
   kind: transitionKindSchema,
   durationMs: z.number().min(MIN_TRANSITION_MS).max(MAX_TRANSITION_MS),
-});
-
-export const hookSceneSettingsSchema = z.object({
-  motionPreset: hookMotionPresetSchema,
-  emphasizedText: copyTextSchema,
-  dimBackground: z.boolean(),
-});
-
-export const ctaSceneSettingsSchema = z.object({
-  /** Dedicated CTA footage; null falls back to the last gameplay frame. */
-  media: mediaReferenceSchema.nullable(),
-  appIcon: mediaReferenceSchema.nullable(),
-  logo: mediaReferenceSchema.nullable(),
-  storeBadge: mediaReferenceSchema.nullable(),
-  useGeneratedBackground: z.boolean(),
-  backgroundBlur: z.number().min(0).max(MAX_CTA_BACKGROUND_BLUR),
-  backgroundDim: z.number().min(0).max(1),
 });
 
 /**
@@ -197,8 +177,8 @@ export const localizedCopySchema = z.object({
   ctaText: copyTextSchema,
   ctaSubcopy: copyTextSchema,
   /**
-   * Day1 panel labels. Day1 Design Ref: §3.3 — optional so a v1 copy block
-   * parses untouched and three-scene projects never carry the field.
+   * Day1 panel labels. Day1 Design Ref: §3.3 — optional so a copy block from a
+   * template that has no panel labels parses untouched.
    */
   day1Labels: z
     .object({
@@ -220,23 +200,9 @@ export const localizedCopySchema = z.object({
   kvLoopDisclaimer: copyTextSchema.optional(),
 });
 
-/**
- * Day1 Design Ref: §3.2 — per-scene settings without `durationMs`, which now
- * lives on the shared `sections` axis so the two never drift apart.
- */
-export const sceneSettingsSchema = z.object({
-  kind: sceneKindSchema,
-  trim: mediaTrimSchema,
-  transforms: ratioTransformsSchema,
-  subtitle: subtitleStyleSchema,
-  transitionOut: sceneTransitionSchema,
-  hook: hookSceneSettingsSchema.optional(),
-  cta: ctaSceneSettingsSchema.optional(),
-});
-
 /** Day1 Design Ref: §3.1 — the time axis every template shares. */
 export const sectionSchema = z.object({
-  /** `hook`|`gameplay`|`cta` for three-scene, `panel-a`|`panel-b`|`endcard` for Day1. */
+  /** `panel-a`|`panel-b`|`endcard` for Day1, `kv-{n}` for the looping template. */
   id: z.string().min(1),
   /** Shown on the timeline clip. */
   label: z.string().min(1),
@@ -253,16 +219,6 @@ export const sectionsSchema = z
   .array(sectionSchema)
   .min(MIN_SECTION_COUNT)
   .max(MAX_SECTION_COUNT);
-
-export const threeSceneSettingsSchema = z.object({
-  template: z.literal('three-scene'),
-  source: mediaReferenceSchema.nullable(),
-  scenes: z.tuple([
-    sceneSettingsSchema,
-    sceneSettingsSchema,
-    sceneSettingsSchema,
-  ]),
-});
 
 /** Day1 Design Ref: §3.2 — one half of the split frame. */
 export const day1PanelSchema = z.object({
@@ -539,7 +495,7 @@ export const kvLoopSettingsSchema = z.object({
   roundTrip: z.boolean().default(false),
   /**
    * kv-loop-reference-motion R-3 — zero is a hard cut. The floor is lowered
-   * here only; MIN_TRANSITION_MS still governs the three-scene template.
+   * here only; MIN_TRANSITION_MS still governs `sceneTransitionSchema`.
    */
   transitionMs: z.number().min(0).max(MAX_TRANSITION_MS),
   /** Plan L5 — every field here may be empty and the render still runs. */
@@ -569,7 +525,6 @@ export const kvLoopSettingsSchema = z.object({
 });
 
 export const templateSettingsSchema = z.discriminatedUnion('template', [
-  threeSceneSettingsSchema,
   day1SettingsSchema,
   day1QuadSettingsSchema,
   kvLoopSettingsSchema,
@@ -594,13 +549,11 @@ export const expectedSectionIds = (
   settings: TemplateSettings,
   sectionCount: number,
 ): readonly string[] =>
-  settings.template === 'three-scene'
-    ? SCENE_ORDER
-    : settings.template === 'day1'
-      ? DAY1_SECTION_ORDER
-      : settings.template === 'day1-quad'
-        ? DAY1_QUAD_SECTION_ORDER
-        : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
+  settings.template === 'day1'
+    ? DAY1_SECTION_ORDER
+    : settings.template === 'day1-quad'
+      ? DAY1_QUAD_SECTION_ORDER
+      : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -620,70 +573,6 @@ const refineTrimInSource = (
       message: 'Trim out must stay inside the source duration.',
     });
   }
-};
-
-const refineThreeScene = (
-  project: SectionedProject,
-  settings: z.infer<typeof threeSceneSettingsSchema>,
-  context: z.RefinementCtx,
-) => {
-  const base: PropertyKey[] = ['templateSettings', 'scenes'];
-
-  settings.scenes.forEach((scene, index) => {
-    if (scene.kind !== SCENE_ORDER[index]) {
-      context.addIssue({
-        code: 'custom',
-        path: [...base, index, 'kind'],
-        message: `Scene ${index} must be ${SCENE_ORDER[index]}.`,
-      });
-    }
-  });
-
-  if (!settings.scenes[0].hook) {
-    context.addIssue({
-      code: 'custom',
-      path: [...base, 0, 'hook'],
-      message: 'The Hook scene must carry Hook settings.',
-    });
-  }
-
-  if (!settings.scenes[2].cta) {
-    context.addIssue({
-      code: 'custom',
-      path: [...base, 2, 'cta'],
-      message: 'The CTA scene must carry CTA settings.',
-    });
-  }
-
-  if (settings.source && !settings.source.durationMs) {
-    context.addIssue({
-      code: 'custom',
-      path: ['templateSettings', 'source', 'durationMs'],
-      message: 'The project source must be a video with a duration.',
-    });
-  }
-
-  settings.scenes.forEach((scene, index) => {
-    refineTrimInSource(
-      scene.trim,
-      settings.source,
-      [...base, index, 'trim'],
-      context,
-    );
-
-    // Design Ref: §3.5 — a transition may not exceed half of its own section.
-    if (scene.transitionOut.kind !== 'cut') {
-      const limit = (project.sections[index]?.durationMs ?? 0) / 2;
-
-      if (scene.transitionOut.durationMs > limit) {
-        context.addIssue({
-          code: 'custom',
-          path: [...base, index, 'transitionOut', 'durationMs'],
-          message: `Transition must not exceed half of the scene (${limit}ms).`,
-        });
-      }
-    }
-  });
 };
 
 /**
@@ -890,9 +779,7 @@ export const editorProjectSchema = z
       });
     }
 
-    if (settings.template === 'three-scene') {
-      refineThreeScene(project, settings, context);
-    } else if (settings.template === 'day1') {
+    if (settings.template === 'day1') {
       refineDay1(project, settings, context);
     } else if (settings.template === 'day1-quad') {
       refineDay1Quad(project, settings, context);
@@ -927,7 +814,6 @@ export type TemplateKind = z.infer<typeof templateKindSchema>;
 export type Locale = z.infer<typeof localeSchema>;
 export type AspectRatio = z.infer<typeof aspectRatioSchema>;
 export type TransitionKind = z.infer<typeof transitionKindSchema>;
-export type HookMotionPreset = z.infer<typeof hookMotionPresetSchema>;
 export type DurationPreset = z.infer<typeof durationPresetSchema>;
 export type MediaTrim = z.infer<typeof mediaTrimSchema>;
 export type MediaTransform = z.infer<typeof mediaTransformSchema>;
@@ -935,19 +821,15 @@ export type MediaFit = MediaTransform['fit'];
 export type RatioTransforms = z.infer<typeof ratioTransformsSchema>;
 export type SubtitleStyle = z.infer<typeof subtitleStyleSchema>;
 export type SceneTransition = z.infer<typeof sceneTransitionSchema>;
-export type HookSceneSettings = z.infer<typeof hookSceneSettingsSchema>;
-export type CtaSceneSettings = z.infer<typeof ctaSceneSettingsSchema>;
 export type LocalizedCopy = z.infer<typeof localizedCopySchema>;
 export type AudioTrack = z.infer<typeof audioTrackSchema>;
 export type NarrationTrack = z.infer<typeof narrationTrackSchema>;
 export type AudioMix = z.infer<typeof audioMixSchema>;
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
-export type EditorScene = z.infer<typeof sceneSettingsSchema>;
 export type EditorProject = z.infer<typeof editorProjectSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type Sections = z.infer<typeof sectionsSchema>;
 export type TemplateSettings = z.infer<typeof templateSettingsSchema>;
-export type ThreeSceneSettings = z.infer<typeof threeSceneSettingsSchema>;
 export type Day1Settings = z.infer<typeof day1SettingsSchema>;
 export type Day1QuadSettings = z.infer<typeof day1QuadSettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
@@ -960,4 +842,3 @@ export type KvEffectRegion = z.infer<typeof kvEffectRegionSchema>;
 export type KvParticlesEffect = Extract<KvEffect, {kind: 'particles'}>;
 export type KvGlowEffect = Extract<KvEffect, {kind: 'glow'}>;
 export type KvMotionPreset = (typeof KV_MOTION_PRESETS)[number];
-export type EditorScenes = ThreeSceneSettings['scenes'];

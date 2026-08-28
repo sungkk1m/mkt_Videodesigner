@@ -29,13 +29,8 @@ export const durationPresetsForTemplate = (
 export const MIN_SECTION_COUNT = 2;
 export const MAX_SECTION_COUNT = 8;
 
-export const TEMPLATE_KINDS = [
-  'three-scene',
-  'day1',
-  'day1-quad',
-  'kv-loop',
-] as const;
-export const DEFAULT_TEMPLATE = 'three-scene';
+export const TEMPLATE_KINDS = ['day1', 'day1-quad', 'kv-loop'] as const;
+export const DEFAULT_TEMPLATE = 'day1';
 
 /** Day1 Design Ref: §1.2 — `[panel A active, panel B active, end card]`. */
 export const DAY1_SECTION_ORDER = ['panel-a', 'panel-b', 'endcard'] as const;
@@ -154,7 +149,6 @@ export const TRANSITION_KINDS = ['cut', 'fade', 'zoom'] as const;
  * a Day1 panel loses half its height under `cover`, and that is the way out.
  */
 export const MEDIA_FITS = ['cover', 'contain'] as const;
-export const HOOK_MOTION_PRESETS = ['impact', 'caption', 'focus'] as const;
 export const SUBTITLE_POSITIONS = ['top', 'center', 'bottom'] as const;
 export const SUBTITLE_ALIGNMENTS = ['left', 'center', 'right'] as const;
 

@@ -7,15 +7,9 @@ import {fileURLToPath} from 'node:url';
 
 import {expect, test, type Page} from '@playwright/test';
 
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const fixturePath = resolve(projectRoot, 'tests/fixtures/gameplay-sample.mp4');
+import {PANEL_A_SOURCE, uploadDay1Panels} from './helpers/day1Source';
 
-const uploadFixture = async (page: Page) => {
-  await page.getByTestId('source-input').setInputFiles(fixturePath);
-  await expect(page.getByTestId('source-metadata')).toContainText(
-    'gameplay-sample.mp4',
-  );
-};
+const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 const expectSaved = async (page: Page) => {
   await expect(page.getByTestId('editor-save-state')).toHaveText('저장됨', {
@@ -31,7 +25,7 @@ test.describe('module-3 persistence and recovery', () => {
   }) => {
     await page.goto('/');
     await page.getByLabel('프로젝트 이름').fill('여름-이벤트');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
     await page.getByRole('button', {name: '30초'}).click();
     await expectSaved(page);
 
@@ -39,31 +33,32 @@ test.describe('module-3 persistence and recovery', () => {
 
     // The project comes back from IndexedDB.
     await expect(page.getByLabel('프로젝트 이름')).toHaveValue('여름-이벤트');
-    await expect(page.getByTestId('timeline-duration-gameplay')).toHaveText(
-      '24.0초',
+    await expect(page.getByTestId('timeline-duration-panel-a')).toHaveText(
+      '13.5초',
     );
 
     // A file chosen through <input type="file"> leaves no reusable handle, so the
     // source must be relinked before the render button becomes available.
-    await expect(page.getByTestId('source-repair')).toBeVisible();
-    await expect(page.getByTestId('source-repair')).toContainText(
+    await expect(page.getByTestId('day1-panel-a-repair')).toBeVisible();
+    await expect(page.getByTestId('day1-panel-a-repair')).toContainText(
       'gameplay-sample.mp4',
     );
     await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeDisabled();
 
-    await page.getByTestId('relink-input').setInputFiles(fixturePath);
+    await page
+      .getByTestId('day1-panel-a-relink')
+      .setInputFiles(PANEL_A_SOURCE);
 
-    await expect(page.getByTestId('source-repair')).toBeHidden();
-    await expect(page.getByTestId('source-metadata')).toContainText(
+    await expect(page.getByTestId('day1-panel-a-repair')).toBeHidden();
+    await expect(page.getByTestId('day1-panel-a-metadata')).toContainText(
       '디코딩 확인됨',
     );
     // An exact fingerprint match is accepted without a warning.
     await expect(page.getByTestId('relink-verdict')).toBeHidden();
-    await expect(page.getByRole('button', {name: 'MP4 렌더'})).toBeEnabled();
 
     // The relink must not reset the edit that was restored.
-    await expect(page.getByTestId('timeline-duration-gameplay')).toHaveText(
-      '24.0초',
+    await expect(page.getByTestId('timeline-duration-panel-a')).toHaveText(
+      '13.5초',
     );
   });
 
@@ -72,7 +67,7 @@ test.describe('module-3 persistence and recovery', () => {
   }) => {
     await page.goto('/');
     await page.getByLabel('프로젝트 이름').fill('내보내기-테스트');
-    await uploadFixture(page);
+    await uploadDay1Panels(page);
     await expectSaved(page);
 
     await page.getByTestId('project-menu-toggle').click();
@@ -102,44 +97,26 @@ test.describe('module-3 persistence and recovery', () => {
       '내보내기-테스트',
     );
     // Imported media never resolves on its own; relink owns that.
-    await expect(page.getByTestId('source-repair')).toBeVisible();
+    await expect(page.getByTestId('day1-panel-a-repair')).toBeVisible();
   });
 
-  // Plan SC3 / Day1 Design Ref: §3.6 — a project exported before the v2 schema
-  // split must still open, with every field intact, through the real import UI.
-  test('imports a v1 project export and upgrades it to v2', async ({page}) => {
+  // The three-scene template was removed, so the documents that carried one no
+  // longer open. The import has to say that rather than reporting a schema
+  // dump, and it must leave the current project alone.
+  test('rejects a three-scene project export with a message that says why', async ({
+    page,
+  }) => {
     await page.goto('/');
+    await page.getByLabel('프로젝트 이름').fill('그대로-유지');
     await page.getByTestId('project-menu-toggle').click();
     await page
       .getByTestId('project-import-input')
       .setInputFiles(resolve(projectRoot, 'tests/fixtures/project-v1.json'));
 
-    await expect(page.getByLabel('프로젝트 이름')).toHaveValue('v1-regression');
-
-    // Section durations survived the move off the individual scenes.
-    await expect(page.getByTestId('timeline-duration-hook')).toHaveText('2.5초');
-    await expect(page.getByTestId('timeline-duration-gameplay')).toHaveText(
-      '9.5초',
+    await expect(page.getByTestId('project-menu-error')).toContainText(
+      '3장면 템플릿은 더 이상 지원하지 않습니다',
     );
-    await expect(page.getByTestId('timeline-duration-cta')).toHaveText('3.0초');
-
-    // Per-scene settings came across under templateSettings.
-    await expect(page.getByTestId('trim-in')).toHaveValue('1.00');
-    await expect(page.getByTestId('subtitle-position')).toHaveValue('top');
-
-    // The source is metadata only after an import, so relink still owns it.
-    await expect(page.getByTestId('source-repair')).toBeVisible();
-
-    // Four-locale copy is untouched by the split.
-    await page.getByTestId('tab-copy').click();
-    await expect(page.getByTestId('copy-hook')).toHaveValue('3일 만에 최강자');
-    await expect(page.getByTestId('copy-subtitle-gameplay')).toHaveValue(
-      '이렇게 성장했습니다',
-    );
-    await page.getByTestId('locale-en').click();
-    await expect(page.getByTestId('copy-hook')).toHaveValue(
-      'Strongest in 3 days',
-    );
+    await expect(page.getByLabel('프로젝트 이름')).toHaveValue('그대로-유지');
   });
 
   test('rejects a JSON file that is not a project export', async ({page}) => {

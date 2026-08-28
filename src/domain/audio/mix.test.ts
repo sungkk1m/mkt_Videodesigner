@@ -1,8 +1,7 @@
 import {describe, expect, it} from 'vitest';
 
 import {
-  applySourceToAllScenes,
-  buildCompositionProps,
+  buildDay1Props,
   createProject,
   setSelectedLocale,
 } from '../editor/project';
@@ -20,7 +19,10 @@ import {
   updateBgm,
 } from './mix';
 
-const base = () => applySourceToAllScenes(createProject(15), testMediaReference());
+// The audio mix is template-agnostic, so the default new project stands in for
+// any of them. At the 15s preset its first section is 6s long.
+const base = () => createProject(15);
+const FIRST_SECTION_MS = 6000;
 
 const narration = (durationMs: number, id = 'media_narration'): NarrationTrack => ({
   mode: 'uploaded',
@@ -91,23 +93,27 @@ describe('audio mix commands', () => {
 });
 
 describe('narrationBlockers', () => {
-  it('reports narration longer than its scene', () => {
-    // The Hook scene is 2s at the 15s preset.
-    const project = setNarration(base(), 'ko', 'hook', narration(2600));
+  it('reports narration longer than its section', () => {
+    const project = setNarration(base(), 'ko', 'hook', narration(6600));
     const blockers = narrationBlockers(project);
 
     expect(blockers).toEqual([
-      {locale: 'ko', kind: 'hook', narrationMs: 2600, sceneMs: 2000},
+      {
+        locale: 'ko',
+        kind: 'hook',
+        narrationMs: 6600,
+        sceneMs: FIRST_SECTION_MS,
+      },
     ]);
   });
 
   it('accepts narration that fits', () => {
-    expect(narrationBlockers(setNarration(base(), 'ko', 'hook', narration(1800))))
+    expect(narrationBlockers(setNarration(base(), 'ko', 'hook', narration(5800))))
       .toEqual([]);
   });
 
   it('only checks the locales it is asked about', () => {
-    const project = setNarration(base(), 'en', 'hook', narration(2600));
+    const project = setNarration(base(), 'en', 'hook', narration(6600));
 
     expect(narrationBlockers(project)).toEqual([]);
     expect(narrationBlockers(project, ['ko', 'en'])).toHaveLength(1);
@@ -154,31 +160,17 @@ describe('ducking', () => {
 });
 
 describe('audio render props', () => {
-  it('carries BGM, narration, and the ducking envelope in frames', () => {
-    const project = setNarration(
-      setBgm(base(), {...bgmTrack(), startMs: 500}),
-      'ko',
-      'gameplay',
-      narration(4000),
-    );
-    const {audio} = buildCompositionProps(project, testUrlResolver('blob:audio'));
+  it('carries BGM and the ducking envelope in frames', () => {
+    const project = setBgm(base(), {...bgmTrack(), startMs: 500});
+    const audio = buildDay1Props(project, testUrlResolver('blob:audio'))?.audio;
 
-    expect(audio.bgm).toEqual({
+    expect(audio?.bgm).toEqual({
       url: 'blob:audio',
       volume: 0.6,
       startInFrames: 15,
       loop: true,
     });
-    expect(audio.narration).toEqual([
-      {
-        kind: 'gameplay',
-        url: 'blob:audio',
-        volume: 1,
-        fromFrame: 60,
-        durationInFrames: 120,
-      },
-    ]);
-    expect(audio.ducking).toEqual({
+    expect(audio?.ducking).toEqual({
       enabled: true,
       targetGain: 0.25,
       attackInFrames: 5,
@@ -186,31 +178,28 @@ describe('audio render props', () => {
     });
   });
 
-  it('renders only the selected locale narration', () => {
+  it('drops BGM whose audio cannot be resolved', () => {
+    const project = setBgm(base(), bgmTrack());
+
+    expect(buildDay1Props(project, testUrlResolver(null))?.audio.bgm).toBeNull();
+  });
+
+  /**
+   * Day1 Plan §2.2 and key-visual-looping Plan L9 both keep narration out, so
+   * every template the editor still has passes no sections to the mixer and the
+   * list comes back empty however many tracks the project stores. Stored tracks
+   * survive untouched — `narrationOf` above still reads them back — so a
+   * template that wants narration only has to hand its sections in.
+   */
+  it('renders no narration for a template that declares no sections', () => {
     const project = setSelectedLocale(
       setNarration(base(), 'ko', 'hook', narration(1500)),
-      'ja',
+      'ko',
     );
 
     expect(
-      buildCompositionProps(project, testUrlResolver('blob:audio')).audio
-        .narration,
+      buildDay1Props(project, testUrlResolver('blob:audio'))?.audio.narration,
     ).toEqual([]);
-  });
-
-  it('never lets narration outlast its scene in the render props', () => {
-    const project = setNarration(base(), 'ko', 'hook', narration(9000));
-    const {audio} = buildCompositionProps(project, testUrlResolver('blob:audio'));
-
-    // The Hook scene is 2s at the default 30fps.
-    expect(audio.narration[0]?.durationInFrames).toBe(60);
-  });
-
-  it('drops a track whose audio cannot be resolved', () => {
-    const project = setNarration(base(), 'ko', 'hook', narration(1500));
-
-    expect(
-      buildCompositionProps(project, testUrlResolver(null)).audio.narration,
-    ).toEqual([]);
+    expect(narrationOf(project, 'ko', 'hook')?.durationMs).toBe(1500);
   });
 });

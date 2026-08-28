@@ -369,13 +369,9 @@ test.describe('looping editor — controls', () => {
     await expect(page.getByTestId('copy-kv-disclaimer-hint')).toBeVisible();
   });
 
-  test('hides Hook analysis and narration for a still-image loop (Plan L9)', async ({
-    page,
-  }) => {
+  test('hides narration for a still-image loop (Plan L9)', async ({page}) => {
     await page.goto('/');
     await selectKvLoop(page);
-
-    await expect(page.getByTestId('tab-hook')).toHaveCount(0);
 
     await page.getByTestId('tab-audio').click();
     await expect(page.getByTestId('audio-bgm-input')).toBeAttached();

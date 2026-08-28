@@ -1,106 +1,63 @@
-// Plan SC3 / Day1 Design Ref: §8.1 — the v1 fixture is a real pre-v2 document
-// with every field populated, so a lossy migration shows up as a diff here
-// rather than as silent data loss in a user's saved project.
+// The three-scene template is gone, so the documents that carried one no longer
+// open. The v1 fixture is a real pre-v2 document, kept as the regression case
+// for the rejection: it must fail with a message that names the reason, and it
+// must fail without the caller having to touch the original.
 import {describe, expect, it} from 'vitest';
 
 import v1File from '../../../tests/fixtures/project-v1.json';
 import {migrateProject} from './migrate';
-import {createProject} from './project';
-import type {EditorProject, ThreeSceneSettings} from './types';
+import {createProject, switchTemplate} from './project';
 
 const v1Project = () =>
   structuredClone(v1File.project) as Record<string, unknown> & {
     scenes: Array<Record<string, unknown>>;
   };
 
-const migrated = (): EditorProject => {
-  const result = migrateProject(v1Project());
-
-  if (!result.ok) {
-    throw new Error(
-      `migration failed: ${JSON.stringify(result.error.details ?? result.error.message)}`,
-    );
-  }
-
-  return result.value;
-};
-
-const threeScene = (project: EditorProject) =>
-  project.templateSettings as ThreeSceneSettings;
-
-describe('migrateProject — v1 to v2', () => {
-  it('upgrades a v1 document', () => {
-    expect(migrateProject(v1Project()).ok).toBe(true);
-  });
-
-  it('stamps the current schema version', () => {
-    expect(migrated().schemaVersion).toBe(2);
-  });
-
-  it('marks the document as a three-scene project', () => {
-    expect(threeScene(migrated()).template).toBe('three-scene');
-  });
-
-  it('moves each scene duration onto its section, in order', () => {
-    const project = migrated();
-
-    expect(project.sections.map((section) => section.id)).toEqual([
-      'hook',
-      'gameplay',
-      'cta',
-    ]);
-    expect(project.sections.map((section) => section.durationMs)).toEqual([
-      2500, 9500, 3000,
-    ]);
-    expect(project.sections.map((section) => section.label)).toEqual([
-      'Hook',
-      'Gameplay',
-      'CTA',
-    ]);
-  });
-
-  it('carries every scene field across untouched, minus durationMs', () => {
-    const before = v1Project();
-    const after = threeScene(migrated()).scenes;
-
-    before.scenes.forEach((scene, index) => {
-      const {durationMs, ...expected} = scene;
-
-      expect(durationMs).toBeTypeOf('number');
-      expect(after[index]).toEqual(expected);
+describe('migrateProject — a three-scene document', () => {
+  it('rejects a v1 document, which was always three-scene', () => {
+    expect(migrateProject(v1Project())).toMatchObject({
+      ok: false,
+      error: {
+        code: 'SCHEMA_UNSUPPORTED',
+        retryable: false,
+        details: {schemaVersion: 1, template: 'three-scene'},
+      },
     });
   });
 
-  it('carries the source under templateSettings', () => {
-    expect(threeScene(migrated()).source).toEqual(v1Project().source);
+  it('rejects a v2 document whose payload is three-scene', () => {
+    const stored = {
+      ...createProject(30),
+      templateSettings: {template: 'three-scene', source: null, scenes: []},
+    };
+
+    expect(migrateProject(stored)).toMatchObject({
+      ok: false,
+      error: {
+        code: 'SCHEMA_UNSUPPORTED',
+        details: {schemaVersion: 2, template: 'three-scene'},
+      },
+    });
   });
 
-  it('leaves every other top-level field byte-identical', () => {
-    const before = v1Project();
-    const after = migrated();
+  // The point of the dedicated arm: a removed template is not a corrupt file,
+  // so the operator gets a sentence instead of a field-by-field schema dump.
+  it('says why rather than reporting a list of schema violations', () => {
+    const result = migrateProject(v1Project());
 
-    for (const key of [
-      'id',
-      'name',
-      'createdAt',
-      'updatedAt',
-      'durationPreset',
-      'fps',
-      'copy',
-      'audio',
-      'render',
-      'selectedLocale',
-      'selectedRatio',
-    ] as const) {
-      expect(after[key]).toEqual(before[key]);
-    }
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error.message).toContain(
+      '3장면 템플릿은 더 이상 지원하지 않습니다',
+    );
   });
 
-  it('drops the v1 top-level scenes and source keys', () => {
-    const after = migrated() as unknown as Record<string, unknown>;
+  it('never mutates the document it rejects', () => {
+    const document = v1Project();
+    const before = structuredClone(document);
 
-    expect(after.scenes).toBeUndefined();
-    expect(after.source).toBeUndefined();
+    migrateProject(document);
+
+    expect(document).toEqual(before);
   });
 });
 
@@ -111,6 +68,14 @@ describe('migrateProject — other versions', () => {
 
     expect(result.ok).toBe(true);
     expect(result.ok && result.value).toEqual(project);
+  });
+
+  it('opens every template the editor still has', () => {
+    for (const template of ['day1', 'day1-quad', 'kv-loop'] as const) {
+      const project = switchTemplate(createProject(15), template);
+
+      expect(migrateProject(project).ok).toBe(true);
+    }
   });
 
   it('rejects an unknown schema version with SCHEMA_UNSUPPORTED', () => {
@@ -131,18 +96,8 @@ describe('migrateProject — other versions', () => {
     expect(migrateProject([])).toMatchObject({ok: false});
   });
 
-  it('reports a corrupt v1 document as invalid instead of throwing', () => {
-    const broken = v1Project();
-    broken.scenes = 'not an array' as never;
-
-    const result = migrateProject(broken);
-
-    expect(result).toMatchObject({ok: false, error: {code: 'PROJECT_INVALID'}});
-  });
-
-  it('reports a v1 scene missing its duration as invalid', () => {
-    const broken = v1Project();
-    delete (broken.scenes[1] as Record<string, unknown>).durationMs;
+  it('reports a corrupt v2 document as invalid instead of throwing', () => {
+    const broken = {...createProject(15), sections: 'not an array'};
 
     expect(migrateProject(broken)).toMatchObject({
       ok: false,

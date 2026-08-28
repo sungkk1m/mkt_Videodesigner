@@ -114,14 +114,14 @@ describe('switchTemplate to kv-loop', () => {
 
   it('round-trips across all three templates', () => {
     const looping = switchTemplate(createProject(30), 'kv-loop');
-    const three = switchTemplate(looping, 'three-scene');
-    const day1 = switchTemplate(three, 'day1');
+    const quad = switchTemplate(looping, 'day1-quad');
+    const day1 = switchTemplate(quad, 'day1');
     const back = switchTemplate(day1, 'kv-loop');
 
-    expect(three.templateSettings.template).toBe('three-scene');
+    expect(quad.templateSettings.template).toBe('day1-quad');
     expect(day1.templateSettings.template).toBe('day1');
     expect(back.templateSettings.template).toBe('kv-loop');
-    expect(parseProject(three).ok).toBe(true);
+    expect(parseProject(quad).ok).toBe(true);
     expect(parseProject(day1).ok).toBe(true);
     expect(parseProject(back).ok).toBe(true);
   });
@@ -207,7 +207,7 @@ describe('the kv-loop schema arm', () => {
         ),
       }),
     ).toContainEqual(
-      'Section durations must total 15 seconds, received 18.',
+      'Section durations must total 15 seconds, received 14.',
     );
   });
 
@@ -355,7 +355,7 @@ describe('buildKvLoopProps', () => {
 
     expect(snapshot.props.segments).toHaveLength(8);
     expect(buildEditorSnapshot(createProject(15), testUrlResolver()).template).toBe(
-      'three-scene',
+      'day1',
     );
   });
 });

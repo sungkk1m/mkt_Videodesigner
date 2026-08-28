@@ -13,7 +13,6 @@ const FALLBACK_PROJECT_NAME = 'ua-video';
 
 /** Short, filename-safe tag per template. day1-quad Design §4.2. */
 export const TEMPLATE_FILE_SEGMENT: Record<TemplateKind, string> = {
-  'three-scene': '3scene',
   day1: 'day1',
   'day1-quad': 'day1x4',
   'kv-loop': 'kvloop',

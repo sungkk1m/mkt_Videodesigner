@@ -15,7 +15,7 @@ import {
   nearestPaletteIndex,
   sampleRegion,
 } from './helpers/videoSampling';
-import {switchTemplate} from './helpers/template';
+import {ensureTemplate} from './helpers/template';
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
@@ -39,7 +39,7 @@ const MAX_TRIM_IN_MS = SOURCE_MS - SECTION_MS;
 const STRIP_CELLS = 16;
 
 const selectDay1 = async (page: Page) => {
-  await switchTemplate(page, 'day1');
+  await ensureTemplate(page, 'day1');
   await expect(page.getByTestId('inspector-template')).toHaveText('Day1 비교');
 };
 

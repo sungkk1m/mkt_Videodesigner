@@ -1,9 +1,7 @@
 // Day1 Design Ref: §6.2 left panel, §6.3 end card section. Owns every path that
-// turns a Day1 file into playable media, mirroring `useEditorSource` for the
-// three-scene template. Kept separate rather than widening that hook because the
-// two templates hold their media in different places, but the restore policy is
-// deliberately the same: a stored File System Access handle first, then the
-// permission prompt, and only then a relink.
+// turns a Day1 file into playable media. The restore policy is a stored File
+// System Access handle first, then the permission prompt, and only then a
+// relink.
 import {useCallback, useEffect, useRef, useState} from 'react';
 
 import {
@@ -22,7 +20,17 @@ import {compareForRelink, type RelinkVerdict} from '../../domain/media/relink';
 import type {MediaHandleStore, MediaResolver} from '../../domain/ports';
 import type {AppError} from '../../shared/errors/appError';
 import type {MediaSession} from './useMediaSession';
-import {VIDEO_PICKER_OPTIONS} from './useEditorSource';
+
+/** Shared with `useKvLoopAssets`, which mirrors it for the formats it accepts. */
+export const VIDEO_PICKER_OPTIONS = {
+  types: [
+    {
+      description: '영상 파일',
+      accept: {'video/*': ['.mp4', '.mov', '.webm', '.m4v']},
+    },
+  ],
+  multiple: false,
+} as const;
 
 export type Day1EndCardSlot = 'banner' | 'appIcon' | 'video';
 
@@ -100,7 +108,7 @@ export const useDay1Assets = ({
   );
 
   /**
-   * Brings a panel back from its stored handle. Mirrors `useEditorSource`:
+   * Brings a panel back from its stored handle:
    * permission is only requested when the user asks, so the silent first attempt
    * degrades to `permission-required` instead of a prompt on load.
    */

@@ -3,7 +3,6 @@
 import {useEffect, useState} from 'react';
 
 import {EditorWorkspace} from '../features/editor/EditorWorkspace';
-import {createHeuristicHookAnalyzer} from '../infrastructure/hook-analysis/heuristicHookAnalyzer';
 import {browserMediaResolver} from '../infrastructure/media/browserMediaResolver';
 import {createFrameSampler} from '../infrastructure/media/frameSampler';
 import {createSourceProxyBuilder} from '../infrastructure/media/sourceProxyBuilder';
@@ -31,10 +30,9 @@ const RENDER_POC_HASH = '#render-poc';
 // Design Ref: §9.2 — adapters are constructed once, here, and injected.
 const projectRepository = createProjectRepository();
 const mediaHandleStore = supportsFileHandles() ? createMediaHandleStore() : null;
-// Day1 Trim UX Design Ref: §3.3 — one sampler, shared by hook analysis and the
-// trim strip. Each sample run owns its own <video>, so sharing is safe (§2.3).
+// Day1 Trim UX Design Ref: §3.3 — feeds the trim strip. Each sample run owns its
+// own <video>, so sharing one sampler is safe (§2.3).
 const frameSampler = createFrameSampler();
-const hookAnalyzer = createHeuristicHookAnalyzer(frameSampler);
 const ttsProvider = createSupertonicProvider();
 const ttsCache = createTtsCache();
 const outputWriter = createBrowserOutputWriter();
@@ -67,7 +65,6 @@ export const App = () => {
     <EditorWorkspace
       debugReport={renderLogLevel() === 'trace' ? capturedReport : null}
       frameSampler={frameSampler}
-      hookAnalyzer={hookAnalyzer}
       loadInitialProject={loadInitialProject}
       mediaHandleStore={mediaHandleStore}
       mediaResolver={browserMediaResolver}

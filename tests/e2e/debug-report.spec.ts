@@ -36,12 +36,12 @@ test.describe('?debug report header', () => {
   }) => {
     await page.goto('/?debug');
 
-    // A three-scene project is the baseline: the looping line has nothing to say
-    // and the template is read off the discriminant.
-    const threeScene = await copiedReport(page);
+    // The default Day1 project is the baseline: the looping line has nothing to
+    // say and the template is read off the discriminant.
+    const day1 = await copiedReport(page);
 
-    expect(threeScene).toContain('# template: three-scene');
-    expect(threeScene).toContain('# kvLoop: n/a');
+    expect(day1).toContain('# template: day1');
+    expect(day1).toContain('# kvLoop: n/a');
 
     await switchTemplate(page, 'kv-loop');
     await expect(page.getByTestId('inspector-template')).toContainText('반복 2회');
@@ -56,8 +56,9 @@ test.describe('?debug report header', () => {
     // Every key visual moves by default.
     const allMoving = await copiedReport(page);
 
-    // Reading this as `three-scene` is exactly what shipped, and it is why a
-    // looping render's header pointed at the wrong composition.
+    // Reading this off a ternary over the narrowing helpers is exactly what
+    // shipped, and it is why a looping render's header pointed at the wrong
+    // composition.
     expect(allMoving).toContain('# template: kv-loop');
     expect(allMoving).toContain('# kvLoop: 3장 · 2회 · 모션 3/3');
 
