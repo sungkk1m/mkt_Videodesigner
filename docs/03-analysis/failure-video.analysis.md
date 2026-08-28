@@ -5,7 +5,7 @@
 > **Plan**: [failure-video.plan.md](../01-plan/features/failure-video.plan.md) ·
 > **Design**: [failure-video.design.md](../02-design/features/failure-video.design.md)
 > **Branch**: `claude/failure-video-template-plan-poq31c`
-> **Date**: 2026-08-28 · **Status**: Do 완료 (실기기 렌더 검증 대기)
+> **Date**: 2026-08-28 · **Status**: Do 완료 · 실기기 렌더 검증 완료 (리포트 §2.3)
 
 Design §11의 M1~M7을 순서대로 구현한 기록. 무엇이 실제로 검증됐고 무엇이 안 됐는지,
 그리고 Design과 다르게 간 곳과 그 근거를 남긴다.
