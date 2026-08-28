@@ -76,6 +76,14 @@ const FIXTURES = [
     size: '1080x1920',
     tone: 880,
   },
+  {
+    // steam-review — the template's window is a fixed 20s (Plan Q2), so its
+    // E2E needs a source that can fill it with room for the trim to slide.
+    name: 'steam-gameplay-22s',
+    colors: [...SECOND_COLORS, ...SECOND_COLORS.slice(0, 10)],
+    size: '1920x1080',
+    tone: 550,
+  },
 ];
 
 await mkdir(fixtureDirectory, {recursive: true});
@@ -144,6 +152,8 @@ const STILLS = [
   {name: 'kv-4', color: '#ffe119', size: '1080x1920'},
   /** Landscape, for the FR-L19 warning and its `contain` way out. */
   {name: 'kv-landscape', color: '#911eb4', size: '1920x1080'},
+  /** steam-review — the landscape key art at its recommended size (Plan Q3). */
+  {name: 'steam-keyart', color: '#f58231', size: '1200x628'},
 ];
 
 for (const {name, color, size} of STILLS) {

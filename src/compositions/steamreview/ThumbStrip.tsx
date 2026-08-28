@@ -11,8 +11,10 @@ import type {
 } from '../../domain/steamreview/layout';
 import {STEAM_REVIEW_COLORS} from '../../domain/steamreview/layout';
 
-/** The scrollbar thumb — `chipBg` lightened, per the §7.2 note. */
-const SCROLL_THUMB_COLOR = '#1B5E8A';
+/** Measured off the KR 16:9 frame (module-5): track, thumb, and arrow chips. */
+const SCROLL_TRACK_COLOR = '#101821';
+const SCROLL_THUMB_COLOR = '#1D465F';
+const PAGINATION_CHIP_COLOR = '#1B4661';
 
 const SELECTED_BORDER_PX = 4;
 
@@ -56,9 +58,9 @@ const Chip = ({rect, glyph}: {rect: Rect; glyph: string}) => (
   <div
     style={{
       alignItems: 'center',
-      backgroundColor: STEAM_REVIEW_COLORS.panel,
+      backgroundColor: PAGINATION_CHIP_COLOR,
       borderRadius: 4,
-      color: STEAM_REVIEW_COLORS.mutedText,
+      color: STEAM_REVIEW_COLORS.chipText,
       display: 'flex',
       fontSize: 28,
       height: rect.h,
@@ -134,7 +136,7 @@ export const ThumbStrip = ({
         <Chip glyph="‹" rect={pagination.prev} />
         <div
           style={{
-            backgroundColor: STEAM_REVIEW_COLORS.panel,
+            backgroundColor: SCROLL_TRACK_COLOR,
             height: pagination.track.h,
             left: pagination.track.x,
             position: 'absolute',

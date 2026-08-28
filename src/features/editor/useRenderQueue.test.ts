@@ -13,6 +13,7 @@ import {
   day1ProjectFixture,
   day1QuadProjectFixture,
   kvLoopProjectFixture,
+  steamReviewProjectFixture,
 } from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {preflightIssues} from './useRenderQueue';
@@ -235,5 +236,90 @@ describe('preflightIssues — Day1-quad (FR-Q02)', () => {
     expect(preflightIssues(day1ProjectFixture(), false, true)).toEqual([
       '영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: A · B',
     ]);
+  });
+});
+
+// steam-review Design §3.6 — the required-material gates, per render target.
+describe('preflightIssues — steam-review (§3.6)', () => {
+  const gameplay = (id: string) =>
+    testMediaReference({id: `media_${id}`, durationMs: 25_000});
+  const image = (id: string) =>
+    testMediaReference({
+      id: `media_${id}`,
+      kind: 'image' as const,
+      mimeType: 'image/png',
+      durationMs: undefined,
+    });
+  const thumbnails = [
+    image('t0'),
+    image('t1'),
+    image('t2'),
+    image('t3'),
+  ];
+  const keyArt = {
+    image: image('keyart'),
+    transforms: {
+      base: {fit: 'cover' as const, scale: 1, x: 0, y: 0},
+      overrides: {},
+    },
+  };
+  /** ko × 9:16 selected by default — the ratio that needs key art and thumbs. */
+  const loaded = () =>
+    steamReviewProjectFixture({source: gameplay('common'), keyArt, thumbnails});
+
+  it('names the locales with no resolvable gameplay source', () => {
+    const project = {
+      ...steamReviewProjectFixture({keyArt, thumbnails}),
+      render: {
+        ...steamReviewProjectFixture().render,
+        selectedLocales: ['ko' as const, 'en' as const],
+      },
+    };
+
+    expect(preflightIssues(project, true, true)).toEqual([
+      '게임플레이 영상이 없는 언어: ko · en. 공통 영상을 올리거나 해당 언어의 교체 영상을 채워주세요.',
+    ]);
+  });
+
+  it('lets a locale replacement cover a locale without the shared source', () => {
+    const project = {
+      ...steamReviewProjectFixture({
+        localeSources: {ko: gameplay('kr')},
+        keyArt,
+        thumbnails,
+      }),
+    };
+
+    expect(preflightIssues(project, true, true)).toEqual([]);
+  });
+
+  it('requires key art and full thumbnails for a 9:16 render (Q10·Q11)', () => {
+    const project = steamReviewProjectFixture({source: gameplay('common')});
+
+    expect(preflightIssues(project, true, true)).toEqual([
+      '9:16 렌더에는 키아트가 필요합니다.',
+      '9:16 렌더에는 썸네일 4장이 필요합니다. 4장이 비어 있습니다.',
+    ]);
+  });
+
+  it('passes a 1:1-only render with just the gameplay source (Q10·Q11)', () => {
+    const bare = steamReviewProjectFixture({source: gameplay('common')});
+    const project = {
+      ...bare,
+      render: {...bare.render, selectedRatios: ['1:1' as const]},
+      selectedRatio: '1:1' as const,
+    };
+
+    expect(preflightIssues(project, true, true)).toEqual([]);
+  });
+
+  it('asks for a relink when the sources exist but cannot be decoded', () => {
+    expect(preflightIssues(loaded(), false, true)).toEqual([
+      '게임플레이 영상이 연결되지 않았습니다. 파일을 다시 올려주세요.',
+    ]);
+  });
+
+  it('passes a fully loaded project', () => {
+    expect(preflightIssues(loaded(), true, true)).toEqual([]);
   });
 });

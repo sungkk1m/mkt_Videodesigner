@@ -1,7 +1,10 @@
-// steam-review Design Ref: §7.1 (lg) / §7.2 (sm) — one review card: avatar,
-// 👍 recommendation box, the "hours on record" line, the comment body, and the
-// gray award star. The avatars are bundled with the composition — the domain
-// hands over a key, and this file owns the key → import-URL map (§2.1).
+// steam-review Design Ref: §7 — one review block, structured the way the
+// reference frames show it (module-5 measurement): a `panel` rectangle with a
+// hairline `divider` on top; the avatar sits left of a darker `headerBar`
+// carrying the 👍 box, the recommendation, the hours line, and the gray star;
+// the body text runs below the bar, left-aligned with it. The avatars are
+// bundled with the composition — the domain hands over a key, and this file
+// owns the key → import-URL map (§2.1).
 import {Img} from 'remotion';
 
 import type {SteamReviewReviewRenderProps} from '../../domain/editor/types';
@@ -35,10 +38,8 @@ const ThumbsUpIcon = ({size}: {size: number}) => (
 
 const StarIcon = ({size}: {size: number}) => (
   <svg
-    fill="none"
+    fill={STEAM_REVIEW_COLORS.starGray}
     height={size}
-    stroke={STEAM_REVIEW_COLORS.starGray}
-    strokeWidth={2}
     viewBox="0 0 24 24"
     width={size}
   >
@@ -53,25 +54,34 @@ export const ReviewCard = ({
   height,
 }: {
   review: SteamReviewReviewRenderProps;
-  size: 'lg' | 'sm';
+  size: 'lg' | 'md' | 'sm';
   width: number;
   height: number;
 }) => {
   const spec = STEAM_REVIEW_CARD_SPECS[size];
-  const textX = spec.thumbBoxX + spec.thumbBoxSize + 16;
 
   return (
     <div
       data-testid="steam-review-card"
       style={{
         backgroundColor: STEAM_REVIEW_COLORS.panel,
-        borderRadius: 4,
         height,
         overflow: 'hidden',
         position: 'relative',
         width,
       }}
     >
+      <div
+        style={{
+          backgroundColor: STEAM_REVIEW_COLORS.divider,
+          height: spec.dividerPx,
+          left: 0,
+          position: 'absolute',
+          top: 0,
+          width: '100%',
+        }}
+      />
+
       <Img
         src={AVATARS[review.avatarKey]}
         style={{
@@ -86,45 +96,56 @@ export const ReviewCard = ({
       <div
         style={{
           alignItems: 'center',
-          backgroundColor: STEAM_REVIEW_COLORS.thumbBox,
-          borderRadius: 4,
+          backgroundColor: STEAM_REVIEW_COLORS.headerBar,
           display: 'flex',
-          height: spec.thumbBoxSize,
-          justifyContent: 'center',
-          left: spec.thumbBoxX,
+          height: spec.barHeight,
+          left: spec.barX,
           position: 'absolute',
-          top: spec.thumbBoxY,
-          width: spec.thumbBoxSize,
-        }}
-      >
-        <ThumbsUpIcon size={spec.thumbBoxSize * 0.55} />
-      </div>
-
-      <div
-        style={{
-          left: textX,
-          position: 'absolute',
-          top: spec.thumbBoxY,
+          right: 0,
+          top: spec.avatarY,
         }}
       >
         <div
           style={{
-            color: STEAM_REVIEW_COLORS.title,
-            fontSize: spec.recommendedFontSize,
-            fontWeight: 600,
-            lineHeight: 1.3,
+            alignItems: 'center',
+            backgroundColor: STEAM_REVIEW_COLORS.thumbBox,
+            borderRadius: 4,
+            display: 'flex',
+            flex: 'none',
+            height: spec.thumbBoxSize,
+            justifyContent: 'center',
+            marginLeft: (spec.barHeight - spec.thumbBoxSize) / 2,
+            width: spec.thumbBoxSize,
           }}
         >
-          {review.recommendedLabel}
+          <ThumbsUpIcon size={spec.thumbBoxSize * 0.6} />
         </div>
-        <div
-          style={{
-            color: STEAM_REVIEW_COLORS.mutedText,
-            fontSize: spec.hoursFontSize,
-            lineHeight: 1.5,
-          }}
-        >
-          {review.hoursLabel}
+
+        <div style={{marginLeft: 20, minWidth: 0}}>
+          <div
+            style={{
+              color: STEAM_REVIEW_COLORS.title,
+              fontSize: spec.recommendedFontSize,
+              fontWeight: 600,
+              lineHeight: 1.3,
+            }}
+          >
+            {review.recommendedLabel}
+          </div>
+          <div
+            style={{
+              color: STEAM_REVIEW_COLORS.mutedText,
+              fontSize: spec.hoursFontSize,
+              lineHeight: 1.4,
+            }}
+          >
+            {review.hoursLabel}
+          </div>
+        </div>
+
+        <div style={{flex: 1}} />
+        <div style={{flex: 'none', marginRight: spec.starRight}}>
+          <StarIcon size={spec.starSize} />
         </div>
       </div>
 
@@ -132,11 +153,11 @@ export const ReviewCard = ({
         style={{
           color: STEAM_REVIEW_COLORS.bodyText,
           fontSize: spec.bodyFontSize,
-          left: spec.avatarX,
+          left: spec.barX,
           lineHeight: 1.35,
           position: 'absolute',
           right: spec.starRight,
-          top: spec.bodyY,
+          top: spec.avatarY + spec.barHeight + spec.bodyGap,
           whiteSpace: 'pre-line',
           ...(spec.bodyMaxLines > 0
             ? {
@@ -149,16 +170,6 @@ export const ReviewCard = ({
         }}
       >
         {review.body}
-      </div>
-
-      <div
-        style={{
-          position: 'absolute',
-          right: spec.starRight,
-          top: spec.starY,
-        }}
-      >
-        <StarIcon size={spec.starSize} />
       </div>
     </div>
   );

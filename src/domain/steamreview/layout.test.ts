@@ -86,12 +86,29 @@ describe('steamReviewLayout', () => {
     ).toBe(645);
   });
 
-  it('uses the lg card internals on 9:16/1:1 and sm on the 16:9 sidebar', () => {
+  it('uses lg on 9:16, md on 1:1, and sm on the 16:9 sidebar', () => {
     expect(steamReviewLayout('9:16').reviews.cardSize).toBe('lg');
-    expect(steamReviewLayout('1:1').reviews.cardSize).toBe('lg');
+    expect(steamReviewLayout('1:1').reviews.cardSize).toBe('md');
     expect(steamReviewLayout('16:9').reviews.cardSize).toBe('sm');
     // §7.2 — the sidebar card clamps its body at two lines.
     expect(STEAM_REVIEW_CARD_SPECS.sm.bodyMaxLines).toBe(2);
     expect(STEAM_REVIEW_CARD_SPECS.lg.bodyMaxLines).toBe(0);
+  });
+
+  // Module-5 frame comparison — a card's internals must fit its own block, or
+  // the body collides with the next block's panel the way the first 1:1 render
+  // did before the md spec existed.
+  it('keeps every card’s bar plus one body line inside its block height', () => {
+    for (const ratio of ASPECT_RATIOS) {
+      const {cardHeight, cardSize} = steamReviewLayout(ratio).reviews;
+      const spec = STEAM_REVIEW_CARD_SPECS[cardSize];
+      const bodyBottom =
+        spec.avatarY +
+        spec.barHeight +
+        spec.bodyGap +
+        Math.ceil(spec.bodyFontSize * 1.35);
+
+      expect(bodyBottom).toBeLessThanOrEqual(cardHeight);
+    }
   });
 });

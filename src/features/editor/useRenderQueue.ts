@@ -13,6 +13,7 @@ import {
 } from '../../domain/editor/project';
 import {narrationBlockers} from '../../domain/audio/mix';
 import {kvLoopMissingImages} from '../../domain/kvloop/assets';
+import {steamReviewMissingAssets} from '../../domain/steamreview/assets';
 import type {
   EditorProject,
   MediaReference,
@@ -137,6 +138,33 @@ export const preflightIssues = (
     } else if (!sourceResolved) {
       issues.push(
         '키비주얼 이미지가 연결되지 않았습니다. 파일을 다시 올려주세요.',
+      );
+    }
+  } else if (project.templateSettings.template === 'steam-review') {
+    // steam-review Design §3.6 — the required-material gates, per render
+    // target: every locale needs a resolvable gameplay source, and the two
+    // ratios that draw the key art and the thumbnail strip need those filled.
+    const missing = steamReviewMissingAssets(project);
+
+    if (missing.locales.length > 0) {
+      issues.push(
+        `게임플레이 영상이 없는 언어: ${missing.locales.join(' · ')}. 공통 영상을 올리거나 해당 언어의 교체 영상을 채워주세요.`,
+      );
+    } else if (!sourceResolved) {
+      issues.push(
+        '게임플레이 영상이 연결되지 않았습니다. 파일을 다시 올려주세요.',
+      );
+    }
+
+    if (missing.keyArtRatios.length > 0) {
+      issues.push(
+        `${missing.keyArtRatios.join(' · ')} 렌더에는 키아트가 필요합니다.`,
+      );
+    }
+
+    if (missing.thumbnailRatios.length > 0) {
+      issues.push(
+        `${missing.thumbnailRatios.join(' · ')} 렌더에는 썸네일 4장이 필요합니다. ${missing.missingThumbnails}장이 비어 있습니다.`,
       );
     }
   } else if (!threeSceneOf(project)?.source) {

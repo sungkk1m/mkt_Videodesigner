@@ -7,10 +7,7 @@ import {useCurrentFrame, useVideoConfig} from 'remotion';
 
 import type {SteamReviewReviewRenderProps} from '../../domain/editor/types';
 import type {SteamReviewReviewAreaSpec} from '../../domain/steamreview/layout';
-import {
-  STEAM_REVIEW_COLORS,
-  steamReviewScrollCycleHeight,
-} from '../../domain/steamreview/layout';
+import {steamReviewScrollCycleHeight} from '../../domain/steamreview/layout';
 import {reviewScrollOffsetPx} from '../../domain/steamreview/scroll';
 import {ReviewCard} from './ReviewCard';
 
@@ -77,6 +74,8 @@ const ScrollingList = ({
         {doubled.map((reviewIndex, position) => {
           const review = reviews[reviewIndex];
 
+          // Each block carries its own top divider, so the tiled loop keeps
+          // the same card separation the static lists show (§7.3).
           return review ? (
             <div
               key={position}
@@ -92,18 +91,6 @@ const ScrollingList = ({
                 size={area.cardSize}
                 width={area.width}
               />
-              {/* §7.3 — the thumbBlue divider between cards, centred in the gap. */}
-              {area.dividerPx ? (
-                <div
-                  style={{
-                    backgroundColor: STEAM_REVIEW_COLORS.thumbBlue,
-                    height: area.dividerPx,
-                    position: 'absolute',
-                    top: area.cardHeight + (area.gap - area.dividerPx) / 2,
-                    width: area.width,
-                  }}
-                />
-              ) : null}
             </div>
           ) : null;
         })}

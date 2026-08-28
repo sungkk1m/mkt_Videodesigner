@@ -55,7 +55,11 @@ export const StoreHeader = ({
             style={{
               alignItems: 'center',
               backgroundColor: STEAM_REVIEW_COLORS.chipBg,
+              // The reference chips are dark with a lighter blue outline
+              // (module-5 measurement), not a solid mid-blue fill.
+              border: `2px solid ${STEAM_REVIEW_COLORS.chipBorder}`,
               borderRadius: tagRow.radius,
+              boxSizing: 'border-box',
               color: STEAM_REVIEW_COLORS.chipText,
               display: 'flex',
               fontSize: tagRow.fontSize,

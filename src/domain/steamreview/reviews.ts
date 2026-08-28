@@ -30,9 +30,12 @@ export const STEAM_REVIEWS: readonly SteamReviewEntry[] = [
     text: {
       ko: '취향저격! 타워, 아이템 조합해가면서\n스테이지 공략하다 보니 하루 3시간 삭제돼요..!',
       en: "What I've been looking for!\nOnce you get the hang of the different towers\nand items you'll be playing for hours straight",
-      ja: '超絶おすすめ！\nタワー＆アイテムを合成してステージ攻略してた…',
-      // ✱Do(module-5) — re-verify against the CT video frames (Design §6.2).
-      'zh-TW': '完全把我的菜! 用塔和角色的組合來攻下關卡,\n一天的3小時就這樣不見了..!',
+      // Read off the JP 16:9 video frame (module-5 ✱Do) — the mockup clipped
+      // the closing lines.
+      ja: '超絶おすすめ！\nタワー＆アイテムを合成してステージ攻略してたら\nあっという間に夜の9時に…！',
+      // Read off the CT 16:9 video frame (module-5 ✱Do) — 「完全我的菜!」,
+      // not 「完全把我的菜!」.
+      'zh-TW': '完全我的菜!用塔和角色的組合來攻下關卡,\n一天的3小時就這樣不見了..!',
     },
   },
   {
@@ -97,8 +100,10 @@ export const steamReviewHoursLabel = (locale: Locale, hours: number): string => 
 export const STEAM_REVIEW_DEFAULT_COPY: Record<Locale, SteamReviewCopy> = {
   ko: {
     title: '언더다크 : 디펜스',
+    // KR renders three lines with no paragraph gap (kr-wide frame, module-5) —
+    // unlike the other locales, whose closing runs as its own paragraph.
     description:
-      '디펜스란, 최후의 최후까지 버티는 자가 이기는 거야.\n그 어떤 적이 오더라도 포기하지 마.\n\n최후의 캠프를 방어하라!\n전략 인디게임 <언더다크:디펜스>',
+      '디펜스란, 최후의 최후까지 버티는 자가 이기는 거야.\n그 어떤 적이 오더라도 포기하지 마.\n최후의 캠프를 방어하라! 전략 인디게임 <언더다크:디펜스>',
     tags: [
       '전략 타워 디펜스',
       '압도적 긍정적 게임',
@@ -119,10 +124,10 @@ export const STEAM_REVIEW_DEFAULT_COPY: Record<Locale, SteamReviewCopy> = {
   },
   ja: {
     title: 'UnderDark : Defense',
-    // ✱Do(module-5) — the mockup clips the closing line; re-read it off the JP
-    // 16:9 video's sidebar (Design §6.3).
+    // Read off the JP 16:9 video frame (module-5 ✱Do): the first sentence is
+    // one line, and the closing line names the game.
     description:
-      'ディフェンスなるもの…\n最後まで諦めない者が勝利するのだ！\nどんな敵でもネバーギブアップ\n\n基地を守り抜け！',
+      'ディフェンスなるもの… 最後まで諦めない者が勝利するのだ！\nどんな敵でもネバーギブアップ\n\n基地を守り抜け！\n戦略インディーズゲーム【UnderDark : Defense】',
     tags: [
       '戦略タワーディフェンス',
       '圧倒的な神ゲー',

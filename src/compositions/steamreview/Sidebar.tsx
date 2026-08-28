@@ -47,7 +47,10 @@ export const Sidebar = ({
         lineHeight: `${sidebar.description.lineHeight}px`,
         position: 'absolute',
         top: sidebar.description.y,
-        whiteSpace: 'pre-line',
+        // `pre`, not `pre-line`: the reference never wraps a description line
+        // (module-5 frame comparison), and a wrapped line collides with the
+        // review list below. A too-long line clips at the frame edge instead.
+        whiteSpace: 'pre',
         width: sidebar.width,
       }}
     >

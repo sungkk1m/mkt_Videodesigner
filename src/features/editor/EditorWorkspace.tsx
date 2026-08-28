@@ -1775,7 +1775,17 @@ export const EditorWorkspace = ({
             void queue.start(project, {
               // Day1 Design Ref: §7 — for Day1 this means both panels decoded,
               // which `renderableSource` already resolves per template.
-              sourceResolved: renderableSource,
+              // steam-review §3.6 — a batch renders every selected locale, so
+              // each one's resolved source has to be playable, not just the
+              // header's.
+              sourceResolved: steamReview
+                ? project.render.selectedLocales.every(
+                    (locale) =>
+                      steamAssets.urlFor(
+                        resolveSteamReviewSource(steamReview, locale),
+                      ) !== null,
+                  )
+                : renderableSource,
               rendererReady: capabilities?.ready === true,
             })
           }
