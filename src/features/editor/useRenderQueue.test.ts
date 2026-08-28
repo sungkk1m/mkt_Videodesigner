@@ -7,11 +7,13 @@ import {
   applySourceToAllScenes,
   createProject,
   setDay1PanelSource,
+  setFailurePanelSource,
 } from '../../domain/editor/project';
 import type {EditorProject} from '../../domain/editor/types';
 import {
   day1ProjectFixture,
   day1QuadProjectFixture,
+  failureProjectFixture,
   kvLoopProjectFixture,
 } from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
@@ -234,6 +236,87 @@ describe('preflightIssues — Day1-quad (FR-Q02)', () => {
   it('leaves the two-panel wording unchanged', () => {
     expect(preflightIssues(day1ProjectFixture(), false, true)).toEqual([
       '영상 2개를 모두 올려야 렌더할 수 있습니다. 남은 패널: A · B',
+    ]);
+  });
+});
+
+// failure-video Design §7.5 / Plan Q2 — the preflight asks per selected ratio.
+// This is where "no automatic fallback between the orientations" becomes
+// something the operator can actually see before a render starts.
+describe('preflightIssues — failure (Q2)', () => {
+  const fill = (
+    project: EditorProject,
+    orientation: 'vertical' | 'horizontal',
+    keys: readonly ('panelA' | 'panelB' | 'panelC')[],
+    durationMs = 60_000,
+  ) =>
+    keys.reduce(
+      (current, key) =>
+        setFailurePanelSource(
+          current,
+          orientation,
+          key,
+          testMediaReference({id: `${orientation}_${key}`, durationMs}),
+        ),
+      project,
+    );
+
+  const verticalOnly = () =>
+    fill(failureProjectFixture(), 'vertical', ['panelA', 'panelB', 'panelC']);
+
+  it('names the orientation and the levels still missing', () => {
+    expect(preflightIssues(failureProjectFixture(), false, true)).toEqual([
+      '세로(9:16)용 영상 3개를 모두 올려야 렌더할 수 있습니다. 남은 구간: 레벨 1 · 레벨 20 · 레벨 99',
+    ]);
+  });
+
+  it('passes a 9:16-only batch with only the vertical group filled', () => {
+    expect(preflightIssues(verticalOnly(), true, true)).toEqual([]);
+  });
+
+  it('blocks the moment 16:9 joins the batch, naming that group', () => {
+    const project = verticalOnly();
+    const both: EditorProject = {
+      ...project,
+      render: {...project.render, selectedRatios: ['9:16', '16:9']},
+    };
+
+    expect(preflightIssues(both, true, true)).toEqual([
+      '가로(16:9)용 영상 3개를 모두 올려야 렌더할 수 있습니다. 남은 구간: 레벨 1 · 레벨 20 · 레벨 99',
+    ]);
+  });
+
+  it('reports each orientation separately when both are half filled', () => {
+    const half = fill(
+      fill(failureProjectFixture(), 'vertical', ['panelA']),
+      'horizontal',
+      ['panelA', 'panelB'],
+    );
+    const both: EditorProject = {
+      ...half,
+      render: {...half.render, selectedRatios: ['9:16', '16:9']},
+    };
+    const issues = preflightIssues(both, true, true);
+
+    expect(issues).toHaveLength(2);
+    expect(issues[0]).toContain('세로(9:16)');
+    expect(issues[0]).toContain('레벨 20 · 레벨 99');
+    expect(issues[1]).toContain('가로(16:9)');
+    expect(issues[1]).toContain('레벨 99');
+  });
+
+  it('reports a segment whose source cannot fill its section', () => {
+    // Level 99 owns 18.9s of the 30s preset; a 5s source leaves it black.
+    const short = fill(verticalOnly(), 'vertical', ['panelC'], 5000);
+    const issues = preflightIssues(short, true, true);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toContain('세로(9:16) 레벨 99');
+  });
+
+  it('reports an unresolved source once every slot is filled', () => {
+    expect(preflightIssues(verticalOnly(), false, true)).toEqual([
+      '구간 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.',
     ]);
   });
 });

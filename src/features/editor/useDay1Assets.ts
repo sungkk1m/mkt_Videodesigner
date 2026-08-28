@@ -4,17 +4,17 @@
 // two templates hold their media in different places, but the restore policy is
 // deliberately the same: a stored File System Access handle first, then the
 // permission prompt, and only then a relink.
+//
+// failure-video Design §4.1-2 — the slots are injected rather than read off the
+// payload, so a template whose panels are not `Day1PanelKey`s uses the same
+// restore, relink, and permission policy. `slots` drives the restore sweep, so a
+// caller that hands over every slot it owns gets its inactive ones restored too
+// (Design §7.3).
 import {useCallback, useEffect, useRef, useState} from 'react';
 
-import {
-  day1PanelAt,
-  day1PanelsOf,
-  panelKeysOf,
-  type Day1PanelKey,
-} from '../../domain/editor/project';
+import type {Day1PanelKey} from '../../domain/editor/project';
 import type {
   Day1Panel,
-  EditorProject,
   MediaReference,
   MediaStatus,
 } from '../../domain/editor/types';
@@ -26,77 +26,80 @@ import {VIDEO_PICKER_OPTIONS} from './useEditorSource';
 
 export type Day1EndCardSlot = 'banner' | 'appIcon' | 'video';
 
-export interface Day1AssetCommands {
-  setPanelSource: (panel: Day1PanelKey, source: MediaReference | null) => void;
-  relinkPanel: (panel: Day1PanelKey, source: MediaReference) => void;
-  setPanelStatus: (panel: Day1PanelKey, status: MediaStatus) => void;
+export interface Day1AssetCommands<TSlot extends string = Day1PanelKey> {
+  setPanelSource: (panel: TSlot, source: MediaReference | null) => void;
+  relinkPanel: (panel: TSlot, source: MediaReference) => void;
+  setPanelStatus: (panel: TSlot, status: MediaStatus) => void;
   setEndCardAsset: (
     slot: Day1EndCardSlot,
     reference: MediaReference | null,
   ) => void;
 }
 
-export interface Day1AssetsApi {
+export interface Day1AssetsApi<TSlot extends string = Day1PanelKey> {
   /** Object URL for a panel, or null when it needs a relink. */
-  panelUrl: (panel: Day1PanelKey) => string | null;
+  panelUrl: (panel: TSlot) => string | null;
   busy: boolean;
   uploadError: AppError | null;
   /** Populated after a relink so the panel can report a mismatch. */
   relinkVerdict: RelinkVerdict | null;
   supportsFilePicker: boolean;
   /** Panels whose stored handle only needs a permission grant to come back. */
-  canGrantPermission: (panel: Day1PanelKey) => boolean;
+  canGrantPermission: (panel: TSlot) => boolean;
   uploadPanel: (
-    panel: Day1PanelKey,
+    panel: TSlot,
     file: File,
     handle?: FileSystemFileHandle,
   ) => Promise<void>;
-  pickAndUploadPanel: (panel: Day1PanelKey) => Promise<void>;
-  relinkPanel: (panel: Day1PanelKey, file: File) => Promise<void>;
-  grantPanelPermission: (panel: Day1PanelKey) => Promise<void>;
+  pickAndUploadPanel: (panel: TSlot) => Promise<void>;
+  relinkPanel: (panel: TSlot, file: File) => Promise<void>;
+  grantPanelPermission: (panel: TSlot) => Promise<void>;
   setEndCardAsset: (slot: Day1EndCardSlot, file: File | null) => Promise<void>;
 }
 
-export const useDay1Assets = ({
+export const useDay1Assets = <TSlot extends string = Day1PanelKey>({
   resolver,
   handleStore,
   session,
-  project,
+  slots,
+  panelOf,
   commands,
 }: {
   resolver: MediaResolver;
   handleStore: MediaHandleStore | null;
   session: MediaSession;
-  project: EditorProject;
-  commands: Day1AssetCommands;
-}): Day1AssetsApi => {
+  /** Every slot the template owns, in order. Empty for a template with none. */
+  slots: readonly TSlot[];
+  /** Resolves a slot off the project, so this hook never indexes the payload. */
+  panelOf: (panel: TSlot) => Day1Panel | null;
+  commands: Day1AssetCommands<TSlot>;
+}): Day1AssetsApi<TSlot> => {
   const [busy, setBusy] = useState(false);
   const [uploadError, setUploadError] = useState<AppError | null>(null);
   const [relinkVerdict, setRelinkVerdict] = useState<RelinkVerdict | null>(null);
 
-  const settings = day1PanelsOf(project);
   const commandsRef = useRef(commands);
+  // Read through a ref for the same reason `commands` is: both close over the
+  // current project, and the callbacks below must not be rebuilt for that.
+  const panelOfRef = useRef(panelOf);
   const restoreAttempts = useRef(new Set<string>());
 
   commandsRef.current = commands;
-
-  const panelOf = (panel: Day1PanelKey): Day1Panel | null =>
-    day1PanelAt(project, panel);
+  panelOfRef.current = panelOf;
 
   const panelUrl = useCallback(
-    (panel: Day1PanelKey) =>
-      session.urlFor(day1PanelAt(project, panel)?.source?.id),
-    [project, session],
+    (panel: TSlot) => session.urlFor(panelOfRef.current(panel)?.source?.id),
+    [session],
   );
 
   const supportsFilePicker =
     typeof window !== 'undefined' && 'showOpenFilePicker' in window;
 
   const canGrantPermission = useCallback(
-    (panel: Day1PanelKey) =>
+    (panel: TSlot) =>
       handleStore !== null &&
-      day1PanelAt(project, panel)?.source?.status === 'permission-required',
-    [handleStore, project],
+      panelOfRef.current(panel)?.source?.status === 'permission-required',
+    [handleStore],
   );
 
   /**
@@ -106,7 +109,7 @@ export const useDay1Assets = ({
    */
   const resolveStoredHandle = useCallback(
     async (
-      panel: Day1PanelKey,
+      panel: TSlot,
       reference: MediaReference,
       requestPermission: boolean,
     ) => {
@@ -153,12 +156,8 @@ export const useDay1Assets = ({
   // stored handle silently; a panel uploaded through the dropzone has none, so it
   // lands on `missing` and the dropzone becomes a relink prompt.
   useEffect(() => {
-    if (!settings) {
-      return;
-    }
-
-    for (const panel of panelKeysOf(settings)) {
-      const source = day1PanelAt(project, panel)?.source;
+    for (const panel of slots) {
+      const source = panelOfRef.current(panel)?.source;
 
       if (
         !source ||
@@ -172,10 +171,10 @@ export const useDay1Assets = ({
       restoreAttempts.current.add(source.id);
       void resolveStoredHandle(panel, source, false);
     }
-  }, [resolveStoredHandle, session, settings]);
+  }, [resolveStoredHandle, session, slots]);
 
   const uploadPanel = useCallback(
-    async (panel: Day1PanelKey, file: File, handle?: FileSystemFileHandle) => {
+    async (panel: TSlot, file: File, handle?: FileSystemFileHandle) => {
       setBusy(true);
       setUploadError(null);
 
@@ -200,7 +199,7 @@ export const useDay1Assets = ({
   );
 
   const pickAndUploadPanel = useCallback(
-    async (panel: Day1PanelKey) => {
+    async (panel: TSlot) => {
       if (!supportsFilePicker) {
         return;
       }
@@ -224,8 +223,8 @@ export const useDay1Assets = ({
   );
 
   const relinkPanel = useCallback(
-    async (panel: Day1PanelKey, file: File) => {
-      const source = panelOf(panel)?.source;
+    async (panel: TSlot, file: File) => {
+      const source = panelOfRef.current(panel)?.source;
 
       if (!source) {
         return;
@@ -260,14 +259,12 @@ export const useDay1Assets = ({
       commandsRef.current.relinkPanel(panel, reference);
       setRelinkVerdict(verdict);
     },
-    // `panelOf` reads the current project through the closure below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [resolver, session, settings],
+    [resolver, session],
   );
 
   const grantPanelPermission = useCallback(
-    async (panel: Day1PanelKey) => {
-      const source = day1PanelAt(project, panel)?.source;
+    async (panel: TSlot) => {
+      const source = panelOfRef.current(panel)?.source;
 
       if (!source) {
         return;
@@ -277,7 +274,7 @@ export const useDay1Assets = ({
       await resolveStoredHandle(panel, source, true);
       setBusy(false);
     },
-    [project, resolveStoredHandle],
+    [resolveStoredHandle],
   );
 
   const setEndCardAsset = useCallback(

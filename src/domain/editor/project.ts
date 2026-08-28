@@ -10,6 +10,15 @@ import {
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
+import {
+  activePanelForFailureSection,
+  failureSectionDurations,
+} from '../failure/playback';
+import {failureLayout} from '../failure/layout';
+import {
+  failureOrientationFor,
+  failureOrientationsFor,
+} from '../failure/orientation';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
 import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
@@ -44,6 +53,11 @@ import {
   DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
   DEFAULT_DAY1_PANEL_TRANSFORM,
+  FAILURE_DURATION_PRESETS,
+  FAILURE_PANEL_KEYS,
+  FAILURE_RATIOS,
+  FAILURE_SECTION_LABELS,
+  FAILURE_SECTION_ORDER,
   DEFAULT_KV_COUNT,
   DEFAULT_KV_LOOPS,
   DEFAULT_KV_BLUR_MS,
@@ -58,6 +72,7 @@ import {
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
   LOCALES,
+  MAX_CAPTION_FONT_SIZE,
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
   MAX_ICON_SCALE,
@@ -82,6 +97,7 @@ import {
   MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
+  ratiosForTemplate,
   SCENE_LABELS,
   SCENE_ORDER,
   kvSectionId,
@@ -106,6 +122,11 @@ import {
   type EditorScene,
   type EditorScenes,
   type EditorSnapshot,
+  type FailureOrientation,
+  type FailurePanels,
+  type FailureProps,
+  type FailureSettings,
+  type FailureSlot,
   type HookSceneSettings,
   type IconAdjust,
   type KvEffect,
@@ -267,6 +288,64 @@ const DAY1_QUAD_DEFAULT_LABELS = {
   d: 'Day7',
 } as const;
 
+/** The lossless starting panel every panelled template opens a slot on. */
+const emptyFailurePanels = (): FailurePanels => ({
+  panelA: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelB: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+  panelC: {
+    source: null,
+    trim: {inMs: 0, outMs: 0},
+    transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+  },
+});
+
+/**
+ * failure-video Design §5.5 — the documented starting values for a failure
+ * payload.
+ *
+ * `contain` rather than the reference's width-filling crop, for the day1-video
+ * reason: an upload must never crop before it has been looked at, and `cover` is
+ * one click away. The caption's 100px is the reference measurement (cap height
+ * 3.7% of a 1920-high frame ÷ 0.72), and every FAIL element starts on — a
+ * project made from this default reproduces the reference beat.
+ */
+export const DEFAULT_FAILURE_SETTINGS: FailureSettings = {
+  template: 'failure',
+  vertical: emptyFailurePanels(),
+  horizontal: emptyFailurePanels(),
+  caption: {fontSize: 100, textColor: '#ffffff', barColor: '#000000'},
+  fail: {
+    stampEnabled: true,
+    zoomEnabled: true,
+    desaturateEnabled: true,
+    shakeEnabled: true,
+    sfxEnabled: true,
+    focusX: 0,
+    focusY: 0,
+  },
+  endCard: structuredClone(DEFAULT_DAY1_SETTINGS.endCard),
+};
+
+/**
+ * failure-video Design §5.4 / Plan Q1 — the captions arrive filled, with the
+ * same English in every locale: `LEVEL 1` is a number, not copy to translate,
+ * and a value in every locale means switching the language tab never blanks the
+ * bar. Same reasoning as the quad's `DAY1_QUAD_DEFAULT_LABELS`.
+ */
+const FAILURE_DEFAULT_LABELS = {
+  a: 'LEVEL 1',
+  b: 'LEVEL 20',
+  c: 'LEVEL 99',
+} as const;
+
 /**
  * key-visual-looping Design Ref: §3.2 — the documented starting values for a
  * looping payload. Four key visuals repeated twice is the reference format
@@ -332,6 +411,12 @@ export const day1QuadOf = (
 
 export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
   project.templateSettings.template === 'kv-loop'
+    ? project.templateSettings
+    : null;
+
+/** The failure counterpart of `threeSceneOf`. failure-video Design §7.1. */
+export const failureOf = (project: EditorProject): FailureSettings | null =>
+  project.templateSettings.template === 'failure'
     ? project.templateSettings
     : null;
 
@@ -448,6 +533,16 @@ export const toggleRenderRatio = (
   ratio: AspectRatio,
 ): EditorProject => {
   const current = project.render.selectedRatios;
+  const allowed = ratiosForTemplate(project.templateSettings.template);
+
+  // A ratio the template's own refinement rejects is refused rather than
+  // corrected, the same contract `withKvCycle` has for an impossible loop.
+  // Adding one used to produce a project that saved and then could not be
+  // parsed back, so the next load silently opened an empty three-scene project.
+  if (!current.includes(ratio) && !allowed.includes(ratio)) {
+    return project;
+  }
+
   const next = current.includes(ratio)
     ? current.filter((entry) => entry !== ratio)
     : [...current, ratio];
@@ -556,7 +651,9 @@ const reconcileTransitions = (project: EditorProject): EditorProject => {
 
 /** Each step no-ops on a template it does not own, so this is template-agnostic. */
 const reconcile = (project: EditorProject) =>
-  reconcileDay1Trims(reconcileTransitions(reconcileAllTrims(project)));
+  reconcileFailureTrims(
+    reconcileDay1Trims(reconcileTransitions(reconcileAllTrims(project))),
+  );
 
 export const renameProject = (
   project: EditorProject,
@@ -584,6 +681,12 @@ export const applyDurationPreset = (
         // `Sequence from=NaN` — a black preview and a failed render.
         settingsBefore.template === 'day1-quad'
         ? day1QuadSectionDurations(preset)
+        : // failure-video Design §5.6 — four sections on the reference's own
+          // 20/10/70 split. The comment above is the warning this arm exists
+          // for: without it the preset switch falls through to the three-scene
+          // lengths and the last sections become NaN.
+          settingsBefore.template === 'failure'
+        ? failureSectionDurations(preset)
         : settingsBefore.template === 'kv-loop'
         ? // The cycle is redivided evenly; the caller is expected to have
           // cleared `kvLoopCombination` first, exactly as the template switch
@@ -717,10 +820,14 @@ export const setSelectedLocale = (
   locale: Locale,
 ): EditorProject => ({...project, selectedLocale: locale});
 
+/** The preview ratio is refined too, so it is guarded the same way. */
 export const setSelectedRatio = (
   project: EditorProject,
   ratio: AspectRatio,
-): EditorProject => ({...project, selectedRatio: ratio});
+): EditorProject =>
+  ratiosForTemplate(project.templateSettings.template).includes(ratio)
+    ? {...project, selectedRatio: ratio}
+    : project;
 
 /**
  * The framing in effect for a ratio: its override, or the shared base.
@@ -980,9 +1087,17 @@ const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1 | 2 | 3> = {
   panelD: 3,
 };
 
+/**
+ * failure-video Design §4.1-3 / D-2 — every payload that carries an `endCard`.
+ * The four end-card commands read only that field, so widening this one alias is
+ * what lets a new template share them; the panel commands narrow further through
+ * `day1PanelsOf` and keep their no-op contract.
+ */
+type EndCardSettings = Day1Settings | Day1QuadSettings | FailureSettings;
+
 const withDay1 = (
   project: EditorProject,
-  settings: Day1Settings | Day1QuadSettings,
+  settings: EndCardSettings,
 ): EditorProject => ({...project, templateSettings: settings});
 
 /**
@@ -1109,6 +1224,17 @@ const buildKvLoopSections = (
     durationMs,
   }));
 
+/** failure-video Design §6.1 — three level segments then the end card. */
+const buildFailureSections = (preset: DurationPreset): Sections => {
+  const durations = failureSectionDurations(preset);
+
+  return FAILURE_SECTION_ORDER.map((id, index) => ({
+    id,
+    label: FAILURE_SECTION_LABELS[id],
+    durationMs: durations[index] as number,
+  }));
+};
+
 /**
  * Day1 Design Ref: §6.1 — switching is destructive because per-scene settings and
  * panel settings cannot be carried across. The common fields (name, copy, audio,
@@ -1155,6 +1281,50 @@ export const switchTemplate = (
           {
             ...(project.copy[locale] as LocalizedCopy),
             day1Labels: {...DAY1_QUAD_DEFAULT_LABELS},
+          },
+        ]),
+      ) as Record<Locale, LocalizedCopy>,
+    };
+  }
+
+  // failure-video Design §4.3 — the same three-point set the quad and the loop
+  // use, over both axes: the preset is narrowed to 30/60 (Plan Q4) and the
+  // ratios to 9:16/16:9 (Plan 요청서), so entering the template coerces both
+  // rather than letting the schema reject a project the operator cannot see is
+  // wrong. The dialog says so before it happens.
+  if (template === 'failure') {
+    const preset = (
+      FAILURE_DURATION_PRESETS as readonly DurationPreset[]
+    ).includes(project.durationPreset)
+      ? project.durationPreset
+      : 30;
+    const allowed = FAILURE_RATIOS as readonly AspectRatio[];
+    const selectedRatios = project.render.selectedRatios.filter((ratio) =>
+      allowed.includes(ratio),
+    );
+
+    return {
+      ...project,
+      durationPreset: preset,
+      sections: buildFailureSections(preset),
+      templateSettings: structuredClone(DEFAULT_FAILURE_SETTINGS),
+      render: {
+        ...project.render,
+        // A batch that selected 1:1 only would be left with nothing, and
+        // `renderSettingsSchema` requires at least one ratio.
+        selectedRatios:
+          selectedRatios.length > 0 ? selectedRatios : [FAILURE_RATIOS[0]],
+      },
+      selectedRatio: allowed.includes(project.selectedRatio)
+        ? project.selectedRatio
+        : FAILURE_RATIOS[0],
+      // Plan Q1 — the captions arrive filled, in every locale.
+      copy: Object.fromEntries(
+        LOCALES.map((locale) => [
+          locale,
+          {
+            ...(project.copy[locale] as LocalizedCopy),
+            failureLabels: {...FAILURE_DEFAULT_LABELS},
           },
         ]),
       ) as Record<Locale, LocalizedCopy>,
@@ -1383,6 +1553,20 @@ export const updateDay1LabelStyle = (
   });
 };
 
+/**
+ * The payload whose end card a command should edit, or null when the template
+ * has none.
+ *
+ * failure-video Design §4.1-3 — the four end-card commands narrow through this
+ * rather than through `day1PanelsOf`, because "has panels" and "has an end card"
+ * stopped being the same question: a failure payload has an end card and no
+ * `Day1PanelKey` at all. Widening happened here, in one expression; the four
+ * command bodies read `settings.endCard` and did not move.
+ */
+export const endCardSettingsOf = (
+  project: EditorProject,
+): EndCardSettings | null => day1PanelsOf(project) ?? failureOf(project);
+
 // `videoTrim` is excluded so it cannot bypass reconciliation — the trim moves
 // only through `setDay1EndCardTrimInMs` (Endcard-Video Design D-04).
 export type Day1EndCardPatch = Partial<
@@ -1394,7 +1578,7 @@ export const updateDay1EndCard = (
   project: EditorProject,
   patch: Day1EndCardPatch,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1432,7 +1616,7 @@ export const setDay1EndCardVideo = (
   project: EditorProject,
   reference: MediaReference | null,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1480,7 +1664,7 @@ export const setDay1EndCardTrimInMs = (
   project: EditorProject,
   inMs: number,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1513,7 +1697,7 @@ export const setDay1EndCardTrimLengthMs = (
   project: EditorProject,
   lengthMs: number,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1558,6 +1742,353 @@ export const setDay1LabelText = (
     },
   };
 };
+
+// ---------------------------------------------------------------------------
+// failure-video commands. Design §5.6 — the Day1 panel commands mirrored over a
+// key that carries its orientation, because a failure slot is addressed by
+// `(orientation, key)` rather than by key alone.
+//
+// They are new functions rather than a widening of the Day1 ones: `Day1PanelKey`
+// staying two-to-four keys is what keeps those fifteen commands' no-op contract
+// intact (Design D-0). What they share is the domain helpers underneath —
+// `reconcileTrim`, `writeTransform`, `writeRatioOverride` — which is where the
+// actual behaviour lives.
+// ---------------------------------------------------------------------------
+
+export type FailurePanelKey = (typeof FAILURE_PANEL_KEYS)[number];
+
+/** One failure segment, or null when the project is not a failure project. */
+export const failurePanelAt = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+): Day1Panel | null => failureOf(project)?.[orientation][key] ?? null;
+
+const mapFailurePanel = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  update: (panel: Day1Panel) => Day1Panel,
+): EditorProject => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  return {
+    ...project,
+    templateSettings: {
+      ...settings,
+      [orientation]: {
+        ...settings[orientation],
+        [key]: update(settings[orientation][key]),
+      },
+    },
+  };
+};
+
+/** A segment's own section length, from the shared axis. Sections 0-2. */
+const failureSectionMs = (project: EditorProject, key: FailurePanelKey) =>
+  project.sections[FAILURE_PANEL_KEYS.indexOf(key)]?.durationMs ?? 0;
+
+/**
+ * Design §5.6 — re-clamps all six segments, both orientations, after a duration
+ * or boundary change. The inactive orientation is included on purpose: it holds
+ * real sources for the other ratio's render, and leaving its windows pointing
+ * past a resized section would only surface at render time.
+ *
+ * No-ops on every other template, like the Day1 pass it sits beside.
+ */
+const reconcileFailureTrims = (project: EditorProject): EditorProject => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const reconcileGroup = (orientation: FailureOrientation): FailurePanels =>
+    Object.fromEntries(
+      FAILURE_PANEL_KEYS.map((key) => {
+        const panel = settings[orientation][key];
+
+        return [
+          key,
+          {
+            ...panel,
+            trim: reconcileTrim(
+              panel.trim,
+              panel.source?.durationMs ?? 0,
+              failureSectionMs(project, key),
+            ),
+          },
+        ];
+      }),
+    ) as FailurePanels;
+
+  return {
+    ...project,
+    templateSettings: {
+      ...settings,
+      vertical: reconcileGroup('vertical'),
+      horizontal: reconcileGroup('horizontal'),
+    },
+  };
+};
+
+/**
+ * A new segment video restarts that slot's trim and framing, mirroring
+ * `setDay1PanelSource`: carrying the previous clip's crop or zoom over would
+ * crop the new footage before it was ever looked at.
+ */
+export const setFailurePanelSource = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  source: MediaReference | null,
+): EditorProject =>
+  reconcile(
+    mapFailurePanel(project, orientation, key, (panel) => ({
+      ...panel,
+      source,
+      trim: {inMs: 0, outMs: 0},
+      transforms: {base: {...DEFAULT_DAY1_PANEL_TRANSFORM}, overrides: {}},
+    })),
+  );
+
+/** Keeps a relinked segment's edit intact, unlike `setFailurePanelSource`. */
+export const relinkFailurePanelSource = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  source: MediaReference,
+): EditorProject =>
+  reconcile(
+    mapFailurePanel(project, orientation, key, (panel) => ({...panel, source})),
+  );
+
+export const setFailurePanelSourceStatus = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  status: MediaStatus,
+): EditorProject =>
+  mapFailurePanel(project, orientation, key, (panel) =>
+    panel.source ? {...panel, source: {...panel.source, status}} : panel,
+  );
+
+export const setFailureTrimInMs = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  inMs: number,
+): EditorProject => {
+  const panel = failurePanelAt(project, orientation, key);
+
+  if (!panel) {
+    return project;
+  }
+
+  const sourceMs = panel.source?.durationMs ?? 0;
+
+  return mapFailurePanel(project, orientation, key, (current) => ({
+    ...current,
+    trim: reconcileTrim(
+      {inMs, outMs: inMs},
+      sourceMs,
+      failureSectionMs(project, key),
+    ),
+  }));
+};
+
+/** The same interval seen from its end, mirroring `setDay1TrimOutMs`. */
+export const setFailureTrimOutMs = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  outMs: number,
+): EditorProject => {
+  const panel = failurePanelAt(project, orientation, key);
+
+  if (!panel) {
+    return project;
+  }
+
+  const sectionMs = failureSectionMs(project, key);
+  const windowMs = Math.min(sectionMs, panel.source?.durationMs ?? sectionMs);
+
+  return setFailureTrimInMs(project, orientation, key, outMs - windowMs);
+};
+
+/** Per-segment reframing, with the same override rules a Day1 panel has. */
+export const updateFailureTransform = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  ratio: AspectRatio,
+  patch: Partial<MediaTransform>,
+): EditorProject =>
+  mapFailurePanel(project, orientation, key, (panel) =>
+    writeTransform(panel, ratio, patch),
+  );
+
+export const resetFailureTransform = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  ratio: AspectRatio,
+): EditorProject =>
+  updateFailureTransform(
+    project,
+    orientation,
+    key,
+    ratio,
+    DEFAULT_DAY1_PANEL_TRANSFORM,
+  );
+
+export const setFailureRatioOverride = (
+  project: EditorProject,
+  orientation: FailureOrientation,
+  key: FailurePanelKey,
+  ratio: AspectRatio,
+  enabled: boolean,
+): EditorProject =>
+  mapFailurePanel(project, orientation, key, (panel) =>
+    writeRatioOverride(panel, ratio, enabled),
+  );
+
+/** Design §5.2 — the caption bar's styling. Its wording lives in `copy`. */
+export const updateFailureCaption = (
+  project: EditorProject,
+  patch: Partial<FailureSettings['caption']>,
+): EditorProject => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const current = settings.caption;
+
+  return {
+    ...project,
+    templateSettings: {
+      ...settings,
+      caption: {
+        ...current,
+        ...patch,
+        fontSize: clamp(
+          patch.fontSize ?? current.fontSize,
+          MIN_SUBTITLE_FONT_SIZE,
+          MAX_CAPTION_FONT_SIZE,
+        ),
+      },
+    },
+  };
+};
+
+/** Plan D-5 / FR-12 — the five toggles and the punch-zoom focus. */
+export const updateFailureFail = (
+  project: EditorProject,
+  patch: Partial<FailureSettings['fail']>,
+): EditorProject => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const current = settings.fail;
+
+  return {
+    ...project,
+    templateSettings: {
+      ...settings,
+      fail: {
+        ...current,
+        ...patch,
+        focusX: clamp(
+          patch.focusX ?? current.focusX,
+          -MAX_OFFSET_PERCENT,
+          MAX_OFFSET_PERCENT,
+        ),
+        focusY: clamp(
+          patch.focusY ?? current.focusY,
+          -MAX_OFFSET_PERCENT,
+          MAX_OFFSET_PERCENT,
+        ),
+      },
+    },
+  };
+};
+
+/** Plan Q1 — a caption's wording, per locale, mirroring `setDay1LabelText`. */
+export const setFailureLabelText = (
+  project: EditorProject,
+  locale: Locale,
+  slot: FailureSlot,
+  value: string,
+): EditorProject => {
+  const current = project.copy[locale] as LocalizedCopy;
+  const labels = current.failureLabels ?? {a: '', b: '', c: ''};
+
+  return {
+    ...project,
+    copy: {
+      ...project.copy,
+      [locale]: {...current, failureLabels: {...labels, [slot]: value}},
+    },
+  };
+};
+
+/** A slot the render preflight names: which orientation, and which segment. */
+export interface FailureSlotRef {
+  orientation: FailureOrientation;
+  key: FailurePanelKey;
+}
+
+const failureSlotsFor = (
+  ratios: readonly AspectRatio[],
+): readonly FailureSlotRef[] =>
+  failureOrientationsFor(ratios).flatMap((orientation) =>
+    FAILURE_PANEL_KEYS.map((key) => ({orientation, key})),
+  );
+
+/**
+ * Design §7.5 / Plan Q2 — the segments still missing a video, for the ratios a
+ * render is about to produce. A 9:16-only batch does not care that the
+ * horizontal group is empty; adding 16:9 to it makes those three required, and
+ * there is no fallback between the groups.
+ */
+export const failureMissingPanels = (
+  project: EditorProject,
+  ratios: readonly AspectRatio[],
+): FailureSlotRef[] =>
+  failureOf(project)
+    ? failureSlotsFor(ratios).filter(
+        ({orientation, key}) =>
+          failurePanelAt(project, orientation, key)?.source == null,
+      )
+    : [];
+
+/**
+ * Segments whose source cannot fill their section — the same silent black tail
+ * `day1PanelsShorterThanSection` exists to surface, over the orientation axis.
+ * A slot with no source at all belongs to `failureMissingPanels`, so the zero
+ * guard keeps the two from reporting it twice.
+ */
+export const failurePanelsShorterThanSection = (
+  project: EditorProject,
+  ratios: readonly AspectRatio[],
+): FailureSlotRef[] =>
+  failureOf(project)
+    ? failureSlotsFor(ratios).filter(({orientation, key}) => {
+        const sourceMs =
+          failurePanelAt(project, orientation, key)?.source?.durationMs ?? 0;
+
+        return sourceMs > 0 && sourceMs < failureSectionMs(project, key);
+      })
+    : [];
 
 /**
  * key-visual-looping §6.2/§6.3 — the looping commands. Same contract as the
@@ -2601,6 +3132,98 @@ export const buildKvLoopProps = (
 };
 
 /**
+ * failure-video Design §5.7 / §2.2 — the failure render contract. Returns null
+ * for any other template, matching `buildDay1Props`.
+ *
+ * The one thing that is genuinely new: the panels come from the orientation
+ * group the selected ratio asks for (D-1). Everything downstream of that — the
+ * frame layout, the locale-resolved captions, the end card — is the Day1 builder
+ * with different names, and `buildEndCardProps` is reused unchanged (Plan FR-07).
+ *
+ * That is also why the batch queue needs no failure code: it already rebuilds
+ * the snapshot per ratio, so swapping `selectedRatio` swaps the source group.
+ */
+export const buildFailureProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): FailureProps | null => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const frames = allocateSceneFrames(
+    sectionDurationsOf(project.sections),
+    project.durationPreset,
+    project.fps,
+  );
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+  const orientation = failureOrientationFor(project.selectedRatio);
+  const group = settings[orientation];
+  let cursor = 0;
+
+  const sections = project.sections.map((section, index) => {
+    const durationInFrames = frames[index] as number;
+    const props: Day1SectionRenderProps<FailureSlot> = {
+      id: section.id,
+      fromFrame: cursor,
+      durationInFrames,
+      activePanel: activePanelForFailureSection(index),
+    };
+
+    cursor += durationInFrames;
+
+    return Object.freeze(props);
+  });
+
+  const panelProps = (panel: Day1Panel): Day1PanelRenderProps => {
+    const transform = activeTransform(panel, project.selectedRatio);
+    const trimBeforeFrames = msToFrames(panel.trim.inMs, project.fps);
+
+    return Object.freeze({
+      url: resolveUrl(panel.source),
+      trimBeforeFrames,
+      trimAfterFrames: Math.max(
+        trimBeforeFrames + 1,
+        msToFrames(panel.trim.outMs, project.fps),
+      ),
+      fit: transform.fit,
+      scale: transform.scale,
+      x: transform.x,
+      y: transform.y,
+      // The caption bar carries the text, so the panel's own label never mounts.
+      label: '',
+    });
+  };
+
+  const labels = copy.failureLabels;
+
+  return Object.freeze({
+    layout: Object.freeze(failureLayout(project.selectedRatio)),
+    panels: Object.freeze([
+      panelProps(group.panelA),
+      panelProps(group.panelB),
+      panelProps(group.panelC),
+    ]) as FailureProps['panels'],
+    captions: Object.freeze([
+      labels?.a ?? '',
+      labels?.b ?? '',
+      labels?.c ?? '',
+    ]) as FailureProps['captions'],
+    captionStyle: Object.freeze({...settings.caption}),
+    fail: Object.freeze({...settings.fail}),
+    orientation,
+    endCard: buildEndCardProps(settings.endCard, project, resolveUrl),
+    sections: Object.freeze(sections) as Day1SectionRenderProps<FailureSlot>[],
+    // Plan §3.2 keeps narration and TTS out of this template too, so passing no
+    // scenes yields an empty narration list: only BGM, the live segment's own
+    // audio, and the stamp hit.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * The one place the template decides which snapshot a render job carries.
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
@@ -2629,8 +3252,14 @@ export const buildEditorSnapshot = (
 
   const kvLoopProps = buildKvLoopProps(project, resolveUrl);
 
-  return kvLoopProps
-    ? {template: 'kv-loop', props: kvLoopProps}
+  if (kvLoopProps) {
+    return {template: 'kv-loop', props: kvLoopProps};
+  }
+
+  const failureProps = buildFailureProps(project, resolveUrl);
+
+  return failureProps
+    ? {template: 'failure', props: failureProps}
     : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
 };
 

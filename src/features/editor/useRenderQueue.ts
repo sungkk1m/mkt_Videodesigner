@@ -7,14 +7,20 @@ import {
   buildEditorSnapshot,
   day1MissingPanels,
   day1PanelsShorterThanSection,
+  failureMissingPanels,
+  failureOf,
+  failurePanelsShorterThanSection,
   panelKeysOf,
   threeSceneOf,
   type Day1PanelKey,
+  type FailurePanelKey,
 } from '../../domain/editor/project';
+import {failureOrientationsFor} from '../../domain/failure/orientation';
 import {narrationBlockers} from '../../domain/audio/mix';
 import {kvLoopMissingImages} from '../../domain/kvloop/assets';
 import type {
   EditorProject,
+  FailureOrientation,
   MediaReference,
 } from '../../domain/editor/types';
 import type {OutputWriter, VideoRenderer} from '../../domain/ports';
@@ -72,6 +78,18 @@ const DAY1_PANEL_LABEL: Record<Day1PanelKey, string> = {
   panelD: 'D',
 };
 
+/** failure-video Design §7.5 — a slot is named by its level and its group. */
+const FAILURE_SEGMENT_LABEL: Record<FailurePanelKey, string> = {
+  panelA: '레벨 1',
+  panelB: '레벨 20',
+  panelC: '레벨 99',
+};
+
+const FAILURE_ORIENTATION_LABEL: Record<FailureOrientation, string> = {
+  vertical: '세로(9:16)',
+  horizontal: '가로(16:9)',
+};
+
 /**
  * Design Ref: §5.5 Preflight list — every blocking condition is reported before a
  * single frame is rendered.
@@ -122,6 +140,44 @@ export const preflightIssues = (
       issues.push(
         `원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 패널: ${shortPanels
           .map((panel) => DAY1_PANEL_LABEL[panel])
+          .join(' · ')}`,
+      );
+    }
+  } else if (failureOf(project)) {
+    // failure-video Design §7.5 / Plan Q2 — asked per selected ratio, because a
+    // 9:16-only batch has no business demanding horizontal footage and adding
+    // 16:9 to it makes those three required. There is no fallback between the
+    // groups, so the message names the orientation rather than a bare count.
+    const ratios = project.render.selectedRatios;
+    const missing = failureMissingPanels(project, ratios);
+
+    if (missing.length > 0) {
+      for (const orientation of failureOrientationsFor(ratios)) {
+        const slots = missing.filter(
+          (slot) => slot.orientation === orientation,
+        );
+
+        if (slots.length > 0) {
+          issues.push(
+            `${FAILURE_ORIENTATION_LABEL[orientation]}용 영상 3개를 모두 올려야 렌더할 수 있습니다. 남은 구간: ${slots
+              .map((slot) => FAILURE_SEGMENT_LABEL[slot.key])
+              .join(' · ')}`,
+          );
+        }
+      }
+    } else if (!sourceResolved) {
+      issues.push('구간 영상이 연결되지 않았습니다. 파일을 다시 연결하세요.');
+    }
+
+    const short = failurePanelsShorterThanSection(project, ratios);
+
+    if (short.length > 0) {
+      issues.push(
+        `원본이 구간보다 짧아 검은 화면이 출력됩니다. 구간 길이를 줄이거나 더 긴 영상을 사용하세요. 해당 구간: ${short
+          .map(
+            (slot) =>
+              `${FAILURE_ORIENTATION_LABEL[slot.orientation]} ${FAILURE_SEGMENT_LABEL[slot.key]}`,
+          )
           .join(' · ')}`,
       );
     }

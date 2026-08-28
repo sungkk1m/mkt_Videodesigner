@@ -3,6 +3,7 @@
 // rows with cancel and retry.
 import {
   ASPECT_RATIOS,
+  ratiosForTemplate,
   LOCALES,
   MAX_BATCH_JOBS,
   type AspectRatio,
@@ -75,6 +76,7 @@ export const BatchDialog = ({
   onClose,
 }: BatchDialogProps) => {
   const {selectedLocales, selectedRatios, profile, fps} = project.render;
+  const allowedRatios = ratiosForTemplate(project.templateSettings.template);
   const jobCount = selectedLocales.length * selectedRatios.length;
   const summary = summarizeQueue(jobs);
   const allowedFps = PROFILE_SPECS[profile].allowedFps;
@@ -118,7 +120,10 @@ export const BatchDialog = ({
                 <input
                   checked={selectedRatios.includes(ratio)}
                   data-testid={`batch-ratio-${ratio}`}
-                  disabled={running}
+                  // A ratio this template's schema rejects is not offerable:
+                  // ticking one used to autosave a document that could not be
+                  // parsed back, and the next load opened an empty project.
+                  disabled={running || !allowedRatios.includes(ratio)}
                   onChange={() => onToggleRatio(ratio)}
                   type="checkbox"
                 />

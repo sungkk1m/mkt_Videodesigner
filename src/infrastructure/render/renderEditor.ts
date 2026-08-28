@@ -4,6 +4,7 @@ import {renderMediaOnWeb} from '@remotion/web-renderer';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
+import {FailureComposition} from '../../compositions/FailureComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {outputDimensions} from '../../domain/editor/project';
@@ -11,6 +12,7 @@ import type {
   Day1Props,
   Day1QuadProps,
   EditorSnapshot,
+  FailureProps,
   KvLoopProps,
   ThreeSceneProps,
 } from '../../domain/editor/types';
@@ -34,7 +36,8 @@ export type EditorRenderRequest =
   | WebRenderRequest<ThreeSceneProps>
   | WebRenderRequest<Day1Props>
   | WebRenderRequest<Day1QuadProps>
-  | WebRenderRequest<KvLoopProps>;
+  | WebRenderRequest<KvLoopProps>
+  | WebRenderRequest<FailureProps>;
 
 export type EditorRenderMediaAdapter = (
   request: EditorRenderRequest,
@@ -103,6 +106,19 @@ export const createEditorRenderRequest = (
       composition: {
         id: 'kv-loop-editor',
         component: KvLoopComposition,
+        ...timing,
+        defaultProps: snapshot.props,
+      },
+      inputProps: snapshot.props,
+      ...encoding,
+    };
+  }
+
+  if (snapshot.template === 'failure') {
+    return {
+      composition: {
+        id: 'failure-editor',
+        component: FailureComposition,
         ...timing,
         defaultProps: snapshot.props,
       },

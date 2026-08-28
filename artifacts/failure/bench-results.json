@@ -1,0 +1,138 @@
+{
+  "runs": [
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 16198,
+      "msPerFrame": 89.99,
+      "outputBytes": 2758589,
+      "window": "beat",
+      "repeat": 1
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 13360,
+      "msPerFrame": 74.22,
+      "outputBytes": 2718955,
+      "window": "beat",
+      "repeat": 1
+    },
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 11770,
+      "msPerFrame": 65.39,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 1
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 11557,
+      "msPerFrame": 64.21,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 1
+    },
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 14876,
+      "msPerFrame": 82.64,
+      "outputBytes": 2758589,
+      "window": "beat",
+      "repeat": 2
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 12260,
+      "msPerFrame": 68.11,
+      "outputBytes": 2718955,
+      "window": "beat",
+      "repeat": 2
+    },
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 11574,
+      "msPerFrame": 64.3,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 2
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 11258,
+      "msPerFrame": 62.54,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 2
+    },
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 15984,
+      "msPerFrame": 88.8,
+      "outputBytes": 2758589,
+      "window": "beat",
+      "repeat": 3
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 60,
+      "elapsedMs": 14155,
+      "msPerFrame": 78.64,
+      "outputBytes": 2718955,
+      "window": "beat",
+      "repeat": 3
+    },
+    {
+      "effects": true,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 11813,
+      "msPerFrame": 65.63,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 3
+    },
+    {
+      "effects": false,
+      "frames": 180,
+      "from": 300,
+      "elapsedMs": 12335,
+      "msPerFrame": 68.53,
+      "outputBytes": 2763194,
+      "window": "plain",
+      "repeat": 3
+    }
+  ],
+  "summary": [
+    {
+      "window": "beat",
+      "msPerFrameEffectsOn": 88.8,
+      "msPerFrameEffectsOff": 74.22,
+      "overheadPercent": 19.6
+    },
+    {
+      "window": "plain",
+      "msPerFrameEffectsOn": 65.39,
+      "msPerFrameEffectsOff": 64.21,
+      "overheadPercent": 1.8
+    }
+  ]
+}

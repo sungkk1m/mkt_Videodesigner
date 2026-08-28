@@ -4,6 +4,7 @@ import {testMediaReference} from '../../test/fixtures/media';
 import {
   createProject,
   day1QuadOf,
+  failureOf,
   kvLoopOf,
   parseProject,
   switchTemplate,
@@ -12,10 +13,17 @@ import {
 import {
   day1ProjectFixture,
   day1QuadProjectFixture,
+  failureProjectFixture,
+  failureSettingsOf,
   kvLoopProjectFixture,
 } from '../../test/fixtures/project';
-import {MAX_LABEL_GLOW_PX} from './constants';
-import type {EditorProject, Section, ThreeSceneSettings} from './types';
+import {MAX_LABEL_GLOW_PX, PROJECT_SCHEMA_VERSION} from './constants';
+import type {
+  EditorProject,
+  LocalizedCopy,
+  Section,
+  ThreeSceneSettings,
+} from './types';
 
 const valid = (): EditorProject => createProject(15);
 
@@ -516,6 +524,160 @@ describe('parseProject — Day1-quad payload', () => {
         a: 'DAY 1',
         b: 'DAY 30',
       });
+    }
+  });
+});
+
+describe('parseProject — failure payload', () => {
+  it('accepts the two-orientation payload on a four-section axis', () => {
+    const project = failureProjectFixture();
+    const result = parseProject(project);
+
+    expect(result.ok).toBe(true);
+    expect(project.sections.map((section) => section.id)).toEqual([
+      'panel-a',
+      'panel-b',
+      'panel-c',
+      'endcard',
+    ]);
+    expect(failureOf(project)).not.toBeNull();
+    // FR-01 — the axis widened for the looping template already holds four.
+    expect(project.schemaVersion).toBe(PROJECT_SCHEMA_VERSION);
+  });
+
+  it('rejects a section count or order that is not the failure axis', () => {
+    const dropped = failureProjectFixture();
+
+    expect(
+      issuePaths({...dropped, sections: dropped.sections.slice(0, 3)}),
+    ).toContain('sections');
+
+    const reordered = failureProjectFixture();
+    const swapped = [...reordered.sections];
+    const [b, c] = [swapped[1], swapped[2]];
+    swapped[1] = c as Section;
+    swapped[2] = b as Section;
+
+    expect(issuePaths({...reordered, sections: swapped})).toContain(
+      'sections.1.id',
+    );
+  });
+
+  // Plan Q4 / Design §4.3 — `switchTemplate` coerces, so the editor never
+  // produces a 15s failure project; an imported JSON can.
+  it('rejects the 15s preset and accepts 30/60', () => {
+    const project = failureProjectFixture();
+    const at15: EditorProject = {
+      ...project,
+      durationPreset: 15,
+      sections: project.sections.map((section, index) => ({
+        ...section,
+        durationMs: index === 3 ? 3000 : 4000,
+      })),
+    };
+
+    expect(issuePaths(at15)).toContain('durationPreset');
+    expect(parseProject(failureProjectFixture({}, 30)).ok).toBe(true);
+    expect(parseProject(failureProjectFixture({}, 60)).ok).toBe(true);
+  });
+
+  // Plan Q2 / Design §4.3 — a subset check, not the loop's single fixed ratio.
+  it('rejects 1:1 on both the preview ratio and the batch selection', () => {
+    const project = failureProjectFixture();
+
+    expect(issuePaths({...project, selectedRatio: '1:1'})).toContain(
+      'selectedRatio',
+    );
+    expect(
+      issuePaths({
+        ...project,
+        render: {...project.render, selectedRatios: ['9:16', '1:1']},
+      }),
+    ).toContain('render.selectedRatios');
+    // Both of the allowed ratios, together, are fine.
+    expect(
+      parseProject({
+        ...project,
+        render: {...project.render, selectedRatios: ['9:16', '16:9']},
+      }).ok,
+    ).toBe(true);
+  });
+
+  it('bounds a trim window inside its source in either orientation', () => {
+    const project = failureProjectFixture();
+    const settings = failureSettingsOf(project);
+    const overrun = {
+      source: testMediaReference({durationMs: 4000}),
+      trim: {inMs: 0, outMs: 9000},
+      transforms: settings.vertical.panelA.transforms,
+    };
+
+    expect(
+      issuePaths({
+        ...project,
+        templateSettings: {
+          ...settings,
+          vertical: {...settings.vertical, panelB: overrun},
+        },
+      }),
+    ).toContain('templateSettings.vertical.panelB.trim.outMs');
+
+    expect(
+      issuePaths({
+        ...project,
+        templateSettings: {
+          ...settings,
+          horizontal: {...settings.horizontal, panelC: overrun},
+        },
+      }),
+    ).toContain('templateSettings.horizontal.panelC.trim.outMs');
+  });
+
+  // The Day1 rule, restated: saving mid-upload has to work, so an empty slot is
+  // the render preflight's problem and not the schema's (§5.2).
+  it('accepts a payload whose sources are still empty', () => {
+    expect(parseProject(failureProjectFixture()).ok).toBe(true);
+  });
+
+  // Design §5.4 — `failureLabels` is optional, so no stored copy block moves.
+  it('parses a copy block that has no failureLabels', () => {
+    const project = failureProjectFixture();
+    const legacyCopy = {
+      ...project,
+      copy: Object.fromEntries(
+        Object.entries(project.copy).map(([locale, copy]) => {
+          const {failureLabels: _dropped, ...rest} = copy as LocalizedCopy;
+
+          return [locale, rest];
+        }),
+      ),
+    };
+    const result = parseProject(legacyCopy);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.copy.ko?.failureLabels).toBeUndefined();
+    }
+  });
+});
+
+// Design §8.1 — the narrower swap in M1 widened what the end-card commands see,
+// so every stored document of every other template still has to round-trip.
+describe('parseProject — stored documents of the other templates', () => {
+  it('parses each template fixture unchanged', () => {
+    for (const project of [
+      createProject(15),
+      day1ProjectFixture(),
+      day1QuadProjectFixture(),
+      kvLoopProjectFixture(),
+      failureProjectFixture(),
+    ]) {
+      const result = parseProject(project);
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.templateSettings).toEqual(project.templateSettings);
+      }
     }
   });
 });

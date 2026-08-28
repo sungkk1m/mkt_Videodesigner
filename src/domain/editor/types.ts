@@ -6,12 +6,16 @@ import type {IconAdjust, NormalizedRect} from '../day1/endCard';
 import type {QuadLayout, SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
 // Type-only for the same reason as the Day1 imports above.
+import type {FailureLayout} from '../failure/layout';
+// Type-only for the same reason as the Day1 imports above.
 import type {KvSegment} from '../kvloop/cycle';
 import type {
   DAY1_CARD_MOTIONS,
   DAY1_PANEL_SLOTS,
   DAY1_END_CARD_MODES,
   DAY1_ICON_ANIMATIONS,
+  FAILURE_ORIENTATIONS,
+  FAILURE_PANEL_SLOTS,
 } from './constants';
 import type {
   HookMotionPreset,
@@ -34,6 +38,7 @@ export type {
   SplitLayout,
   SplitOrientation,
 } from '../day1/layout';
+export type {FailureLayout} from '../failure/layout';
 export type {DuckingEnvelope, NarrationWindow} from '../audio/ducking';
 export type {
   MediaKind,
@@ -53,6 +58,8 @@ export type {
   EditorProject,
   EditorScene,
   EditorScenes,
+  FailurePanels,
+  FailureSettings,
   HookMotionPreset,
   HookSceneSettings,
   KvEffect,
@@ -126,6 +133,25 @@ export const DAY1_QUAD_SECTION_LABELS = {
   'panel-d': '패널 D',
   endcard: '엔드카드',
 } as const;
+
+/**
+ * failure-video Design §5.1 — the failure sections share the quad's `panel-*`
+ * ids, so the timeline clip names are where the story shows: three levels, then
+ * the end card. The wording is the reference format's, not the default caption
+ * text, which the operator edits per locale.
+ */
+export const FAILURE_SECTION_LABELS = {
+  'panel-a': '레벨 1',
+  'panel-b': '레벨 20',
+  'panel-c': '레벨 99',
+  endcard: '엔드카드',
+} as const;
+
+/** failure-video Design §5.7 — a level segment's letter. */
+export type FailureSlot = (typeof FAILURE_PANEL_SLOTS)[number];
+
+/** failure-video Plan Q2 — which of the two source groups a render reads. */
+export type FailureOrientation = (typeof FAILURE_ORIENTATIONS)[number];
 
 /**
  * day1-quad Design §5.3 — a panel letter. `ActivePanel` stays the Day1-only
@@ -378,6 +404,45 @@ export type Day1QuadProps = {
 };
 
 /**
+ * failure-video Design §5.7 — the failure render contract.
+ *
+ * `Day1PanelRenderProps` is reused verbatim for a level segment, with `label`
+ * always `''`: the text a failure video shows lives in the caption bar, so the
+ * panel's own label overlay never mounts. That is what lets `Panel` be reused
+ * without a line changed (§6.3).
+ */
+export type FailureProps = {
+  layout: FailureLayout;
+  /** The active orientation's three segments, in level order. */
+  panels: readonly [
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+  ];
+  /** Locale-resolved caption text, one per level segment. */
+  captions: readonly [string, string, string];
+  captionStyle: {fontSize: number; textColor: string; barColor: string};
+  fail: {
+    stampEnabled: boolean;
+    zoomEnabled: boolean;
+    desaturateEnabled: boolean;
+    shakeEnabled: boolean;
+    sfxEnabled: boolean;
+    focusX: number;
+    focusY: number;
+  };
+  /**
+   * Which source group these panels came from. Carried so the placeholder can
+   * name the group the operator still has to fill, rather than making the
+   * composition re-derive it from a ratio it does not otherwise need.
+   */
+  orientation: FailureOrientation;
+  endCard: Day1EndCardRenderProps;
+  sections: Day1SectionRenderProps<FailureSlot>[];
+  audio: AudioRenderProps;
+};
+
+/**
  * key-visual-looping Design Ref: §5.2 — one key visual's resolved pixels and the
  * framing to draw them with. Flattened like `Day1PanelRenderProps` rather than
  * carrying the stored `transform`, so the composition reads render inputs only.
@@ -470,4 +535,5 @@ export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
   | {template: 'day1'; props: Day1Props}
   | {template: 'day1-quad'; props: Day1QuadProps}
-  | {template: 'kv-loop'; props: KvLoopProps};
+  | {template: 'kv-loop'; props: KvLoopProps}
+  | {template: 'failure'; props: FailureProps};

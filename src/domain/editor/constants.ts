@@ -15,10 +15,42 @@ export const DURATION_PRESETS = [15, 30, 60] as const;
  */
 export const DAY1_QUAD_DURATION_PRESETS = [15, 30] as const;
 
+/**
+ * failure-video Plan Q4 — 15s cannot hold three level segments plus a 3s end
+ * card, so the failure template does not offer it. 60s is the closest to the
+ * 50s reference.
+ */
+export const FAILURE_DURATION_PRESETS = [30, 60] as const;
+
 export const durationPresetsForTemplate = (
   template: (typeof TEMPLATE_KINDS)[number],
 ): readonly (typeof DURATION_PRESETS)[number][] =>
-  template === 'day1-quad' ? DAY1_QUAD_DURATION_PRESETS : DURATION_PRESETS;
+  template === 'day1-quad'
+    ? DAY1_QUAD_DURATION_PRESETS
+    : template === 'failure'
+      ? FAILURE_DURATION_PRESETS
+      : DURATION_PRESETS;
+
+/**
+ * The output ratios a template can hold, as the schema's refinements state them
+ * (`refineKvLoop`, `refineFailure`). The preset function above's counterpart,
+ * and it exists for the same three consumers: the ratio controls, the commands
+ * that write a ratio, and the refine that rejects one.
+ *
+ * It was the missing fourth surface that made this a bug rather than a rule:
+ * the constant and the refine agreed, `switchTemplate` coerced on the way in,
+ * and the Batch dialog then let the operator tick a ratio the refine forbids.
+ * The document autosaved, failed to parse on the next load, and the editor
+ * opened an empty three-scene project instead — the work was simply gone.
+ */
+export const ratiosForTemplate = (
+  template: (typeof TEMPLATE_KINDS)[number],
+): readonly (typeof ASPECT_RATIOS)[number][] =>
+  template === 'kv-loop'
+    ? [KV_LOOP_RATIO]
+    : template === 'failure'
+      ? FAILURE_RATIOS
+      : ASPECT_RATIOS;
 
 /**
  * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
@@ -34,6 +66,7 @@ export const TEMPLATE_KINDS = [
   'day1',
   'day1-quad',
   'kv-loop',
+  'failure',
 ] as const;
 export const DEFAULT_TEMPLATE = 'three-scene';
 
@@ -59,6 +92,45 @@ export const DAY1_QUAD_SECTION_ORDER = [
  * stays `'a' | 'b'`: `SplitFrame` must not be handed a `'c'`.
  */
 export const DAY1_PANEL_SLOTS = ['a', 'b', 'c', 'd'] as const;
+
+/**
+ * failure-video Design §5.1 — three level segments then the end card. Four
+ * sections, inside the `[MIN, MAX]_SECTION_COUNT` bounds, so
+ * `PROJECT_SCHEMA_VERSION` stays 2 here too.
+ *
+ * The ids are the quad's `panel-*` series on purpose (Plan D-1): the display
+ * name is the section label's job, and keeping the series means "section index
+ * 0..2 is a panel, the last one is the end card" is one rule for every panelled
+ * template — `endCardSectionMs` included.
+ */
+export const FAILURE_SECTION_ORDER = [
+  'panel-a',
+  'panel-b',
+  'panel-c',
+  'endcard',
+] as const;
+
+/** The three segments' payload keys, inside whichever orientation group. */
+export const FAILURE_PANEL_KEYS = ['panelA', 'panelB', 'panelC'] as const;
+
+/** Slot letters, shared by `copy.failureLabels` and the composition. */
+export const FAILURE_PANEL_SLOTS = ['a', 'b', 'c'] as const;
+
+/**
+ * failure-video Plan Q2 — a 9:16 render draws the vertical sources and a 16:9
+ * render the horizontal ones. There is no automatic fallback between them.
+ */
+export const FAILURE_ORIENTATIONS = ['vertical', 'horizontal'] as const;
+
+/** Plan 요청서 — 세로·가로만. 1:1은 제공하지 않는다. */
+export const FAILURE_RATIOS = ['9:16', '16:9'] as const;
+
+/**
+ * failure-video Plan §1.4 — the caption bar is 10% of the frame height, measured
+ * off the reference. Not a stored field: nothing asked for it to move, and the
+ * video area's geometry is the other half of the same number (Design §6.5).
+ */
+export const FAILURE_CAPTION_RATIO = 0.1;
 
 /**
  * key-visual-looping Design Ref: §3.1 — the looping template's section ids are
@@ -198,6 +270,14 @@ export const MAX_TRANSITION_MS = 1000;
 
 export const MIN_SUBTITLE_FONT_SIZE = 20;
 export const MAX_SUBTITLE_FONT_SIZE = 120;
+
+/**
+ * failure-video Design §5.2 — the caption bar's own ceiling. `MAX_SUBTITLE_FONT_SIZE`
+ * is a 1080-wide subtitle's bound; a caption is sized against a 1920-high canvas
+ * and opens at 100px (Plan §1.4's measured 3.7% cap height), which leaves that
+ * bound almost no room above the default.
+ */
+export const MAX_CAPTION_FONT_SIZE = 160;
 
 export const MAX_CTA_BACKGROUND_BLUR = 40;
 

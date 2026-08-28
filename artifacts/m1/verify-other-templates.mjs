@@ -149,10 +149,27 @@ check('quad → three-scene restores 15/30/60 and unlocks ratios',
 // A stored project written by this build must come back after a reload — the
 // schema extraction must not have broken parse for any template.
 await switchTo('day1');
-await page.waitForTimeout(800);
+// `AUTOSAVE_DEBOUNCE_MS` is 800, and the write itself takes a moment after that.
+// The original 800ms wait was exactly the debounce with nothing left for the
+// save, so it raced: the reload landed first and restored the *previous*
+// template, which looks exactly like a parse failure and is not one. Waiting on
+// the "저장됨" badge does not fix it either — the badge is still showing the
+// previous save when the switch lands, so that wait returns immediately.
+await page.waitForTimeout(3000);
 await page.reload({waitUntil: 'load'});
 await page.getByTestId('template-selector').waitFor({timeout: 30_000});
-const restored = await page.getByTestId('template-selector').inputValue();
+// The write side is settled above, but the read side races too. On load the app
+// renders the initial three-scene project and swaps in the stored one when the
+// IndexedDB restore resolves — measured at ~100ms. Reading the selector the
+// moment it appears therefore catches the pre-restore value about two runs in
+// three. Poll for the stored template instead; this still fails if the restore
+// never lands, which is the whole point of the check.
+let restored = await page.getByTestId('template-selector').inputValue();
+
+for (let i = 0; i < 100 && restored !== 'day1'; i++) {
+  await page.waitForTimeout(100);
+  restored = await page.getByTestId('template-selector').inputValue();
+}
 check('reload restores the stored template', restored === 'day1', restored);
 
 check('no page errors across all templates', errors.length === 0, errors.join(' | '));
