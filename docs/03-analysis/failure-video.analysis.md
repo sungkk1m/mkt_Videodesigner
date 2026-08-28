@@ -202,8 +202,21 @@ Design Goal 1은 "기존 4템플릿의 렌더 출력 픽셀을 바꾸지 않는�
 | `projectFile.ts` | failure arm 추가 + 엔드카드 헬퍼 추출 | 기존 arm 동작 동일 |
 | `toggleRenderRatio`·`setSelectedRatio` | 허용 비율 가드 | day1·quad·three-scene은 세 비율 전부 허용이라 무영향. kv-loop는 §5의 버그가 닫힌다 |
 
-검증: 기존 유닛 618건 전량 그린 유지, 컨테이너 UI 검증 스크립트
-(`artifacts/m1/verify-*`) 전량 그린, `day1-quad` E2E 중 코덱 무관 시나리오 그린.
+검증: 기존 유닛 618건 전량 그린 유지, `day1-quad` E2E 중 코덱 무관 시나리오 그린,
+컨테이너 UI 검증 스크립트 그린.
+
+`artifacts/m1/`의 두 스크립트는 빨간데 **둘 다 이전 사이클에서 낡은 것**이다.
+`verify-quad-switch.mjs`는 "선택기에 day1-quad가 아직 없다"를 단언한다 —
+day1-quad M1에 쓰였고 그 사이클의 M5가 목적을 없앴다. `verify-panel-move.mjs`는
+`Panel.tsx` 원문을 day1-quad M1 스냅샷과 글자 단위로 비교하는데, 지금 나는 차이는
+**day1-label-effects** 사이클의 주석 블록이다. 이 사이클은 `Panel.tsx`를 한 글자도
+바꾸지 않았고 `git log cbda6be..HEAD -- src/compositions/day1/Panel.tsx`가 비어 있다.
+남의 사이클 산출물이라 손대지 않고 인수인계 문서에 적어 뒀다.
+
+이 사이클 스크립트 2건은 기대값이 낡아 손봤다: `verify-dropdown`의 하드코딩된
+4템플릿 목록(이제 5개), `verify-other-templates`의 자동저장 800ms 고정 대기
+(디바운스와 정확히 같아 경합했다 — 파싱 실패처럼 보였지만 아니었고, 네 템플릿
+전부 저장·복원 왕복을 따로 확인했다).
 
 ---
 

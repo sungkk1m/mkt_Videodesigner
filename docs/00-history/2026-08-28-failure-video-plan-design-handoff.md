@@ -63,6 +63,21 @@ node artifacts/m1/verify-*.mjs                    # 기존 템플릿 무변경
 npx playwright test --config artifacts/m1/playwright.container.ts failure  # 2/5 그린
 ```
 
+### `artifacts/m1/` 중 이미 낡은 스크립트 2개 (이 사이클과 무관)
+
+전량 돌리면 두 개가 빨간데, **둘 다 이전 사이클에서 낡은 것**이다. 회귀로 오해하지 말 것:
+
+- `verify-quad-switch.mjs` — "선택기에 day1-quad가 **아직** 없다"를 단언한다.
+  day1-quad **M1** 시점에 쓰였고 그 사이클의 M5가 템플릿을 켜면서 목적을 잃었다.
+  이 사이클 이전부터 빨갛다.
+- `verify-panel-move.mjs` — `Panel.tsx` 원문을 day1-quad M1 시점 스냅샷과 글자
+  단위로 비교한다. 지금 나는 차이는 **day1-label-effects** 사이클이 추가한 주석
+  블록이다. 이 사이클은 `Panel.tsx`를 한 글자도 건드리지 않았다
+  (`git log cbda6be..HEAD -- src/compositions/day1/Panel.tsx`가 비어 있다).
+
+둘 다 이 사이클에서 손대지 않았다 — 남의 사이클 산출물이고, 후자는 스냅샷 갱신,
+전자는 삭제가 맞아 보이는데 판단은 그쪽 맥락을 아는 사람 몫이다.
+
 에셋 재생성:
 
 ```bash
