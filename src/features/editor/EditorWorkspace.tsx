@@ -320,7 +320,11 @@ export const EditorWorkspace = ({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
     session,
-    project,
+    // failure-video Design §4.1-2 — the hook takes the slots rather than reading
+    // them off the payload. `panelKeysOf` is empty for a template with no
+    // panels, which is the guard the hook used to hold itself.
+    slots: panelKeysOf(project.templateSettings),
+    panelOf: (panel) => day1PanelAt(project, panel),
     commands: day1Commands,
   });
 

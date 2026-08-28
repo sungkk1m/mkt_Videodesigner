@@ -980,9 +980,17 @@ const DAY1_PANEL_SECTION: Record<Day1PanelKey, 0 | 1 | 2 | 3> = {
   panelD: 3,
 };
 
+/**
+ * failure-video Design §4.1-3 / D-2 — every payload that carries an `endCard`.
+ * The four end-card commands read only that field, so widening this one alias is
+ * what lets a new template share them; the panel commands narrow further through
+ * `day1PanelsOf` and keep their no-op contract.
+ */
+type EndCardSettings = Day1Settings | Day1QuadSettings;
+
 const withDay1 = (
   project: EditorProject,
-  settings: Day1Settings | Day1QuadSettings,
+  settings: EndCardSettings,
 ): EditorProject => ({...project, templateSettings: settings});
 
 /**
@@ -1383,6 +1391,19 @@ export const updateDay1LabelStyle = (
   });
 };
 
+/**
+ * The payload whose end card a command should edit, or null when the template
+ * has none.
+ *
+ * failure-video Design §4.1-3 — the four end-card commands narrow through this
+ * rather than through `day1PanelsOf`, because "has panels" and "has an end card"
+ * stopped being the same question. Today the two answers still coincide; the
+ * failure payload joins here in M2 without touching a command body.
+ */
+export const endCardSettingsOf = (
+  project: EditorProject,
+): EndCardSettings | null => day1PanelsOf(project);
+
 // `videoTrim` is excluded so it cannot bypass reconciliation — the trim moves
 // only through `setDay1EndCardTrimInMs` (Endcard-Video Design D-04).
 export type Day1EndCardPatch = Partial<
@@ -1394,7 +1415,7 @@ export const updateDay1EndCard = (
   project: EditorProject,
   patch: Day1EndCardPatch,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1432,7 +1453,7 @@ export const setDay1EndCardVideo = (
   project: EditorProject,
   reference: MediaReference | null,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1480,7 +1501,7 @@ export const setDay1EndCardTrimInMs = (
   project: EditorProject,
   inMs: number,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
@@ -1513,7 +1534,7 @@ export const setDay1EndCardTrimLengthMs = (
   project: EditorProject,
   lengthMs: number,
 ): EditorProject => {
-  const settings = day1PanelsOf(project);
+  const settings = endCardSettingsOf(project);
 
   if (!settings) {
     return project;
