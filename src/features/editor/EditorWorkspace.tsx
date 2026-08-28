@@ -56,6 +56,8 @@ import {
   resolveKvSet,
   resolveKvTitle,
 } from '../../domain/kvloop/assets';
+import {resolveSteamReviewSource} from '../../domain/steamreview/assets';
+import {steamReviewTrimBoundMs} from '../../domain/editor/steamReviewCommands';
 import {
   effectiveKvMotion,
   isKvMotionStill,
@@ -84,7 +86,7 @@ import {msToFrames, sceneIndexOf} from '../../domain/timeline/timeline';
 import {AudioPanel} from './AudioPanel';
 import {BatchDialog} from './BatchDialog';
 import './editor.css';
-import {CopyPanel} from './CopyPanel';
+import {CopyPanel, LOCALE_LABELS} from './CopyPanel';
 import {Day1AssetPanel} from './Day1AssetPanel';
 import {Day1Inspector} from './Day1Inspector';
 import {KvLoopAssetPanel} from './KvLoopAssetPanel';
@@ -97,10 +99,16 @@ import {ProjectMenu} from './ProjectMenu';
 import {useProjectStore} from './projectStore';
 import {SceneInspector} from './SceneInspector';
 import {SourceRepair} from './SourceRepair';
+import {SteamReviewAssetPanel} from './SteamReviewAssetPanel';
+import {SteamReviewInspector} from './SteamReviewInspector';
 import {TemplateSelector} from './TemplateSelector';
 import {Timeline} from './Timeline';
 import {useDay1Assets, type Day1AssetCommands} from './useDay1Assets';
 import {useKvLoopAssets, type KvLoopAssetCommands} from './useKvLoopAssets';
+import {
+  useSteamReviewAssets,
+  type SteamReviewAssetCommands,
+} from './useSteamReviewAssets';
 import {
   useEditorAudio,
   type EditorAudioCommands,
@@ -149,6 +157,12 @@ const DAY1_LEFT_TABS: LeftTab[] = ['assets', 'audio'];
  * disclaimer lives there, as the only field it shows for this template.
  */
 const KV_LOOP_LEFT_TABS: LeftTab[] = ['assets', 'copy', 'audio'];
+
+/**
+ * steam-review Design §9 — Hook analysis has no meaning here; the copy tab
+ * carries title/description/tags and the audio tab BGM + original volume.
+ */
+const STEAM_REVIEW_LEFT_TABS: LeftTab[] = ['assets', 'copy', 'audio'];
 
 const LEFT_TAB_TITLES: Record<LeftTab, string> = {
   assets: '소재',
@@ -290,6 +304,22 @@ export const EditorWorkspace = ({
     [store],
   );
 
+  const steamReviewCommands = useMemo<SteamReviewAssetCommands>(
+    () => ({
+      setSource: (reference) => store().setSteamReviewSource(reference),
+      relinkSource: (reference) => store().relinkSteamReviewSource(reference),
+      setLocaleSource: (locale, reference) =>
+        store().setSteamReviewLocaleSource(locale, reference),
+      relinkLocaleSource: (locale, reference) =>
+        store().relinkSteamReviewLocaleSource(locale, reference),
+      setKeyArt: (reference) => store().setSteamReviewKeyArt(reference),
+      relinkKeyArt: (reference) => store().relinkSteamReviewKeyArt(reference),
+      setThumbnail: (index, reference) =>
+        store().setSteamReviewThumbnail(index, reference),
+    }),
+    [store],
+  );
+
   const source = useEditorSource({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
@@ -371,6 +401,19 @@ export const EditorWorkspace = ({
     commands: kvLoopCommands,
   });
 
+  const steamAssets = useSteamReviewAssets({
+    resolver: mediaResolver,
+    handleStore: mediaHandleStore,
+    session,
+    project,
+    commands: steamReviewCommands,
+  });
+
+  // steam-review §2.2 — what the selected locale's render would actually play.
+  const steamActiveSource = steamReview
+    ? resolveSteamReviewSource(steamReview, project.selectedLocale)
+    : null;
+
   const audio = useEditorAudio({
     resolver: mediaResolver,
     provider: ttsProvider,
@@ -432,6 +475,14 @@ export const EditorWorkspace = ({
     ...Object.values(kvLoop?.title.images ?? {}).map(
       (reference) => reference?.id,
     ),
+    // steam-review §9 — the shared source, every locale replacement, the key
+    // art, and all four thumbnails; not just what the selected locale shows.
+    steamReview?.source?.id,
+    ...Object.values(steamReview?.localeSources ?? {}).map(
+      (reference) => reference?.id,
+    ),
+    steamReview?.keyArt.image?.id,
+    ...(steamReview?.thumbnails ?? []).map((reference) => reference?.id),
     project.audio.bgm?.source.id,
     ...Object.values(project.audio.narration).flatMap((tracks) =>
       Object.values(tracks ?? {}).map((track) => track.source.id),
@@ -505,7 +556,11 @@ export const EditorWorkspace = ({
     ? unresolvedPanels.length === 0
     : kvLoop
       ? missingKvImages === 0 && unresolvedKvImages.length === 0
-      : source.sourceUrl !== null;
+      : steamReview
+        ? // The selected locale must resolve a playable gameplay source. The
+          // per-ratio key art/thumbnail gates (§3.6) are the render queue's.
+          steamAssets.urlFor(steamActiveSource) !== null
+        : source.sourceUrl !== null;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
   // or it only half-applies.
@@ -837,7 +892,9 @@ export const EditorWorkspace = ({
     ? DAY1_LEFT_TABS
     : kvLoop
       ? KV_LOOP_LEFT_TABS
-      : null;
+      : steamReview
+        ? STEAM_REVIEW_LEFT_TABS
+        : null;
   const visibleTabs = allowedTabs
     ? LEFT_TABS.filter((tab) => allowedTabs.includes(tab.kind))
     : LEFT_TABS;
@@ -881,10 +938,14 @@ export const EditorWorkspace = ({
             onSwitch={(template) => {
               store().switchTemplate(template);
               setSelectedKind('hook');
-              // The section selection is shared by Day1 and the looping
-              // template, so it resets to whichever axis is arriving.
+              // The section selection is shared by Day1, the loop, and the
+              // store page, so it resets to whichever axis is arriving.
               setSelectedDay1Section(
-                template === 'kv-loop' ? kvSectionId(0) : 'panel-a',
+                template === 'kv-loop'
+                  ? kvSectionId(0)
+                  : template === 'steam-review'
+                    ? 'gameplay'
+                    : 'panel-a',
               );
               setLeftTab('assets');
               setRenderState({status: 'idle'});
@@ -915,6 +976,25 @@ export const EditorWorkspace = ({
           {kvLoop && unresolvedKvImages.length > 0 ? (
             <span className="editor__blocker" data-testid="kv-unresolved-blocker">
               키비주얼 {unresolvedKvImages.length}장을 다시 올려야 합니다
+            </span>
+          ) : null}
+          {steamReview && steamActiveSource === null ? (
+            <span
+              className="editor__blocker"
+              data-testid="steam-source-blocker"
+            >
+              {LOCALE_LABELS[project.selectedLocale]} 게임플레이 영상이
+              필요합니다
+            </span>
+          ) : null}
+          {steamReview &&
+          steamActiveSource !== null &&
+          steamAssets.urlFor(steamActiveSource) === null ? (
+            <span
+              className="editor__blocker"
+              data-testid="steam-unresolved-blocker"
+            >
+              게임플레이 영상을 다시 올려야 합니다
             </span>
           ) : null}
           {shortPanels.length > 0 ? (
@@ -1055,6 +1135,38 @@ export const EditorWorkspace = ({
             supportsFilePicker={day1Assets.supportsFilePicker}
             uploadError={day1Assets.uploadError}
           />
+        ) : steamReview && activeTab === 'assets' ? (
+          <SteamReviewAssetPanel
+            autosaveError={
+              persistence.saveState.status === 'failed'
+                ? persistence.saveState.error
+                : null
+            }
+            busy={steamAssets.busy}
+            canGrantPermission={steamAssets.canGrantPermission}
+            disabled={isRendering}
+            onGrantPermission={(mediaId) =>
+              void steamAssets.grantPermission(mediaId)
+            }
+            onPickKeyArt={() => void steamAssets.pickKeyArt()}
+            onPickLocaleSource={(locale) =>
+              void steamAssets.pickLocaleSource(locale)
+            }
+            onPickSource={() => void steamAssets.pickSource()}
+            onPickThumbnail={(index) => void steamAssets.pickThumbnail(index)}
+            onUploadKeyArt={(file) => void steamAssets.uploadKeyArt(file)}
+            onUploadLocaleSource={(locale, file) =>
+              void steamAssets.uploadLocaleSource(locale, file)
+            }
+            onUploadSource={(file) => void steamAssets.uploadSource(file)}
+            onUploadThumbnail={(index, file) =>
+              void steamAssets.uploadThumbnail(index, file)
+            }
+            settings={steamReview}
+            supportsFilePicker={steamAssets.supportsFilePicker}
+            uploadError={steamAssets.uploadError}
+            urlFor={steamAssets.urlFor}
+          />
         ) : kvLoop && activeTab === 'assets' ? (
           <KvLoopAssetPanel
             autosaveError={
@@ -1146,6 +1258,28 @@ export const EditorWorkspace = ({
             onField={(field, value) => store().setCopy(field, value)}
             onLocale={(locale) => store().setLocale(locale)}
             onSubtitle={(kind, value) => store().setSubtitleText(kind, value)}
+            steamReview={
+              steamReview
+                ? {
+                    onTitle: (value) =>
+                      store().setSteamReviewTitleAt(
+                        project.selectedLocale,
+                        value,
+                      ),
+                    onDescription: (value) =>
+                      store().setSteamReviewDescriptionAt(
+                        project.selectedLocale,
+                        value,
+                      ),
+                    onTag: (index, value) =>
+                      store().setSteamReviewTagAt(
+                        project.selectedLocale,
+                        index,
+                        value,
+                      ),
+                  }
+                : undefined
+            }
           />
         ) : (
           <>
@@ -1446,7 +1580,46 @@ export const EditorWorkspace = ({
 
       </main>
 
-      {kvLoop ? (
+      {steamReview ? (
+        <SteamReviewInspector
+          disabled={isRendering}
+          frameSampler={frameSampler}
+          hasKeyArt={steamReview.keyArt.image !== null}
+          keyArtHasOverride={hasRatioOverride(
+            steamReview.keyArt,
+            project.selectedRatio,
+          )}
+          keyArtTransform={activeTransform(
+            steamReview.keyArt,
+            project.selectedRatio,
+          )}
+          onKeyArtTransform={(patch) =>
+            store().setSteamReviewKeyArtTransform(patch)
+          }
+          onResetKeyArtTransform={() =>
+            store().resetSteamReviewKeyArtTransform()
+          }
+          onResetTransform={() => store().resetSteamReviewTransform()}
+          onToggleKeyArtRatioOverride={(enabled) =>
+            store().toggleSteamReviewKeyArtRatioOverride(enabled)
+          }
+          onToggleRatioOverride={(enabled) =>
+            store().toggleSteamReviewRatioOverride(enabled)
+          }
+          onTransform={(patch) => store().setSteamReviewTransform(patch)}
+          onTrimIn={(ms) => store().setSteamReviewTrimIn(ms)}
+          ratio={project.selectedRatio}
+          sourceReference={steamActiveSource}
+          sourceUrl={steamAssets.urlFor(steamActiveSource)}
+          trim={steamReview.trim}
+          trimBoundMs={steamReviewTrimBoundMs(steamReview)}
+          videoHasOverride={hasRatioOverride(
+            steamReview,
+            project.selectedRatio,
+          )}
+          videoTransform={activeTransform(steamReview, project.selectedRatio)}
+        />
+      ) : kvLoop ? (
         <KvLoopInspector
           disabled={isRendering}
           fps={project.fps}
@@ -1632,8 +1805,9 @@ export const EditorWorkspace = ({
         onSelect={(sectionId) =>
           // day1-quad — the quad template selects on the shared section axis
           // exactly like Day1 and the loop; `day1 || kvLoop` sent its clip
-          // clicks down the three-scene arm.
-          panelled || kvLoop
+          // clicks down the three-scene arm. steam-review has one section, so
+          // selection is a no-op there, but it stays on the section axis.
+          panelled || kvLoop || steamReview
             ? setSelectedDay1Section(sectionId)
             : setSelectedKind(sectionId as SceneKind)
         }
@@ -1642,7 +1816,9 @@ export const EditorWorkspace = ({
         // told how many times it plays. Every other template passes nothing.
         repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={panelled || kvLoop ? selectedSectionId : selectedKind}
+        selectedId={
+          panelled || kvLoop || steamReview ? selectedSectionId : selectedKind
+        }
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

@@ -75,6 +75,9 @@ import {
   type KvLoopPatch,
 } from '../../domain/editor/project';
 import {
+  relinkSteamReviewKeyArt,
+  relinkSteamReviewLocaleSource,
+  relinkSteamReviewSource,
   resetSteamReviewKeyArtTransform,
   resetSteamReviewTransform,
   setSteamReviewDescription,
@@ -231,10 +234,17 @@ export interface ProjectStore {
   ) => void;
   /** steam-review commands. Design Ref: §3.5. */
   setSteamReviewSource: (source: MediaReference | null) => void;
+  /** Restore path — keeps the trim, unlike `setSteamReviewSource`. */
+  relinkSteamReviewSource: (source: MediaReference) => void;
   setSteamReviewLocaleSource: (
     locale: Locale,
     source: MediaReference | null,
   ) => void;
+  relinkSteamReviewLocaleSource: (
+    locale: Locale,
+    source: MediaReference,
+  ) => void;
+  relinkSteamReviewKeyArt: (image: MediaReference) => void;
   setSteamReviewSourceStatus: (status: MediaStatus) => void;
   setSteamReviewTrimIn: (ms: number) => void;
   /** Framing commands act on the ratio currently selected in the header. */
@@ -500,9 +510,21 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: updateKvDisclaimerStyle(state.project, patch)})),
   setSteamReviewSource: (source) =>
     set((state) => ({project: setSteamReviewSource(state.project, source)})),
+  relinkSteamReviewSource: (source) =>
+    set((state) => ({
+      project: relinkSteamReviewSource(state.project, source),
+    })),
   setSteamReviewLocaleSource: (locale, source) =>
     set((state) => ({
       project: setSteamReviewLocaleSource(state.project, locale, source),
+    })),
+  relinkSteamReviewLocaleSource: (locale, source) =>
+    set((state) => ({
+      project: relinkSteamReviewLocaleSource(state.project, locale, source),
+    })),
+  relinkSteamReviewKeyArt: (image) =>
+    set((state) => ({
+      project: relinkSteamReviewKeyArt(state.project, image),
     })),
   setSteamReviewSourceStatus: (status) =>
     set((state) => ({

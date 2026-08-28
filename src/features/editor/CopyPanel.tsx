@@ -4,6 +4,7 @@ import {
   LOCALES,
   SCENE_LABELS,
   SCENE_ORDER,
+  STEAM_REVIEW_KR_NOTICE,
   type Locale,
   type LocalizedCopy,
   type SceneKind,
@@ -39,6 +40,16 @@ export interface CopyPanelProps {
    * what turns the panel into the single disclaimer field.
    */
   kvLoop?: {onDisclaimer: (value: string) => void};
+  /**
+   * steam-review Design §9 — present only for the store page template. Its
+   * presence turns the panel into title/description/tags, and the Korean
+   * fourth tag renders locked (D-6).
+   */
+  steamReview?: {
+    onTitle: (value: string) => void;
+    onDescription: (value: string) => void;
+    onTag: (index: number, value: string) => void;
+  };
 }
 
 export const CopyPanel = ({
@@ -49,6 +60,7 @@ export const CopyPanel = ({
   onField,
   onSubtitle,
   kvLoop,
+  steamReview,
 }: CopyPanelProps) => (
   <div className="copy">
     <div aria-label="언어" className="segmented" role="group">
@@ -68,7 +80,78 @@ export const CopyPanel = ({
       ))}
     </div>
 
-    {kvLoop ? (
+    {steamReview ? (
+      <>
+        <div className="panel__group">
+          <h3>게임 타이틀</h3>
+          <label className="field">
+            <span>타이틀 ({LOCALE_LABELS[locale]})</span>
+            <input
+              data-testid="copy-steam-title"
+              disabled={disabled}
+              onChange={(event) => steamReview.onTitle(event.target.value)}
+              type="text"
+              value={copy.steamReview?.title ?? ''}
+            />
+          </label>
+        </div>
+
+        <div className="panel__group">
+          <h3>스토어 설명</h3>
+          <label className="field">
+            <span>설명 ({LOCALE_LABELS[locale]})</span>
+            <textarea
+              data-testid="copy-steam-description"
+              disabled={disabled}
+              onChange={(event) =>
+                steamReview.onDescription(event.target.value)
+              }
+              rows={5}
+              value={copy.steamReview?.description ?? ''}
+            />
+          </label>
+          <p className="panel__hint">
+            16:9 사이드바에서만 렌더됩니다. 줄바꿈이 그대로 반영됩니다.
+          </p>
+        </div>
+
+        <div className="panel__group">
+          <h3>태그 4개</h3>
+          {[0, 1, 2, 3].map((index) => {
+            // D-6 / Plan Q5 — the Korean fourth chip is the loot-box notice.
+            const locked = locale === 'ko' && index === 3;
+
+            return (
+              <label className="field" key={index}>
+                <span>
+                  태그 {index + 1}
+                  {locked ? ' 🔒' : ''}
+                </span>
+                <input
+                  data-testid={`copy-steam-tag-${index}`}
+                  disabled={disabled || locked}
+                  onChange={(event) =>
+                    steamReview.onTag(index, event.target.value)
+                  }
+                  type="text"
+                  value={
+                    locked
+                      ? STEAM_REVIEW_KR_NOTICE
+                      : (copy.steamReview?.tags[index] ?? '')
+                  }
+                />
+              </label>
+            );
+          })}
+          {locale === 'ko' ? (
+            <p className="panel__hint" data-testid="copy-steam-tag-locked-hint">
+              한국어 4번째 태그는 「{STEAM_REVIEW_KR_NOTICE}」로 고정되어
+              수정할 수 없습니다.
+            </p>
+          ) : null}
+        </div>
+      </>
+    ) : kvLoop ? (
       <div className="panel__group">
         <h3>하단 고지문구</h3>
         <label className="field">

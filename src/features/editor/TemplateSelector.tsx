@@ -102,6 +102,18 @@ export const TemplateSelector = ({
                 30초로 바뀝니다.
               </p>
             ) : null}
+            {/* steam-review Plan Q2 / Design §9 — the store page runs 20s only,
+                so the preset is coerced on the way in and the dialog says so
+                first (the day1-quad precedent). */}
+            {pending === 'steam-review' && currentPreset !== 20 ? (
+              <p
+                className="panel__hint"
+                data-testid="template-switch-duration-note"
+              >
+                스팀리뷰는 20초 고정입니다. 현재 {currentPreset}초 프로젝트는
+                20초로 바뀝니다.
+              </p>
+            ) : null}
             {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way
                 in, so the dialog says so before it happens. */}
             {pending === 'kv-loop' ? (

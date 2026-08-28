@@ -42,7 +42,12 @@ const mapSteamReview = (
  * D-5 — the one shared trim window must stay inside *every* source that will
  * play it, so the binding length is the shortest of the common source and all
  * locale replacements. Zero when nothing with a duration is uploaded yet.
+ * Exported for the inspector, whose trim strip drags against this bound.
  */
+export const steamReviewTrimBoundMs = (
+  settings: SteamReviewSettings,
+): number => shortestSourceMs(settings);
+
 const shortestSourceMs = (settings: SteamReviewSettings): number => {
   const durations = [
     settings.source?.durationMs,
@@ -130,6 +135,68 @@ export const setSteamReviewSourceStatus = (
       ? {...settings, source: {...settings.source, status}}
       : settings,
   );
+
+/**
+ * Restores or replaces the shared source while keeping the edit — the
+ * `relinkDay1PanelSource` counterpart. The trim is reconciled, not reset, so a
+ * reload (same file, same duration) keeps the chosen window bit for bit.
+ */
+export const relinkSteamReviewSource = (
+  project: EditorProject,
+  source: MediaReference,
+): EditorProject =>
+  mapSteamReview(project, (settings) => {
+    if (!source.durationMs) {
+      return settings;
+    }
+
+    const next = {...settings, source};
+
+    return {
+      ...next,
+      trim: reconcileTrim(
+        next.trim,
+        shortestSourceMs(next),
+        STEAM_REVIEW_WINDOW_MS,
+      ),
+    };
+  });
+
+/** The locale-source counterpart of `relinkSteamReviewSource`. */
+export const relinkSteamReviewLocaleSource = (
+  project: EditorProject,
+  locale: Locale,
+  source: MediaReference,
+): EditorProject =>
+  mapSteamReview(project, (settings) => {
+    if (!source.durationMs) {
+      return settings;
+    }
+
+    const next = {
+      ...settings,
+      localeSources: {...settings.localeSources, [locale]: source},
+    };
+
+    return {
+      ...next,
+      trim: reconcileTrim(
+        next.trim,
+        shortestSourceMs(next),
+        STEAM_REVIEW_WINDOW_MS,
+      ),
+    };
+  });
+
+/** Restores the key art without resetting its per-placement crop (D-4). */
+export const relinkSteamReviewKeyArt = (
+  project: EditorProject,
+  image: MediaReference,
+): EditorProject =>
+  mapSteamReview(project, (settings) => ({
+    ...settings,
+    keyArt: {...settings.keyArt, image},
+  }));
 
 /**
  * §3.5 — the window length is invariant (20s, or all of the shortest source
