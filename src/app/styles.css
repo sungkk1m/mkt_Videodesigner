@@ -157,6 +157,46 @@ textarea:focus-visible,
 }
 
 /*
+ * steam-review — the store page's length is fitted to its gameplay source, so
+ * it takes a number field where the other templates take preset buttons. Styled
+ * to sit at the same height inside the same `.segmented` shell.
+ */
+.stage__duration {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stage__duration input {
+  width: 48px;
+  padding: 2px 4px;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: right;
+}
+
+.stage__duration input:focus-visible {
+  outline: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+.stage__duration input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.stage__duration span {
+  color: var(--muted);
+}
+
+/*
  * day1-quad Design §4.3 — the template selector became a dropdown, so it needs
  * the compact header dimensions the segmented control had. `.field select` is
  * full width with inspector padding, which is wrong in the header.

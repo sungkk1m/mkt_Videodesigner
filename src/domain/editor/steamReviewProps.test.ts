@@ -63,9 +63,10 @@ describe('buildSteamReviewProps', () => {
   it('converts the trim window to frames at the project fps', () => {
     const props = buildSteamReviewProps(filled(), idResolver);
 
-    // 0–20s at 30fps.
+    // The 32s shared source fitted the output to 32s, then the 25s KR
+    // replacement pulled it down to 25s: 0–25s at 30fps.
     expect(props?.video.trimBeforeFrames).toBe(0);
-    expect(props?.video.trimAfterFrames).toBe(600);
+    expect(props?.video.trimAfterFrames).toBe(750);
   });
 
   it('bakes the selected ratio’s layout in', () => {

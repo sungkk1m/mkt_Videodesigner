@@ -58,6 +58,8 @@ import {
   SCENE_ORDER,
   STEAM_REVIEW_DURATION_S,
   STEAM_REVIEW_KR_NOTICE,
+  STEAM_REVIEW_MAX_DURATION_S,
+  STEAM_REVIEW_MIN_DURATION_S,
   STEAM_REVIEW_SECTION_ORDER,
   STEAM_REVIEW_THUMBNAIL_COUNT,
   SUBTITLE_ALIGNMENTS,
@@ -82,6 +84,22 @@ export const durationPresetSchema = z.union([
   z.literal(STEAM_REVIEW_DURATION_S),
   z.literal(DURATION_PRESETS[1]),
   z.literal(DURATION_PRESETS[2]),
+]);
+
+/**
+ * The project's own length. steam-review fits it to the gameplay source, so it
+ * is any whole second inside the store page's bounds rather than one of the
+ * presets; every other template is still pinned to its tuple, checked in
+ * `superRefine` where the template is known. Keeping the preset union intact
+ * matters: `SCENE_DURATION_PRESETS_MS` is keyed by it, and widening that to a
+ * number index would drop the compiler's guarantee that a lookup exists.
+ */
+export const projectDurationSchema = z.union([
+  durationPresetSchema,
+  z
+    .int()
+    .min(STEAM_REVIEW_MIN_DURATION_S)
+    .max(STEAM_REVIEW_MAX_DURATION_S),
 ]);
 
 export const hexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, {
@@ -613,7 +631,7 @@ export const steamReviewSettingsSchema = z.object({
   source: mediaReferenceSchema.nullable(),
   /** Plan Q4 — per-locale replacement. Sparse, like kv-loop's `images`. */
   localeSources: z.partialRecord(localeSchema, mediaReferenceSchema).default({}),
-  /** One shared 20s window into whichever source resolves (D-5). */
+  /** One shared window into whichever source resolves (D-5). */
   trim: mediaTrimSchema,
   /** Video slot framing — one base plus per-ratio overrides, like a scene. */
   transforms: ratioTransformsSchema,
@@ -903,13 +921,18 @@ const refineSteamReview = (
   settings: z.infer<typeof steamReviewSettingsSchema>,
   context: z.RefinementCtx,
 ) => {
-  // Plan Q2 / D-2 — narrowed here like day1-quad's preset rule: the editor
-  // coerces on the way in, so only an imported JSON can reach this.
-  if (project.durationPreset !== STEAM_REVIEW_DURATION_S) {
+  // The length follows the gameplay source now, so the rule is the bound rather
+  // than the 20s literal. `projectDurationSchema` already rejects anything
+  // outside it; this arm exists so a foreign preset (a 15s import that kept its
+  // three-scene length) is named against the store page's own range.
+  if (
+    project.durationPreset < STEAM_REVIEW_MIN_DURATION_S ||
+    project.durationPreset > STEAM_REVIEW_MAX_DURATION_S
+  ) {
     context.addIssue({
       code: 'custom',
       path: ['durationPreset'],
-      message: `A steam-review project runs ${STEAM_REVIEW_DURATION_S}s only.`,
+      message: `A steam-review project runs ${STEAM_REVIEW_MIN_DURATION_S}s to ${STEAM_REVIEW_MAX_DURATION_S}s.`,
     });
   }
 
@@ -969,7 +992,7 @@ export const editorProjectSchema = z
     name: z.string().max(MAX_PROJECT_NAME_LENGTH),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
-    durationPreset: durationPresetSchema,
+    durationPreset: projectDurationSchema,
     fps: z.union([z.literal(FRAME_RATES[0]), z.literal(FRAME_RATES[1])]),
     sections: sectionsSchema,
     templateSettings: templateSettingsSchema,
@@ -1023,6 +1046,23 @@ export const editorProjectSchema = z
             message: `Section ${index} of a ${settings.template} project must be ${expectedIds[index]}.`,
           });
         }
+      });
+    }
+
+    // `durationPresetSchema` used to be the only gate on the project length.
+    // steam-review fits its length to the gameplay source, so the field widened
+    // to a plain second count and the tuple rule moves here, where the template
+    // is known. day1-quad keeps its narrower list in `refineDay1Quad`.
+    if (
+      (settings.template === 'three-scene' ||
+        settings.template === 'day1' ||
+        settings.template === 'kv-loop') &&
+      !(DURATION_PRESETS as readonly number[]).includes(project.durationPreset)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['durationPreset'],
+        message: `A ${settings.template} project runs ${DURATION_PRESETS.join('s, ')}s only.`,
       });
     }
 

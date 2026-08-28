@@ -8,6 +8,8 @@ import {reconcileTrim} from '../timeline/timeline';
 import {
   STEAM_REVIEW_DURATION_S,
   STEAM_REVIEW_KR_NOTICE,
+  STEAM_REVIEW_MAX_DURATION_S,
+  STEAM_REVIEW_MIN_DURATION_S,
   STEAM_REVIEW_THUMBNAIL_COUNT,
   type AspectRatio,
   type EditorProject,
@@ -18,10 +20,90 @@ import {
   type SteamReviewSettings,
   DEFAULT_TRANSFORM,
 } from './types';
-import {steamReviewOf, writeRatioOverride, writeTransform} from './project';
+import {
+  buildSteamReviewSections,
+  steamReviewOf,
+  writeRatioOverride,
+  writeTransform,
+} from './project';
 
-/** The fixed window the trim selects out of the gameplay source (Plan Q2). */
-export const STEAM_REVIEW_WINDOW_MS = STEAM_REVIEW_DURATION_S * 1000;
+/**
+ * The window the trim selects out of the gameplay source. It used to be the
+ * fixed 20s of Plan Q2; the output now runs as long as its footage, so the
+ * window is the project's own length.
+ */
+export const steamReviewWindowMs = (project: EditorProject): number =>
+  project.durationPreset * 1000;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+/**
+ * The length the store page takes on when footage arrives: the shortest source
+ * it has to play, whole seconds, inside the template's bounds. Falls back to
+ * the starting length while nothing is uploaded.
+ *
+ * D-5 keeps one shared trim window across every locale, so fitting to the
+ * *shortest* source is what keeps that window playable everywhere — the reason
+ * a short locale replacement shrinks the output instead of being refused.
+ */
+export const steamReviewFittedDurationS = (
+  settings: SteamReviewSettings,
+): number => {
+  const shortest = shortestSourceMs(settings);
+
+  return shortest > 0
+    ? clamp(
+        Math.round(shortest / 1000),
+        STEAM_REVIEW_MIN_DURATION_S,
+        STEAM_REVIEW_MAX_DURATION_S,
+      )
+    : STEAM_REVIEW_DURATION_S;
+};
+
+/**
+ * Rewrites the length, the one-section axis and the trim window together, so
+ * the schema's "sections total the project length" invariant can never be seen
+ * half-applied. Out-of-range values clamp rather than throw, matching every
+ * other command here.
+ */
+const withSteamReviewDuration = (
+  project: EditorProject,
+  settings: SteamReviewSettings,
+  durationS: number,
+): EditorProject => {
+  const bounded = clamp(
+    Math.round(durationS),
+    STEAM_REVIEW_MIN_DURATION_S,
+    STEAM_REVIEW_MAX_DURATION_S,
+  );
+  const windowMs = bounded * 1000;
+
+  return {
+    ...project,
+    durationPreset: bounded,
+    sections: buildSteamReviewSections(bounded),
+    templateSettings: {
+      ...settings,
+      trim: reconcileTrim(settings.trim, shortestSourceMs(settings), windowMs),
+    },
+  };
+};
+
+/**
+ * The length control. The auto-fit is a default, not a lock: a 60s source can
+ * still be cut to a 30s spot, and `setSteamReviewTrimInMs` picks which 30s.
+ */
+export const setSteamReviewDuration = (
+  project: EditorProject,
+  durationS: number,
+): EditorProject => {
+  const settings = steamReviewOf(project);
+
+  return settings
+    ? withSteamReviewDuration(project, settings, durationS)
+    : project;
+};
 
 const mapSteamReview = (
   project: EditorProject,
@@ -36,6 +118,40 @@ const mapSteamReview = (
   const next = update(settings);
 
   return next === settings ? project : {...project, templateSettings: next};
+};
+
+/**
+ * A source change moves the length as well as the payload. `fit` is for a fresh
+ * upload, which adopts the footage's length outright; a relink or a locale
+ * replacement only clamps, so an intentional shorter cut is not overwritten by
+ * a longer file arriving later.
+ */
+const mapSteamReviewSource = (
+  project: EditorProject,
+  mode: 'fit' | 'clamp',
+  update: (settings: SteamReviewSettings) => SteamReviewSettings,
+): EditorProject => {
+  const settings = steamReviewOf(project);
+
+  if (!settings) {
+    return project;
+  }
+
+  const next = update(settings);
+
+  if (next === settings) {
+    return project;
+  }
+
+  const shortest = shortestSourceMs(next);
+  const durationS =
+    mode === 'fit'
+      ? steamReviewFittedDurationS(next)
+      : shortest > 0
+        ? Math.min(project.durationPreset, Math.floor(shortest / 1000))
+        : project.durationPreset;
+
+  return withSteamReviewDuration(project, next, durationS);
 };
 
 /**
@@ -62,48 +178,45 @@ const shortestSourceMs = (settings: SteamReviewSettings): number => {
 /**
  * A new shared source restarts the trim and the framing, mirroring
  * `setDay1PanelSource`: carrying the previous clip's window or zoom over would
- * crop footage nobody has looked at yet. Clearing keeps the rest of the edit.
+ * crop footage nobody has looked at yet. It also adopts the footage's length —
+ * a 35s clip renders a 35s store page, which is the point of the auto-fit.
+ * Clearing keeps the rest of the edit, and the length with it.
  */
 export const setSteamReviewSource = (
   project: EditorProject,
   source: MediaReference | null,
 ): EditorProject =>
-  mapSteamReview(project, (settings) => {
-    // The gameplay slot plays video; a reference without a duration (an image)
-    // would fail the schema, so it is refused here instead.
-    if (source && !source.durationMs) {
-      return settings;
-    }
-
-    if (!source) {
-      return {...settings, source: null};
-    }
-
-    const next = {...settings, source};
-
-    return {
-      ...next,
-      trim: reconcileTrim(
-        {inMs: 0, outMs: 0},
-        shortestSourceMs(next),
-        STEAM_REVIEW_WINDOW_MS,
-      ),
-      transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
-    };
-  });
+  source === null
+    ? mapSteamReview(project, (settings) =>
+        settings.source === null ? settings : {...settings, source: null},
+      )
+    : mapSteamReviewSource(project, 'fit', (settings) =>
+        // The gameplay slot plays video; a reference without a duration (an
+        // image) would fail the schema, so it is refused here instead.
+        source.durationMs
+          ? {
+              ...settings,
+              source,
+              trim: {inMs: 0, outMs: 0},
+              transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
+            }
+          : settings,
+      );
 
 /**
- * Plan Q4 — one locale's replacement footage. A source shorter than the shared
- * trim window is refused, not accommodated (D-5): shrinking the window here
- * would silently re-cut every other locale's render, and the asset panel is
- * the place that explains the refusal.
+ * Plan Q4 — one locale's replacement footage. D-5 keeps one shared trim window
+ * across every locale, so a shorter replacement used to be refused outright.
+ * With the length fitted to the footage it shortens the output instead, which
+ * re-cuts every locale to a window they can all play — visible in the length
+ * field rather than silent. Below the template's floor there is no such window,
+ * so that case is still refused and the asset panel explains it.
  */
 export const setSteamReviewLocaleSource = (
   project: EditorProject,
   locale: Locale,
   source: MediaReference | null,
 ): EditorProject =>
-  mapSteamReview(project, (settings) => {
+  mapSteamReviewSource(project, 'clamp', (settings) => {
     if (source === null) {
       if (!(locale in settings.localeSources)) {
         return settings;
@@ -116,7 +229,10 @@ export const setSteamReviewLocaleSource = (
       return {...settings, localeSources};
     }
 
-    if (!source.durationMs || source.durationMs < settings.trim.outMs) {
+    if (
+      !source.durationMs ||
+      source.durationMs < STEAM_REVIEW_MIN_DURATION_S * 1000
+    ) {
       return settings;
     }
 
@@ -145,22 +261,9 @@ export const relinkSteamReviewSource = (
   project: EditorProject,
   source: MediaReference,
 ): EditorProject =>
-  mapSteamReview(project, (settings) => {
-    if (!source.durationMs) {
-      return settings;
-    }
-
-    const next = {...settings, source};
-
-    return {
-      ...next,
-      trim: reconcileTrim(
-        next.trim,
-        shortestSourceMs(next),
-        STEAM_REVIEW_WINDOW_MS,
-      ),
-    };
-  });
+  mapSteamReviewSource(project, 'clamp', (settings) =>
+    source.durationMs ? {...settings, source} : settings,
+  );
 
 /** The locale-source counterpart of `relinkSteamReviewSource`. */
 export const relinkSteamReviewLocaleSource = (
@@ -168,25 +271,14 @@ export const relinkSteamReviewLocaleSource = (
   locale: Locale,
   source: MediaReference,
 ): EditorProject =>
-  mapSteamReview(project, (settings) => {
-    if (!source.durationMs) {
-      return settings;
-    }
-
-    const next = {
-      ...settings,
-      localeSources: {...settings.localeSources, [locale]: source},
-    };
-
-    return {
-      ...next,
-      trim: reconcileTrim(
-        next.trim,
-        shortestSourceMs(next),
-        STEAM_REVIEW_WINDOW_MS,
-      ),
-    };
-  });
+  mapSteamReviewSource(project, 'clamp', (settings) =>
+    source.durationMs
+      ? {
+          ...settings,
+          localeSources: {...settings.localeSources, [locale]: source},
+        }
+      : settings,
+  );
 
 /** Restores the key art without resetting its per-placement crop (D-4). */
 export const relinkSteamReviewKeyArt = (
@@ -199,9 +291,10 @@ export const relinkSteamReviewKeyArt = (
   }));
 
 /**
- * §3.5 — the window length is invariant (20s, or all of the shortest source
- * when that is less), so moving the in point is the whole edit, exactly like
- * the Day1 panel trim.
+ * §3.5 — the window length is the project's length (or all of the shortest
+ * source when that is less), so moving the in point is the whole edit, exactly
+ * like the Day1 panel trim. This is what makes a 30s cut out of a 60s clip
+ * possible after the auto-fit has been overridden.
  */
 export const setSteamReviewTrimInMs = (
   project: EditorProject,
@@ -219,7 +312,7 @@ export const setSteamReviewTrimInMs = (
       trim: reconcileTrim(
         {inMs, outMs: inMs},
         boundMs,
-        STEAM_REVIEW_WINDOW_MS,
+        steamReviewWindowMs(project),
       ),
     };
   });

@@ -1,17 +1,17 @@
 // Design Ref: §3.4 RenderSettings — render configuration is project data, so it
 // lives in the domain and the adapter consumes it.
-import type {
-  AspectRatio,
-  DurationPreset,
-  Locale,
-  TemplateKind,
-} from '../editor/types';
+import type {AspectRatio, Locale, TemplateKind} from '../editor/types';
 import type {RenderProfile} from './profile';
 
 export type OutputTarget = 'arraybuffer' | 'web-fs';
 
 export interface EditorRenderConfig {
-  durationPreset: DurationPreset;
+  /**
+   * Output length in seconds, and the `_{n}s_` segment of the file name. A
+   * preset for four of the five templates; steam-review fits it to its
+   * gameplay source, so the type is the second count rather than the tuple.
+   */
+  durationPreset: number;
   fps: number;
   ratio: AspectRatio;
   locale: Locale;

@@ -20,9 +20,33 @@ export const DAY1_QUAD_DURATION_PRESETS = [15, 30] as const;
  * on purpose: the tuple feeds `kvLoopCombination`'s "raise the preset" hint and
  * the three-scene preset list, and neither may start offering 20s. The literal
  * joins `durationPresetSchema` instead, so only this template ever reaches it.
+ *
+ * The store page's length is no longer pinned to it: the output runs as long as
+ * the gameplay source (`steamReviewFittedDurationS`), and this is the value the
+ * template starts on before any footage is uploaded.
  */
 export const STEAM_REVIEW_DURATION_S = 20;
 export const STEAM_REVIEW_DURATION_PRESETS = [STEAM_REVIEW_DURATION_S] as const;
+
+/**
+ * The bounds the auto-fitted length is clamped into. The floor keeps a store
+ * page readable (the 1:1 review list needs a scroll cycle to be worth
+ * watching); the ceiling is the longest existing preset, so a Batch of twelve
+ * stays inside the render budget it always had.
+ */
+export const STEAM_REVIEW_MIN_DURATION_S = 5;
+export const STEAM_REVIEW_MAX_DURATION_S = 60;
+
+/**
+ * The preset a free-form length lands on. steam-review is the one template that
+ * fits its length to its footage, so a switch out of it can arrive carrying a
+ * second count no preset template offers. Rounding *up* to the nearest preset
+ * keeps the footage: a 22s edit becomes 30s rather than losing seven seconds.
+ */
+export const coerceToPreset = (
+  seconds: number,
+): (typeof DURATION_PRESETS)[number] =>
+  DURATION_PRESETS.find((preset) => preset >= seconds) ?? DURATION_PRESETS[2];
 
 export const durationPresetsForTemplate = (
   template: (typeof TEMPLATE_KINDS)[number],

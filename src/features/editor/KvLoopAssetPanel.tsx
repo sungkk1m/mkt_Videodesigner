@@ -7,7 +7,6 @@ import {
   KV_MIN_SLOTS,
   LOCALES,
   MAX_SECTION_COUNT,
-  type DurationPreset,
   type KvLoopSettings,
   type Locale,
   type MediaReference,
@@ -39,7 +38,8 @@ const isPortrait = (reference: MediaReference | null) =>
 export interface KvLoopAssetPanelProps {
   settings: KvLoopSettings;
   locale: Locale;
-  preset: DurationPreset;
+  /** The project's length in seconds. */
+  preset: number;
   /** The set actually in play, inherited or not. */
   references: readonly (MediaReference | null)[];
   inheritedFrom: Locale | null;

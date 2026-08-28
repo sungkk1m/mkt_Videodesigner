@@ -26,7 +26,7 @@ export const SCENE_DURATION_PRESETS_MS: Record<
   // steam-review Design D-2 — present because the Record's key type demands it,
   // unreachable in practice: no template that builds three-scene sections offers
   // the 20s preset (`durationPresetsForTemplate`), and steam-review builds its
-  // own one-section axis.
+  // own one-section axis at whatever length its footage gives it.
   20: [2000, 15000, 3000],
   30: [3000, 24000, 3000],
   60: [3000, 54000, 3000],
@@ -114,7 +114,12 @@ export const moveBoundary = (
  */
 export const allocateSceneFrames = (
   durations: SceneDurationsMs,
-  preset: DurationPreset,
+  /**
+   * The project's length in seconds, not necessarily one of the presets:
+   * steam-review fits its own to the gameplay source. Only the frame total is
+   * read from it, so any whole second works.
+   */
+  preset: number,
   fps: number,
 ): readonly number[] => {
   const totalFrames = preset * fps;

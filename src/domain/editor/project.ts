@@ -48,6 +48,7 @@ import {
 import {
   DAY1_SECTION_LABELS,
   DAY1_QUAD_DURATION_PRESETS,
+  coerceToPreset,
   DAY1_QUAD_SECTION_LABELS,
   DAY1_QUAD_SECTION_ORDER,
   DAY1_SECTION_ORDER,
@@ -320,7 +321,8 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
 
 /**
  * steam-review Design Ref: §3.4 — the documented starting values. The trim
- * opens on the full 20s window, the framings on plain cover, and the four
+ * opens on the full starting window (the first upload refits it to the
+ * footage), the framings on plain cover, and the four
  * thumbnail slots empty (a render blocker until filled, Plan Q10). The default
  * copy is filled separately by `switchTemplate`, because copy lives on the
  * project, not in the payload.
@@ -637,8 +639,9 @@ export const applyDurationPreset = (
             settingsBefore.slots.length,
           )
         : settingsBefore.template === 'steam-review'
-          ? // One section, always the whole preset. Only 20s is offered
-            // (`durationPresetsForTemplate`), so this arm is a re-apply.
+          ? // One section, always the whole length. The store page reaches
+            // this through `setSteamReviewDuration`, the only caller that can
+            // hand it a second count outside the preset tuple.
             [preset * 1000]
           : createSceneDurations(preset),
   );
@@ -1158,14 +1161,16 @@ const buildKvLoopSections = (
   }));
 
 /**
- * steam-review Design Ref: §5 — one gameplay section covering the whole 20s
- * preset. No boundaries, so the timeline only ever edits the trim.
+ * steam-review Design Ref: §5 — one gameplay section covering the whole project
+ * length. No boundaries, so the timeline only ever edits the trim. Exported for
+ * `setSteamReviewDuration`, which resizes the axis whenever the length follows
+ * the gameplay source.
  */
-const buildSteamReviewSections = (): Sections =>
+export const buildSteamReviewSections = (durationS: number): Sections =>
   STEAM_REVIEW_SECTION_ORDER.map((id) => ({
     id,
     label: STEAM_REVIEW_SECTION_LABELS[id],
-    durationMs: STEAM_REVIEW_DURATION_S * 1000,
+    durationMs: durationS * 1000,
   }));
 
 /**
@@ -1184,10 +1189,17 @@ export const switchTemplate = (
     return project;
   }
 
+  // steam-review fits its length to its footage, so leaving it can carry a
+  // second count no other template offers (a 22s clip renders a 22s page). The
+  // preset templates coerce it to the nearest one they do offer, the way
+  // day1-quad already coerces 60s → 30s below. The dialog says so first (§6.1).
+  const carried = coerceToPreset(project.durationPreset);
+
   if (template === 'day1') {
     return {
       ...project,
-      sections: buildDay1Sections(project.durationPreset),
+      durationPreset: carried,
+      sections: buildDay1Sections(carried),
       templateSettings: structuredClone(DEFAULT_DAY1_SETTINGS),
     };
   }
@@ -1198,8 +1210,8 @@ export const switchTemplate = (
     // which is the same contract the looping template's ratio coercion has.
     const preset = (
       DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[]
-    ).includes(project.durationPreset)
-      ? project.durationPreset
+    ).includes(carried)
+      ? carried
       : 30;
 
     return {
@@ -1220,14 +1232,15 @@ export const switchTemplate = (
     };
   }
 
-  // steam-review Plan Q2 / Design D-2 — the store page runs 20s only, so
-  // entering it forces the preset the same way day1-quad coerces 60s → 30s.
-  // The dialog says so before it happens (§9).
+  // steam-review Plan Q2 / Design D-2 — the store page starts at its own
+  // length, so entering it forces the preset the same way day1-quad coerces
+  // 60s → 30s. The dialog says so before it happens (§9). From here the length
+  // follows the gameplay source (`setSteamReviewSource`).
   if (template === 'steam-review') {
     return {
       ...project,
       durationPreset: STEAM_REVIEW_DURATION_S,
-      sections: buildSteamReviewSections(),
+      sections: buildSteamReviewSections(STEAM_REVIEW_DURATION_S),
       templateSettings: structuredClone(DEFAULT_STEAM_REVIEW_SETTINGS),
       // §3.4 — the copy arrives filled with the reference's UnderDark wording,
       // so the first render is directly comparable to the reference. This also
@@ -1250,8 +1263,9 @@ export const switchTemplate = (
   if (template === 'kv-loop') {
     return {
       ...project,
+      durationPreset: carried,
       sections: buildKvLoopSections(
-        project.durationPreset,
+        carried,
         DEFAULT_KV_LOOPS,
         DEFAULT_KV_COUNT,
       ),
@@ -1263,7 +1277,8 @@ export const switchTemplate = (
 
   return {
     ...project,
-    sections: buildSections(project.durationPreset),
+    durationPreset: carried,
+    sections: buildSections(carried),
     templateSettings: {
       template: 'three-scene',
       source: null,

@@ -1,10 +1,11 @@
 // steam-review Design Ref: §12.2 — the store page template end to end.
 //
-// L1 is DOM-only and cheap: the switch dialog's 20s coercion note, the single
-// 20s preset, the pinned Korean fourth tag (D-6), the §3.6 required-material
-// blockers, and the one-section timeline. L2 renders real MP4s — ko across all
-// three ratios — and verifies the reference's output contract off the files:
-// 20.0s, the ratio's resolution, H.264 + AAC (Plan §1.1).
+// L1 is DOM-only and cheap: the switch dialog's 20s coercion note, the length
+// field fitting itself to the uploaded footage, the pinned Korean fourth tag
+// (D-6), the §3.6 required-material blockers, and the one-section timeline.
+// L2 renders real MP4s — ko across all three ratios — and verifies the output
+// contract off the files: the fitted length, the ratio's resolution, H.264 +
+// AAC (Plan §1.1).
 import {mkdir} from 'node:fs/promises';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -19,6 +20,8 @@ const fixture = (name: string) => resolve(projectRoot, 'tests/fixtures', name);
 const outputDirectory = resolve(projectRoot, 'artifacts/steam-review');
 
 const GAMEPLAY = fixture('steam-gameplay-22s.mp4');
+/** The output length the auto-fit takes from `GAMEPLAY`. */
+const FITTED_S = 22;
 const KEY_ART = fixture('steam-keyart.png');
 const THUMBNAILS = [1, 2, 3, 4].map((index) => fixture(`kv-${index}.png`));
 
@@ -58,10 +61,12 @@ test('switch, guards, and copy lock work without a render', async ({page}) => {
   await page.goto('/');
   await selectSteamReview(page);
 
-  // Q2 — the preset row offers 20s and nothing else.
+  // Q2 — the store page starts at 20s, and the length is a field rather than
+  // the preset buttons the other templates get.
+  await expect(page.getByTestId('steam-duration')).toHaveValue('20');
   await expect(
     page.getByRole('group', {name: '전체 길이'}).getByRole('button'),
-  ).toHaveText(['20초']);
+  ).toHaveCount(0);
 
   // §5 — one section means no draggable boundary on the timeline.
   await expect(page.getByRole('slider', {name: /경계/})).toHaveCount(0);
@@ -90,6 +95,23 @@ test('switch, guards, and copy lock work without a render', async ({page}) => {
   await page.getByRole('button', {name: '소재'}).click();
   await uploadRequiredAssets(page);
   await expect(page.getByTestId('steam-unresolved-blocker')).toHaveCount(0);
+
+  // The length follows the gameplay source: a 22s clip renders a 22s page, and
+  // the one-section timeline grows with it rather than cutting at 20s.
+  await expect(page.getByTestId('steam-duration')).toHaveValue(
+    String(FITTED_S),
+  );
+  await expect(page.getByTestId('transport-time')).toContainText('00:22.0');
+  await expect(page.getByRole('slider', {name: /경계/})).toHaveCount(0);
+
+  // The fit is a default, not a lock — a shorter cut is still available, and
+  // Trim In picks which part of the clip it takes.
+  await page.getByTestId('steam-duration').fill('15');
+  await page.getByTestId('steam-duration').blur();
+  await expect(page.getByTestId('steam-trim-range')).toContainText('창 15s');
+  await page.getByTestId('steam-trim-in').fill('4');
+  await page.getByTestId('steam-trim-in').blur();
+  await expect(page.getByTestId('steam-trim-out')).toHaveText('19.00');
 });
 
 test('renders ko across all three ratios at the reference contract', async ({
@@ -123,9 +145,10 @@ test('renders ko across all three ratios at the reference contract', async ({
     const download = await downloadPromise;
     const fileName = download.suggestedFilename();
 
-    // Plan Q12 — `{project}_steamreview_{locale}_{ratio}_20s_{fps}fps.mp4`.
+    // Plan Q12 — `{project}_steamreview_{locale}_{ratio}_{seconds}s_{fps}fps`,
+    // where the seconds are the length fitted to the gameplay source.
     expect(fileName).toContain('steamreview');
-    expect(fileName).toContain('20s');
+    expect(fileName).toContain(`${FITTED_S}s`);
 
     const outputPath = resolve(outputDirectory, fileName);
 
@@ -139,10 +162,10 @@ test('renders ko across all three ratios at the reference contract', async ({
       (stream) => stream.codec_type === 'audio',
     );
 
-    // Plan §1.1 — the reference contract: 20.0s, H.264 + AAC, the ratio's
-    // full resolution.
-    expect(Number(probe.format.duration)).toBeGreaterThan(19.9);
-    expect(Number(probe.format.duration)).toBeLessThan(20.5);
+    // Plan §1.1 — the output contract: the fitted length, H.264 + AAC, the
+    // ratio's full resolution.
+    expect(Number(probe.format.duration)).toBeGreaterThan(FITTED_S - 0.1);
+    expect(Number(probe.format.duration)).toBeLessThan(FITTED_S + 0.5);
     expect(video?.codec_name).toBe('h264');
     expect(video?.width).toBe(ratio.width);
     expect(video?.height).toBe(ratio.height);

@@ -3,7 +3,6 @@
 // disagree about where a key visual starts (Design §1.1 goal 2).
 import {createAppError, fail, ok, type Result} from '../../shared/errors/appError';
 import {DURATION_PRESETS, MIN_SCENE_MS} from '../editor/constants';
-import type {DurationPreset} from '../editor/types';
 
 export interface KvSegment {
   /** Index within one cycle, so the key for `slots` and `images`. */
@@ -27,7 +26,8 @@ export const cycleTotalMs = (cycleDurationsMs: readonly number[]) =>
  * rejects the sub-second sections rather than this function guessing.
  */
 export const kvLoopCycleDurations = (
-  preset: DurationPreset,
+  /** The project's length in seconds. Only arithmetic is done with it. */
+  preset: number,
   loopCount: number,
   kvCount: number,
 ): number[] => {
@@ -97,7 +97,8 @@ export const kvLoopSegments = (
  * tell the user which of the three numbers to change.
  */
 export const kvLoopCombination = (
-  preset: DurationPreset,
+  /** The project's length in seconds. Only arithmetic is done with it. */
+  preset: number,
   loopCount: number,
   kvCount: number,
 ): Result<void> => {

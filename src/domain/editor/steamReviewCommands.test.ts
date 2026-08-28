@@ -25,8 +25,9 @@ import {
   switchTemplate,
 } from './project';
 import {
-  STEAM_REVIEW_WINDOW_MS,
+  relinkSteamReviewSource,
   resetSteamReviewTransform,
+  setSteamReviewDuration,
   setSteamReviewKeyArt,
   setSteamReviewKeyArtRatioOverride,
   setSteamReviewLocaleSource,
@@ -36,6 +37,7 @@ import {
   setSteamReviewThumbnail,
   setSteamReviewTitle,
   setSteamReviewTrimInMs,
+  steamReviewFittedDurationS,
   updateSteamReviewKeyArtTransform,
   updateSteamReviewTransform,
 } from './steamReviewCommands';
@@ -117,11 +119,27 @@ describe('steam-review schema arm', () => {
     expect(parseProject(steamReviewProjectFixture()).ok).toBe(true);
   });
 
-  it('pins the project to the 20s preset', () => {
+  it('holds the project length inside the store page bounds', () => {
     const project = steamReviewProjectFixture();
+    const at = (durationS: number): EditorProject => ({
+      ...project,
+      durationPreset: durationS,
+      sections: [{...project.sections[0], durationMs: durationS * 1000} as never],
+    });
+
+    expect(issuePaths(at(4))).toContain('durationPreset');
+    expect(issuePaths(at(61))).toContain('durationPreset');
+    expect(parseProject(at(5)).ok).toBe(true);
+    expect(parseProject(at(45)).ok).toBe(true);
+    expect(parseProject(at(60)).ok).toBe(true);
+  });
+
+  // The preset templates did not become free-form with it.
+  it('still pins every other template to its preset tuple', () => {
+    const project = kvLoopProjectFixture();
 
     expect(
-      issuePaths({...project, durationPreset: 15}),
+      issuePaths({...project, durationPreset: 22}),
     ).toContain('durationPreset');
   });
 
@@ -193,7 +211,7 @@ describe('steam-review commands', () => {
     expect(setSteamReviewTrimInMs(project, 1000)).toBe(project);
   });
 
-  it('applies a new source and restarts the 20s trim window', () => {
+  it('fits the length and the trim window to a new source', () => {
     const project = setSteamReviewSource(
       steamReviewProjectFixture(),
       video('common', 32_000),
@@ -201,8 +219,93 @@ describe('steam-review commands', () => {
     const settings = steamReviewOf(project);
 
     expect(settings?.source?.id).toBe('media_common');
-    expect(settings?.trim).toEqual({inMs: 0, outMs: STEAM_REVIEW_WINDOW_MS});
+    expect(project.durationPreset).toBe(32);
+    expect(project.sections[0]?.durationMs).toBe(32_000);
+    expect(settings?.trim).toEqual({inMs: 0, outMs: 32_000});
     expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('clamps the fitted length to the template bounds', () => {
+    const long = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('long', 90_000),
+    );
+
+    expect(long.durationPreset).toBe(60);
+    expect(parseProject(long).ok).toBe(true);
+
+    const tiny = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('tiny', 2_000),
+    );
+
+    expect(tiny.durationPreset).toBe(5);
+    expect(parseProject(tiny).ok).toBe(true);
+  });
+
+  it('lets a longer clip be cut shorter, and keeps the cut', () => {
+    const fitted = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('common', 45_000),
+    );
+    const trimmed = setSteamReviewDuration(fitted, 30);
+
+    expect(trimmed.durationPreset).toBe(30);
+    expect(steamReviewOf(trimmed)?.trim).toEqual({inMs: 0, outMs: 30_000});
+
+    // The in point picks which 30s, and the window travels with it.
+    const moved = setSteamReviewTrimInMs(trimmed, 10_000);
+
+    expect(steamReviewOf(moved)?.trim).toEqual({inMs: 10_000, outMs: 40_000});
+    expect(moved.durationPreset).toBe(30);
+    expect(parseProject(moved).ok).toBe(true);
+  });
+
+  it('clamps a manual length into the bounds instead of throwing', () => {
+    const project = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('common', 45_000),
+    );
+
+    expect(setSteamReviewDuration(project, 0).durationPreset).toBe(5);
+    expect(setSteamReviewDuration(project, 999).durationPreset).toBe(60);
+  });
+
+  it('only clamps on a relink, so a restored file keeps the chosen cut', () => {
+    const cut = setSteamReviewDuration(
+      setSteamReviewSource(steamReviewProjectFixture(), video('common', 45_000)),
+      25,
+    );
+    const restored = relinkSteamReviewSource(cut, video('common', 45_000));
+
+    expect(restored.durationPreset).toBe(25);
+    expect(steamReviewOf(restored)?.trim).toEqual({inMs: 0, outMs: 25_000});
+  });
+
+  it('shortens the output when a locale replacement is shorter', () => {
+    const fitted = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('common', 40_000),
+    );
+    const withKr = setSteamReviewLocaleSource(fitted, 'ko', video('kr', 18_000));
+
+    expect(withKr.durationPreset).toBe(18);
+    expect(steamReviewOf(withKr)?.localeSources.ko?.id).toBe('media_kr');
+    expect(parseProject(withKr).ok).toBe(true);
+  });
+
+  it('reports the fitted length off the shortest uploaded source', () => {
+    expect(
+      steamReviewFittedDurationS(steamReviewSettingsOf(steamReviewProjectFixture())),
+    ).toBe(20);
+
+    const mixed = setSteamReviewLocaleSource(
+      setSteamReviewSource(steamReviewProjectFixture(), video('common', 40_000)),
+      'ja',
+      video('jp', 24_400),
+    );
+
+    expect(steamReviewFittedDurationS(steamReviewSettingsOf(mixed))).toBe(24);
   });
 
   it('shrinks the window to a shorter source instead of leaving it', () => {
@@ -222,8 +325,14 @@ describe('steam-review commands', () => {
   });
 
   it('moves the trim window without changing its length', () => {
+    const fitted = setSteamReviewSource(
+      steamReviewProjectFixture(),
+      video('long', 32_000),
+    );
+    // The auto-fit fills the clip, so cutting the output shorter is what leaves
+    // a window there is anywhere to slide it to.
     const project = setSteamReviewTrimInMs(
-      setSteamReviewSource(steamReviewProjectFixture(), video('long', 32_000)),
+      setSteamReviewDuration(fitted, 20),
       5_000,
     );
 
@@ -234,12 +343,18 @@ describe('steam-review commands', () => {
   });
 
   it('clamps the trim inside the shortest source (D-5)', () => {
-    // Common 32s, but the KR replacement is 24s: the window may slide only 4s.
+    // A 20s cut of a 32s clip, and the KR replacement is 24s: the window may
+    // slide only 4s. The replacement is longer than the cut, so it leaves the
+    // length alone — only a shorter one would pull it down.
     let project = setSteamReviewSource(
       steamReviewProjectFixture(),
       video('long', 32_000),
     );
+    project = setSteamReviewDuration(project, 20);
     project = setSteamReviewLocaleSource(project, 'ko', video('kr', 24_000));
+
+    expect(project.durationPreset).toBe(20);
+
     project = setSteamReviewTrimInMs(project, 10_000);
 
     expect(steamReviewOf(project)?.trim).toEqual({
@@ -263,14 +378,16 @@ describe('steam-review commands', () => {
     expect(steamReviewOf(project)?.localeSources.ko).toBeUndefined();
   });
 
-  it('refuses a locale replacement shorter than the trim window (D-5)', () => {
+  // A shorter replacement now shortens the output rather than being refused
+  // (covered above); below the length floor there is no output to shorten to.
+  it('refuses a locale replacement below the length floor (D-5)', () => {
     const project = setSteamReviewSource(
       steamReviewProjectFixture(),
       video('common'),
     );
 
     expect(
-      setSteamReviewLocaleSource(project, 'ko', video('kr', 15_000)),
+      setSteamReviewLocaleSource(project, 'ko', video('kr', 3_000)),
     ).toBe(project);
   });
 

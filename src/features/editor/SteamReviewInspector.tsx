@@ -1,11 +1,11 @@
-// steam-review Design Ref: §9 — the right column: the 20s trim window picked
-// on the footage (TrimStrip, the Day1 idiom), the video slot framing, and the
-// key art's per-placement crop (D-4). Wording lives in the copy tab.
+// steam-review Design Ref: §9 — the right column: the trim window picked on the
+// footage (TrimStrip, the Day1 idiom), the video slot framing, and the key art's
+// per-placement crop (D-4). The window is as long as the output, which follows
+// the gameplay source, so it arrives as a prop. Wording lives in the copy tab.
 import {
   MAX_OFFSET_PERCENT,
   MAX_SCALE,
   MIN_SCALE,
-  STEAM_REVIEW_DURATION_S,
   type AspectRatio,
   type MediaReference,
   type MediaTransform,
@@ -15,8 +15,6 @@ import type {FrameSampler} from '../../domain/ports';
 import {InspectorSection} from './InspectorSection';
 import {PercentField, PlainField, SecondsField, formatSeconds} from './inspectorFields';
 import {TrimStrip} from './TrimStrip';
-
-const WINDOW_MS = STEAM_REVIEW_DURATION_S * 1000;
 
 /** Scale/X/Y plus the per-ratio override toggle — the scene framing idiom. */
 const FramingFields = ({
@@ -96,6 +94,11 @@ const FramingFields = ({
 export interface SteamReviewInspectorProps {
   ratio: AspectRatio;
   disabled: boolean;
+  /**
+   * The project's length in seconds. It is also the trim window's length: the
+   * store page plays one continuous cut, so the window is the whole output.
+   */
+  durationS: number;
   frameSampler: FrameSampler;
   trim: {inMs: number; outMs: number};
   /** D-5 — the shortest of every uploaded source; the trim drags against it. */
@@ -120,6 +123,7 @@ export interface SteamReviewInspectorProps {
 export const SteamReviewInspector = ({
   ratio,
   disabled,
+  durationS,
   frameSampler,
   trim,
   trimBoundMs,
@@ -139,6 +143,7 @@ export const SteamReviewInspector = ({
   onToggleKeyArtRatioOverride,
 }: SteamReviewInspectorProps) => {
   const layout = steamReviewLayout(ratio);
+  const windowMs = durationS * 1000;
   const controlsDisabled = disabled || trimBoundMs <= 0;
   // 1:1 shows no key art at all (Plan Q11); the sidebar and banner do.
   const keyArtVisibleHere = ratio !== '1:1';
@@ -154,7 +159,7 @@ export const SteamReviewInspector = ({
 
       <div className="inspector__body">
         <InspectorSection
-          badge={`${STEAM_REVIEW_DURATION_S}s`}
+          badge={`${durationS}s`}
           defaultOpen
           id="steam-gameplay"
           title="게임플레이"
@@ -174,7 +179,7 @@ export const SteamReviewInspector = ({
             inMs={trim.inMs}
             onCommit={onTrimIn}
             sampler={frameSampler}
-            sectionDurationMs={WINDOW_MS}
+            sectionDurationMs={windowMs}
             sourceDurationMs={trimBoundMs}
             sourceId={sourceReference?.id ?? null}
             testIdPrefix="steam-review"
@@ -200,11 +205,11 @@ export const SteamReviewInspector = ({
           </p>
           <p className="panel__hint" data-testid="steam-trim-range">
             소스 구간 {formatSeconds(trim.inMs)}s – {formatSeconds(trim.outMs)}s
-            · 창 {STEAM_REVIEW_DURATION_S}s
+            · 창 {durationS}s
             {trimBoundMs > 0 ? ` · 사용 가능 ${formatSeconds(trimBoundMs)}s` : ''}
           </p>
           {/* D-5 — the bound is the shortest source across every locale. */}
-          {trimBoundMs > 0 && trimBoundMs < WINDOW_MS ? (
+          {trimBoundMs > 0 && trimBoundMs < windowMs ? (
             <p className="notice notice--warning" data-testid="steam-trim-short">
               가장 짧은 소스가 {formatSeconds(trimBoundMs)}s라 트림 창이
               그만큼으로 줄었습니다. 남는 시간은 검은 화면으로 출력됩니다.

@@ -81,6 +81,7 @@ import {
   resetSteamReviewKeyArtTransform,
   resetSteamReviewTransform,
   setSteamReviewDescription,
+  setSteamReviewDuration,
   setSteamReviewKeyArt,
   setSteamReviewKeyArtRatioOverride,
   setSteamReviewLocaleSource,
@@ -233,6 +234,11 @@ export interface ProjectStore {
     patch: Partial<KvLoopSettings['disclaimer']>,
   ) => void;
   /** steam-review commands. Design Ref: §3.5. */
+  /**
+   * The store page's length. Uploading footage fits it automatically; this is
+   * the manual override, so a long clip can still be cut to a shorter spot.
+   */
+  setSteamReviewDuration: (seconds: number) => void;
   setSteamReviewSource: (source: MediaReference | null) => void;
   /** Restore path — keeps the trim, unlike `setSteamReviewSource`. */
   relinkSteamReviewSource: (source: MediaReference) => void;
@@ -508,6 +514,10 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: updateKvTitleTransform(state.project, patch)})),
   setKvDisclaimerStyle: (patch) =>
     set((state) => ({project: updateKvDisclaimerStyle(state.project, patch)})),
+  setSteamReviewDuration: (seconds) =>
+    set((state) => ({
+      project: setSteamReviewDuration(state.project, seconds),
+    })),
   setSteamReviewSource: (source) =>
     set((state) => ({project: setSteamReviewSource(state.project, source)})),
   relinkSteamReviewSource: (source) =>

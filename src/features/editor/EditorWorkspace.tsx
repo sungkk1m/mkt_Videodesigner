@@ -41,7 +41,10 @@ import {
 import {
   ASPECT_RATIOS,
   DEFAULT_TRANSFORM,
+  coerceToPreset,
   durationPresetsForTemplate,
+  STEAM_REVIEW_MAX_DURATION_S,
+  STEAM_REVIEW_MIN_DURATION_S,
   KV_LOOP_RATIO,
   kvSectionId,
   type DurationPreset,
@@ -172,6 +175,74 @@ const LEFT_TAB_TITLES: Record<LeftTab, string> = {
   copy: '카피',
   audio: '오디오',
   hook: 'Hook 후보',
+};
+
+/**
+ * steam-review — the store page's length. It is fitted to the gameplay source
+ * on upload, so this is the override, and it keeps a draft while focused for
+ * the same reason `SecondsField` does: committing every keystroke turns typing
+ * "45" over "22" into a clamp to the floor on the first digit.
+ */
+const StageDurationField = ({
+  disabled,
+  max,
+  min,
+  onCommit,
+  value,
+}: {
+  disabled: boolean;
+  max: number;
+  min: number;
+  onCommit: (seconds: number) => void;
+  value: number;
+}) => {
+  const [draft, setDraft] = useState(() => String(value));
+  const focusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!focusedRef.current) {
+      setDraft(String(value));
+    }
+  }, [value]);
+
+  const commit = () => {
+    const parsed = Number(draft);
+
+    if (draft.trim() !== '' && Number.isFinite(parsed)) {
+      onCommit(parsed);
+    }
+
+    setDraft(String(value));
+  };
+
+  return (
+    <label className="stage__duration">
+      <input
+        aria-label="전체 길이 (초)"
+        data-testid="steam-duration"
+        disabled={disabled}
+        max={max}
+        min={min}
+        onBlur={() => {
+          focusedRef.current = false;
+          commit();
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onFocus={() => {
+          focusedRef.current = true;
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur();
+          }
+        }}
+        step={1}
+        type="number"
+        value={draft}
+      />
+      <span>초</span>
+    </label>
+  );
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -434,6 +505,20 @@ export const EditorWorkspace = ({
     steamMissingForSelected !== null &&
     (steamMissingForSelected.keyArtRatios.length > 0 ||
       steamMissingForSelected.thumbnailRatios.length > 0);
+  // The length follows the gameplay source, so the ceiling is the shortest
+  // uploaded clip (D-5 — one shared trim window every locale must be able to
+  // play), and the template's own maximum above that.
+  const steamTrimBoundMs = steamReview ? steamReviewTrimBoundMs(steamReview) : 0;
+  const steamMaxDurationS =
+    steamTrimBoundMs > 0
+      ? Math.max(
+          STEAM_REVIEW_MIN_DURATION_S,
+          Math.min(
+            STEAM_REVIEW_MAX_DURATION_S,
+            Math.floor(steamTrimBoundMs / 1000),
+          ),
+        )
+      : STEAM_REVIEW_MAX_DURATION_S;
 
   const audio = useEditorAudio({
     resolver: mediaResolver,
@@ -698,7 +783,10 @@ export const EditorWorkspace = ({
   };
 
   const handleNewProject = () => {
-    store().replaceProject(createProject(project.durationPreset));
+    // A new project is three-scene, which only runs the presets — the current
+    // length can be a steam-review fit (22s from a 22s clip), so it is coerced
+    // rather than carried into a document the schema would reject.
+    store().replaceProject(createProject(coerceToPreset(project.durationPreset)));
     setSelectedKind('hook');
     setRenderState({status: 'idle'});
     seekToMs(0);
@@ -1473,22 +1561,39 @@ export const EditorWorkspace = ({
             </span>
           ) : null}
           <span className="stage__divider" />
-          <div aria-label="전체 길이" className="segmented" role="group">
-            {durationPresetsForTemplate(project.templateSettings.template).map((preset) => (
-              <button
-                aria-pressed={project.durationPreset === preset}
-                className={`segmented__item${
-                  project.durationPreset === preset ? ' segmented__item--on' : ''
-                }`}
+          {/* steam-review — the store page's length is fitted to its gameplay
+              source rather than picked from a tuple, so the one template with a
+              free-form length gets a field where the others get their presets.
+              The upload sets it; this is the override that cuts a shorter spot
+              out of a longer clip. */}
+          {steamReview ? (
+            <div aria-label="전체 길이" className="segmented" role="group">
+              <StageDurationField
                 disabled={isRendering}
-                key={preset}
-                onClick={() => handlePreset(preset)}
-                type="button"
-              >
-                {preset}초
-              </button>
-            ))}
-          </div>
+                max={steamMaxDurationS}
+                min={STEAM_REVIEW_MIN_DURATION_S}
+                onCommit={(seconds) => store().setSteamReviewDuration(seconds)}
+                value={project.durationPreset}
+              />
+            </div>
+          ) : (
+            <div aria-label="전체 길이" className="segmented" role="group">
+              {durationPresetsForTemplate(project.templateSettings.template).map((preset) => (
+                <button
+                  aria-pressed={project.durationPreset === preset}
+                  className={`segmented__item${
+                    project.durationPreset === preset ? ' segmented__item--on' : ''
+                  }`}
+                  disabled={isRendering}
+                  key={preset}
+                  onClick={() => handlePreset(preset)}
+                  type="button"
+                >
+                  {preset}초
+                </button>
+              ))}
+            </div>
+          )}
           <span className="stage__divider" />
           <span className="stage__chip" data-testid="output-size">
             {output.width}×{output.height}
@@ -1625,6 +1730,7 @@ export const EditorWorkspace = ({
 
       {steamReview ? (
         <SteamReviewInspector
+          durationS={project.durationPreset}
           disabled={isRendering}
           frameSampler={frameSampler}
           hasKeyArt={steamReview.keyArt.image !== null}
@@ -1655,7 +1761,7 @@ export const EditorWorkspace = ({
           sourceReference={steamActiveSource}
           sourceUrl={steamAssets.urlFor(steamActiveSource)}
           trim={steamReview.trim}
-          trimBoundMs={steamReviewTrimBoundMs(steamReview)}
+          trimBoundMs={steamTrimBoundMs}
           videoHasOverride={hasRatioOverride(
             steamReview,
             project.selectedRatio,

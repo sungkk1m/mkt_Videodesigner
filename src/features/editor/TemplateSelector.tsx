@@ -8,8 +8,9 @@ import {useState} from 'react';
 
 import {
   DAY1_QUAD_DURATION_PRESETS,
+  STEAM_REVIEW_DURATION_S,
   TEMPLATE_KINDS,
-  type DurationPreset,
+  coerceToPreset,
   type TemplateKind,
 } from '../../domain/editor/types';
 
@@ -33,8 +34,11 @@ const TEMPLATE_LOSS: Record<TemplateKind, string> = {
 
 export interface TemplateSelectorProps {
   current: TemplateKind;
-  /** The project's length preset, so the dialog can warn before coercing it. */
-  currentPreset: DurationPreset;
+  /**
+   * The project's length in seconds, so the dialog can warn before coercing it.
+   * Free-form under steam-review, which fits it to the gameplay source.
+   */
+  currentPreset: number;
   disabled: boolean;
   onSwitch: (template: TemplateKind) => void;
 }
@@ -46,7 +50,11 @@ export const TemplateSelector = ({
   onSwitch,
 }: TemplateSelectorProps) => {
   const [pending, setPending] = useState<TemplateKind | null>(null);
-  const quadPresets = DAY1_QUAD_DURATION_PRESETS as readonly DurationPreset[];
+  const quadPresets = DAY1_QUAD_DURATION_PRESETS as readonly number[];
+  // The store page is the one template whose length is not a preset, so it is
+  // also the only one a switch can be leaving with a length the target does not
+  // offer. Both directions get a note, the day1-quad contract.
+  const coerced = coerceToPreset(currentPreset);
 
   return (
     <>
@@ -102,16 +110,33 @@ export const TemplateSelector = ({
                 30초로 바뀝니다.
               </p>
             ) : null}
-            {/* steam-review Plan Q2 / Design §9 — the store page runs 20s only,
-                so the preset is coerced on the way in and the dialog says so
-                first (the day1-quad precedent). */}
-            {pending === 'steam-review' && currentPreset !== 20 ? (
+            {/* steam-review Plan Q2 / Design §9 — the store page starts at 20s
+                and then follows its gameplay source, so the length is coerced on
+                the way in and the dialog says so first (day1-quad precedent). */}
+            {pending === 'steam-review' &&
+            currentPreset !== STEAM_REVIEW_DURATION_S ? (
               <p
                 className="panel__hint"
                 data-testid="template-switch-duration-note"
               >
-                스팀리뷰는 20초 고정입니다. 현재 {currentPreset}초 프로젝트는
-                20초로 바뀝니다.
+                스팀리뷰는 {STEAM_REVIEW_DURATION_S}초로 시작해 게임플레이 영상
+                길이에 맞춰집니다. 현재 {currentPreset}초 프로젝트는{' '}
+                {STEAM_REVIEW_DURATION_S}초로 바뀝니다.
+              </p>
+            ) : null}
+            {/* The way back out: a store page fitted to a 22s clip carries a
+                length no preset template offers, so it rounds up to the nearest
+                one rather than being silently truncated. */}
+            {current === 'steam-review' &&
+            pending !== 'steam-review' &&
+            coerced !== currentPreset ? (
+              <p
+                className="panel__hint"
+                data-testid="template-switch-preset-restore-note"
+              >
+                {TEMPLATE_LABELS[pending]}은 {coerced}초 같은 정해진 길이만
+                지원합니다. 현재 {currentPreset}초 프로젝트는 {coerced}초로
+                바뀝니다.
               </p>
             ) : null}
             {/* key-visual-looping FR-L14 / §6.1 — the ratio is coerced on the way
