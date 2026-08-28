@@ -56,7 +56,10 @@ import {
   resolveKvSet,
   resolveKvTitle,
 } from '../../domain/kvloop/assets';
-import {resolveSteamReviewSource} from '../../domain/steamreview/assets';
+import {
+  resolveSteamReviewSource,
+  steamReviewMissingAssets,
+} from '../../domain/steamreview/assets';
 import {steamReviewTrimBoundMs} from '../../domain/editor/steamReviewCommands';
 import {
   effectiveKvMotion,
@@ -413,6 +416,24 @@ export const EditorWorkspace = ({
   const steamActiveSource = steamReview
     ? resolveSteamReviewSource(steamReview, project.selectedLocale)
     : null;
+  // §3.6 — the required-material gates for the SINGLE render's own target
+  // (selected locale × selected ratio). Batch runs the same checks over its
+  // full selection in `preflightIssues`; this is the Day1-parity gate that
+  // keeps the render button from starting a 16:9 job with no key art.
+  const steamMissingForSelected = steamReview
+    ? steamReviewMissingAssets({
+        ...project,
+        render: {
+          ...project.render,
+          selectedLocales: [project.selectedLocale],
+          selectedRatios: [project.selectedRatio],
+        },
+      })
+    : null;
+  const steamSelectedBlocked =
+    steamMissingForSelected !== null &&
+    (steamMissingForSelected.keyArtRatios.length > 0 ||
+      steamMissingForSelected.thumbnailRatios.length > 0);
 
   const audio = useEditorAudio({
     resolver: mediaResolver,
@@ -704,7 +725,10 @@ export const EditorWorkspace = ({
       !renderableSource ||
       narrationTooLong.length > 0 ||
       // FR-S03 — a short panel renders black, so the job never starts.
-      shortPanels.length > 0
+      shortPanels.length > 0 ||
+      // steam-review §3.6 — a 16:9/9:16 job without its key art or thumbnails
+      // is unusable material, so it never starts either (Day1 parity).
+      steamSelectedBlocked
     ) {
       return;
     }
@@ -995,6 +1019,25 @@ export const EditorWorkspace = ({
               data-testid="steam-unresolved-blocker"
             >
               게임플레이 영상을 다시 올려야 합니다
+            </span>
+          ) : null}
+          {steamMissingForSelected &&
+          steamMissingForSelected.keyArtRatios.length > 0 ? (
+            <span
+              className="editor__blocker"
+              data-testid="steam-keyart-blocker"
+            >
+              {project.selectedRatio} 렌더에는 키아트가 필요합니다
+            </span>
+          ) : null}
+          {steamMissingForSelected &&
+          steamMissingForSelected.thumbnailRatios.length > 0 ? (
+            <span
+              className="editor__blocker"
+              data-testid="steam-thumbs-blocker"
+            >
+              썸네일 {steamMissingForSelected.missingThumbnails}장이 더
+              필요합니다
             </span>
           ) : null}
           {shortPanels.length > 0 ? (
