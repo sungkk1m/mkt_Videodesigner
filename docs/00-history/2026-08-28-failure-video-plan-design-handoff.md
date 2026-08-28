@@ -3,13 +3,14 @@
 새 세션에서 이 사이클을 이어받을 때 필요한 것만 적었다. 전체 맥락은
 [Plan](../01-plan/features/failure-video.plan.md) ·
 [Design](../02-design/features/failure-video.design.md) ·
-[Analysis](../03-analysis/failure-video.analysis.md)에 있다.
+[Analysis](../03-analysis/failure-video.analysis.md) ·
+[Report](../04-report/failure-video.report.md)에 있다.
 
 ## 지금 상태
 
 - 브랜치 `claude/failure-video-template-plan-poq31c`, 전부 푸시됨. PR 없음(요청되지 않음).
-- PDCA: **Plan 완료 · Design 완료 · Do 완료(M1~M7 + D-12)** — 남은 것은 실기기 렌더 검증
-  하나뿐이다.
+- PDCA: **Plan · Design · Do · Check 완료** — 리포트까지 썼고, 남은 것은 실기기 렌더
+  검증 하나뿐이다.
 - `npm test` 727/727 · `npm run build` 그린. 스키마 버전 **2 유지**, 마이그레이션 0건.
 - 레퍼런스 영상(사용자 업로드 mp4, 360×640 @30fps, 50s)은 여전히 **이 저장소에 없다.**
   M4 게이트는 Plan §1.2/§1.4에 박제된 **수치**와 실제 컴포지션 프레임을 대조하는
@@ -23,9 +24,27 @@
 
 ## 남은 일 — 실기기 렌더 검증 하나
 
-`npx playwright test failure` 5개 시나리오 중 **2개는 컨테이너에서 이미 그린**,
-3개(업로드가 필요한 것)가 실기기 몫이다. 끝나면 `docs/04-report/failure-video.report.md`를
-쓰고 사이클을 닫는다. 절차는 아래 "실기기에서 할 것".
+`npx playwright test failure` 5개 시나리오 중 **2개는 컨테이너에서 그린**, 3개(업로드가
+필요한 것)가 실기기 몫이다. 리포트는
+[failure-video.report.md](../04-report/failure-video.report.md)에 있고 §7이 남은 항목이다.
+절차는 아래 "실기기에서 할 것".
+
+### 2026-08-28 재검증 세션에서 확인한 것
+
+- H.264 부재를 직접 재확인했다: WebCodecs `isConfigSupported`가 avc1 디코드·인코드
+  둘 다 `false`, `canPlayType`은 빈 문자열, VP9/VP8만 `true`. 같은 업로드 컨트롤에서
+  H.264 픽스처는 앱이 거부하고 VP9 소스는 통과하는 것까지 대조했다 — E2E 3건의
+  실패는 코드가 아니라 코덱이다.
+- 컨테이너 검증 스크립트를 전량 재실행해 전부 그린. `npm test` **727/727**,
+  `npm run build` 그린.
+- `artifacts/m1/verify-other-templates.mjs`의 마지막 단언이 3회 중 2회 실패했는데
+  **거짓 실패**였다. 자동저장은 595ms에 IndexedDB에 기록되고, 리로드 후 셀렉터가
+  0ms `three-scene` → 100ms `day1`로 바뀐다 — 스크립트가 복원 전 값을 읽고 있었다.
+  Do 단계가 고친 것은 **쓰기** 쪽 경합이었고 **읽기** 쪽이 남아 있었다. 복원값을
+  폴링하도록 고쳐 3회 연속 그린 (리포트 §6).
+- SC7을 재측정했더니 `plain` −1.0% → **+1.8%**, `beat` +15% → **+19.6%**로 움직였다.
+  결론(창 밖 비용 ≈ 0)은 그대로이고, 이 컨테이너의 실행 간 편차가 ±5% 수준이라는
+  점이 함께 확인됐다 — Analysis §6.1.
 
 ## 이 사이클에서 나온 회귀 방어 (중요)
 

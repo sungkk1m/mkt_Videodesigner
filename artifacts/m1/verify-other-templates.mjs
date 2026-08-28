@@ -158,7 +158,18 @@ await switchTo('day1');
 await page.waitForTimeout(3000);
 await page.reload({waitUntil: 'load'});
 await page.getByTestId('template-selector').waitFor({timeout: 30_000});
-const restored = await page.getByTestId('template-selector').inputValue();
+// The write side is settled above, but the read side races too. On load the app
+// renders the initial three-scene project and swaps in the stored one when the
+// IndexedDB restore resolves — measured at ~100ms. Reading the selector the
+// moment it appears therefore catches the pre-restore value about two runs in
+// three. Poll for the stored template instead; this still fails if the restore
+// never lands, which is the whole point of the check.
+let restored = await page.getByTestId('template-selector').inputValue();
+
+for (let i = 0; i < 100 && restored !== 'day1'; i++) {
+  await page.waitForTimeout(100);
+  restored = await page.getByTestId('template-selector').inputValue();
+}
 check('reload restores the stored template', restored === 'day1', restored);
 
 check('no page errors across all templates', errors.length === 0, errors.join(' | '));
