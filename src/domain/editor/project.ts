@@ -10,8 +10,15 @@ import {
   activePanelForSection,
   day1SectionDurations,
 } from '../day1/playback';
-import {failureSectionDurations} from '../failure/playback';
-import {failureOrientationsFor} from '../failure/orientation';
+import {
+  activePanelForFailureSection,
+  failureSectionDurations,
+} from '../failure/playback';
+import {failureLayout} from '../failure/layout';
+import {
+  failureOrientationFor,
+  failureOrientationsFor,
+} from '../failure/orientation';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
 import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
@@ -116,6 +123,7 @@ import {
   type EditorSnapshot,
   type FailureOrientation,
   type FailurePanels,
+  type FailureProps,
   type FailureSettings,
   type FailureSlot,
   type HookSceneSettings,
@@ -3109,6 +3117,98 @@ export const buildKvLoopProps = (
 };
 
 /**
+ * failure-video Design §5.7 / §2.2 — the failure render contract. Returns null
+ * for any other template, matching `buildDay1Props`.
+ *
+ * The one thing that is genuinely new: the panels come from the orientation
+ * group the selected ratio asks for (D-1). Everything downstream of that — the
+ * frame layout, the locale-resolved captions, the end card — is the Day1 builder
+ * with different names, and `buildEndCardProps` is reused unchanged (Plan FR-07).
+ *
+ * That is also why the batch queue needs no failure code: it already rebuilds
+ * the snapshot per ratio, so swapping `selectedRatio` swaps the source group.
+ */
+export const buildFailureProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): FailureProps | null => {
+  const settings = failureOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const frames = allocateSceneFrames(
+    sectionDurationsOf(project.sections),
+    project.durationPreset,
+    project.fps,
+  );
+  const copy = project.copy[project.selectedLocale] as LocalizedCopy;
+  const orientation = failureOrientationFor(project.selectedRatio);
+  const group = settings[orientation];
+  let cursor = 0;
+
+  const sections = project.sections.map((section, index) => {
+    const durationInFrames = frames[index] as number;
+    const props: Day1SectionRenderProps<FailureSlot> = {
+      id: section.id,
+      fromFrame: cursor,
+      durationInFrames,
+      activePanel: activePanelForFailureSection(index),
+    };
+
+    cursor += durationInFrames;
+
+    return Object.freeze(props);
+  });
+
+  const panelProps = (panel: Day1Panel): Day1PanelRenderProps => {
+    const transform = activeTransform(panel, project.selectedRatio);
+    const trimBeforeFrames = msToFrames(panel.trim.inMs, project.fps);
+
+    return Object.freeze({
+      url: resolveUrl(panel.source),
+      trimBeforeFrames,
+      trimAfterFrames: Math.max(
+        trimBeforeFrames + 1,
+        msToFrames(panel.trim.outMs, project.fps),
+      ),
+      fit: transform.fit,
+      scale: transform.scale,
+      x: transform.x,
+      y: transform.y,
+      // The caption bar carries the text, so the panel's own label never mounts.
+      label: '',
+    });
+  };
+
+  const labels = copy.failureLabels;
+
+  return Object.freeze({
+    layout: Object.freeze(failureLayout(project.selectedRatio)),
+    panels: Object.freeze([
+      panelProps(group.panelA),
+      panelProps(group.panelB),
+      panelProps(group.panelC),
+    ]) as FailureProps['panels'],
+    captions: Object.freeze([
+      labels?.a ?? '',
+      labels?.b ?? '',
+      labels?.c ?? '',
+    ]) as FailureProps['captions'],
+    captionStyle: Object.freeze({...settings.caption}),
+    fail: Object.freeze({...settings.fail}),
+    orientation,
+    endCard: buildEndCardProps(settings.endCard, project, resolveUrl),
+    sections: Object.freeze(sections) as Day1SectionRenderProps<FailureSlot>[],
+    // Plan §3.2 keeps narration and TTS out of this template too, so passing no
+    // scenes yields an empty narration list: only BGM, the live segment's own
+    // audio, and the stamp hit.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * The one place the template decides which snapshot a render job carries.
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
@@ -3137,8 +3237,14 @@ export const buildEditorSnapshot = (
 
   const kvLoopProps = buildKvLoopProps(project, resolveUrl);
 
-  return kvLoopProps
-    ? {template: 'kv-loop', props: kvLoopProps}
+  if (kvLoopProps) {
+    return {template: 'kv-loop', props: kvLoopProps};
+  }
+
+  const failureProps = buildFailureProps(project, resolveUrl);
+
+  return failureProps
+    ? {template: 'failure', props: failureProps}
     : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
 };
 

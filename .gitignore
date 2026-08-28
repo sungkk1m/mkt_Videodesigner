@@ -23,6 +23,11 @@ artifacts/day1-label-effects/
 artifacts/m0/sources/
 artifacts/m0/backdrops/
 artifacts/m0/results.json
+# failure-video M4 gate output. The scripts and the review sheet are committed;
+# the per-frame captures and the symlink to the M0 spike's VP9 sources are not.
+artifacts/failure/frames/
+artifacts/failure/sources
+artifacts/failure/stamp-on-grounds.png
 # kv-loop-reference-motion M0 spike output — a regenerable VP9 render.
 artifacts/kv-m0/out/
 # kv-object-animation M0 spike output — regenerable VP9 renders and fixtures.

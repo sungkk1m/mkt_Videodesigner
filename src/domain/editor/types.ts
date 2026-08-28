@@ -6,6 +6,8 @@ import type {IconAdjust, NormalizedRect} from '../day1/endCard';
 import type {QuadLayout, SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
 // Type-only for the same reason as the Day1 imports above.
+import type {FailureLayout} from '../failure/layout';
+// Type-only for the same reason as the Day1 imports above.
 import type {KvSegment} from '../kvloop/cycle';
 import type {
   DAY1_CARD_MOTIONS,
@@ -36,6 +38,7 @@ export type {
   SplitLayout,
   SplitOrientation,
 } from '../day1/layout';
+export type {FailureLayout} from '../failure/layout';
 export type {DuckingEnvelope, NarrationWindow} from '../audio/ducking';
 export type {
   MediaKind,
@@ -401,6 +404,45 @@ export type Day1QuadProps = {
 };
 
 /**
+ * failure-video Design §5.7 — the failure render contract.
+ *
+ * `Day1PanelRenderProps` is reused verbatim for a level segment, with `label`
+ * always `''`: the text a failure video shows lives in the caption bar, so the
+ * panel's own label overlay never mounts. That is what lets `Panel` be reused
+ * without a line changed (§6.3).
+ */
+export type FailureProps = {
+  layout: FailureLayout;
+  /** The active orientation's three segments, in level order. */
+  panels: readonly [
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+    Day1PanelRenderProps,
+  ];
+  /** Locale-resolved caption text, one per level segment. */
+  captions: readonly [string, string, string];
+  captionStyle: {fontSize: number; textColor: string; barColor: string};
+  fail: {
+    stampEnabled: boolean;
+    zoomEnabled: boolean;
+    desaturateEnabled: boolean;
+    shakeEnabled: boolean;
+    sfxEnabled: boolean;
+    focusX: number;
+    focusY: number;
+  };
+  /**
+   * Which source group these panels came from. Carried so the placeholder can
+   * name the group the operator still has to fill, rather than making the
+   * composition re-derive it from a ratio it does not otherwise need.
+   */
+  orientation: FailureOrientation;
+  endCard: Day1EndCardRenderProps;
+  sections: Day1SectionRenderProps<FailureSlot>[];
+  audio: AudioRenderProps;
+};
+
+/**
  * key-visual-looping Design Ref: §5.2 — one key visual's resolved pixels and the
  * framing to draw them with. Flattened like `Day1PanelRenderProps` rather than
  * carrying the stored `transform`, so the composition reads render inputs only.
@@ -493,4 +535,5 @@ export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
   | {template: 'day1'; props: Day1Props}
   | {template: 'day1-quad'; props: Day1QuadProps}
-  | {template: 'kv-loop'; props: KvLoopProps};
+  | {template: 'kv-loop'; props: KvLoopProps}
+  | {template: 'failure'; props: FailureProps};
