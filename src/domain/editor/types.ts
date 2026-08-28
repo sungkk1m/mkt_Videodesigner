@@ -7,6 +7,8 @@ import type {QuadLayout, SplitLayout} from '../day1/layout';
 import type {ActivePanel} from '../day1/playback';
 // Type-only for the same reason as the Day1 imports above.
 import type {KvSegment} from '../kvloop/cycle';
+import type {SteamReviewLayout} from '../steamreview/layout';
+import type {SteamReviewAvatarKey} from '../steamreview/reviews';
 import type {
   DAY1_CARD_MOTIONS,
   DAY1_PANEL_SLOTS,
@@ -467,6 +469,55 @@ export type KvLoopProps = {
 };
 
 /**
+ * steam-review Design Ref: §8 — one review card's locale-resolved wording. The
+ * avatar travels as a key, not a URL: the pixels are bundled with the
+ * composition, which owns the key → import-URL map (§2.1).
+ */
+export interface SteamReviewReviewRenderProps {
+  avatarKey: SteamReviewAvatarKey;
+  recommendedLabel: string;
+  hoursLabel: string;
+  body: string;
+}
+
+export interface SteamReviewVideoRenderProps {
+  url: string | null;
+  trimBeforeFrames: number;
+  trimAfterFrames: number;
+  scale: number;
+  x: number;
+  y: number;
+}
+
+/** The key art's resolved framing for the selected ratio's placement (D-4). */
+export interface SteamReviewKeyArtRenderProps {
+  url: string | null;
+  scale: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * steam-review Design Ref: §8 — the store page's frozen render contract. The
+ * layout is baked in by the prop builder (the Day1 precedent), so the
+ * composition is presentational and the geometry stays unit-testable.
+ */
+export type SteamReviewProps = {
+  layout: SteamReviewLayout;
+  video: SteamReviewVideoRenderProps;
+  keyArt: SteamReviewKeyArtRenderProps;
+  /** Four slots; null renders the slot empty (the render gate blocks it). */
+  thumbnails: (string | null)[];
+  title: string;
+  tags: readonly string[];
+  /** 16:9 only by layout; always carried so the contract is ratio-agnostic. */
+  description: string;
+  /** All four embedded reviews; `layout.reviews.indexes` picks the subset. */
+  reviews: SteamReviewReviewRenderProps[];
+  audio: AudioRenderProps;
+};
+
+/**
  * One render job's frozen input, tagged with the template that produced it.
  * Day1 Design Ref: §2.1 — the render path branches on the template exactly once,
  * where this tag is read. The tag mirrors `templateSettings.template` rather than
@@ -477,4 +528,5 @@ export type EditorSnapshot =
   | {template: 'three-scene'; props: ThreeSceneProps}
   | {template: 'day1'; props: Day1Props}
   | {template: 'day1-quad'; props: Day1QuadProps}
-  | {template: 'kv-loop'; props: KvLoopProps};
+  | {template: 'kv-loop'; props: KvLoopProps}
+  | {template: 'steam-review'; props: SteamReviewProps};

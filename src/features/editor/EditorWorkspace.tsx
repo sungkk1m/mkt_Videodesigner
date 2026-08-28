@@ -12,6 +12,7 @@ import {
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
+import {SteamReviewComposition} from '../../compositions/SteamReviewComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   activeTransform,
@@ -20,6 +21,7 @@ import {
   buildDay1Props,
   buildDay1QuadProps,
   buildKvLoopProps,
+  buildSteamReviewProps,
   createProject,
   day1MissingPanels,
   day1Of,
@@ -32,6 +34,7 @@ import {
   kvLoopOf,
   outputDimensions,
   projectTotalFrames,
+  steamReviewOf,
   threeSceneOf,
   type Day1PanelKey,
 } from '../../domain/editor/project';
@@ -310,6 +313,7 @@ export const EditorWorkspace = ({
    */
   const panelled = day1PanelsOf(project);
   const kvLoop = kvLoopOf(project);
+  const steamReview = steamReviewOf(project);
   const selectedIndex = sceneIndexOf(selectedKind);
   const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
   const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
@@ -459,6 +463,10 @@ export const EditorWorkspace = ({
   );
   const kvLoopProps = useMemo(
     () => buildKvLoopProps(project, resolveUrl),
+    [project, resolveUrl],
+  );
+  const steamReviewProps = useMemo(
+    () => buildSteamReviewProps(project, resolveUrl),
     [project, resolveUrl],
   );
 
@@ -814,7 +822,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene && !panelled && !kvLoop) {
+  if (!threeScene && !panelled && !kvLoop && !steamReview) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -1339,7 +1347,19 @@ export const EditorWorkspace = ({
         >
           {/* Day1 Design Ref: §2.1 — the template picks the composition, and each
               one gets the snapshot its own prop builder produced. */}
-          {kvLoop && kvLoopProps ? (
+          {steamReview && steamReviewProps ? (
+            <Player
+              acknowledgeRemotionLicense
+              component={SteamReviewComposition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={steamReviewProps}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          ) : kvLoop && kvLoopProps ? (
             <Player
               acknowledgeRemotionLicense
               component={KvLoopComposition}

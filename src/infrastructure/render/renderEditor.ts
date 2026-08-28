@@ -5,6 +5,7 @@ import {renderMediaOnWeb} from '@remotion/web-renderer';
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
+import {SteamReviewComposition} from '../../compositions/SteamReviewComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {outputDimensions} from '../../domain/editor/project';
 import type {
@@ -12,6 +13,7 @@ import type {
   Day1QuadProps,
   EditorSnapshot,
   KvLoopProps,
+  SteamReviewProps,
   ThreeSceneProps,
 } from '../../domain/editor/types';
 import {DEFAULT_PROFILE, PROFILE_SPECS} from '../../domain/render/profile';
@@ -34,7 +36,8 @@ export type EditorRenderRequest =
   | WebRenderRequest<ThreeSceneProps>
   | WebRenderRequest<Day1Props>
   | WebRenderRequest<Day1QuadProps>
-  | WebRenderRequest<KvLoopProps>;
+  | WebRenderRequest<KvLoopProps>
+  | WebRenderRequest<SteamReviewProps>;
 
 export type EditorRenderMediaAdapter = (
   request: EditorRenderRequest,
@@ -103,6 +106,19 @@ export const createEditorRenderRequest = (
       composition: {
         id: 'kv-loop-editor',
         component: KvLoopComposition,
+        ...timing,
+        defaultProps: snapshot.props,
+      },
+      inputProps: snapshot.props,
+      ...encoding,
+    };
+  }
+
+  if (snapshot.template === 'steam-review') {
+    return {
+      composition: {
+        id: 'steam-review-editor',
+        component: SteamReviewComposition,
         ...timing,
         defaultProps: snapshot.props,
       },

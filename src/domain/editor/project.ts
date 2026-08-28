@@ -11,7 +11,14 @@ import {
   day1SectionDurations,
 } from '../day1/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
-import {STEAM_REVIEW_DEFAULT_COPY} from '../steamreview/reviews';
+import {resolveSteamReviewSource} from '../steamreview/assets';
+import {steamReviewLayout} from '../steamreview/layout';
+import {
+  STEAM_REVIEWS,
+  STEAM_REVIEW_DEFAULT_COPY,
+  STEAM_REVIEW_RECOMMENDED_LABELS,
+  steamReviewHoursLabel,
+} from '../steamreview/reviews';
 import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
 import {
@@ -131,6 +138,8 @@ import {
   type SceneKind,
   type SceneRenderProps,
   type Sections,
+  type SteamReviewProps,
+  type SteamReviewReviewRenderProps,
   type SteamReviewSettings,
   type SubtitleStyle,
   type TemplateKind,
@@ -2675,6 +2684,72 @@ export const buildKvLoopProps = (
 };
 
 /**
+ * steam-review Design Ref: §8 — the store page's render contract. Returns null
+ * for any other template, matching `buildDay1Props`.
+ *
+ * Everything the composition needs is resolved here: the ratio's measured
+ * layout, the locale's gameplay source (locale replacement or the shared one,
+ * §2.2), the trim window in frames, the key art framing for this ratio's
+ * placement (D-4), and the four reviews with locale-resolved labels (§6).
+ */
+export const buildSteamReviewProps = (
+  project: EditorProject,
+  resolveUrl: (reference: MediaReference | null | undefined) => string | null,
+): SteamReviewProps | null => {
+  const settings = steamReviewOf(project);
+
+  if (!settings) {
+    return null;
+  }
+
+  const locale = project.selectedLocale;
+  const ratio = project.selectedRatio;
+  const source = resolveSteamReviewSource(settings, locale);
+  const trimBeforeFrames = msToFrames(settings.trim.inMs, project.fps);
+  const videoTransform = activeTransform(settings, ratio);
+  const keyArtTransform = activeTransform(settings.keyArt, ratio);
+  const copy = (project.copy[locale] as LocalizedCopy).steamReview;
+
+  const reviews = STEAM_REVIEWS.map<SteamReviewReviewRenderProps>((review) =>
+    Object.freeze({
+      avatarKey: review.avatarKey,
+      recommendedLabel: STEAM_REVIEW_RECOMMENDED_LABELS[locale],
+      hoursLabel: steamReviewHoursLabel(locale, review.hours),
+      body: review.text[locale],
+    }),
+  );
+
+  return Object.freeze({
+    layout: steamReviewLayout(ratio),
+    video: Object.freeze({
+      url: resolveUrl(source),
+      trimBeforeFrames,
+      trimAfterFrames: Math.max(
+        trimBeforeFrames + 1,
+        msToFrames(settings.trim.outMs, project.fps),
+      ),
+      scale: videoTransform.scale,
+      x: videoTransform.x,
+      y: videoTransform.y,
+    }),
+    keyArt: Object.freeze({
+      url: resolveUrl(settings.keyArt.image),
+      scale: keyArtTransform.scale,
+      x: keyArtTransform.x,
+      y: keyArtTransform.y,
+    }),
+    thumbnails: settings.thumbnails.map((reference) => resolveUrl(reference)),
+    title: copy?.title ?? '',
+    tags: Object.freeze(copy?.tags ?? ['', '', '', '']) as readonly string[],
+    description: copy?.description ?? '',
+    reviews,
+    // Plan FR-13 — original video audio plus BGM; narration stays unwired, so
+    // no scenes go in and the narration list comes back empty.
+    audio: buildAudioRenderProps(project, [], resolveUrl),
+  });
+};
+
+/**
  * The one place the template decides which snapshot a render job carries.
  * Day1 Design Ref: §2.1 — the editor preview, the single render, and the Batch
  * queue all go through here, so the branch cannot drift between them.
@@ -2703,8 +2778,14 @@ export const buildEditorSnapshot = (
 
   const kvLoopProps = buildKvLoopProps(project, resolveUrl);
 
-  return kvLoopProps
-    ? {template: 'kv-loop', props: kvLoopProps}
+  if (kvLoopProps) {
+    return {template: 'kv-loop', props: kvLoopProps};
+  }
+
+  const steamReviewProps = buildSteamReviewProps(project, resolveUrl);
+
+  return steamReviewProps
+    ? {template: 'steam-review', props: steamReviewProps}
     : {template: 'three-scene', props: buildCompositionProps(project, resolveUrl)};
 };
 

@@ -2,6 +2,7 @@ import {describe, expect, it, vi} from 'vitest';
 
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
+import {SteamReviewComposition} from '../../compositions/SteamReviewComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
   applySourceToAllScenes,
@@ -12,7 +13,10 @@ import {
 } from '../../domain/editor/project';
 import type {EditorSnapshot, ThreeSceneProps} from '../../domain/editor/types';
 import {testMediaReference, testUrlResolver} from '../../test/fixtures/media';
-import {kvLoopProjectFixture} from '../../test/fixtures/project';
+import {
+  kvLoopProjectFixture,
+  steamReviewProjectFixture,
+} from '../../test/fixtures/project';
 import type {EditorRenderConfig} from '../../domain/render/types';
 import {
   createEditorRenderRequest,
@@ -166,6 +170,21 @@ describe('createEditorRenderRequest', () => {
     expect(request.composition.id).toBe('kv-loop-editor');
     expect(request.composition.component).toBe(KvLoopComposition);
     expect(request.composition.defaultProps).toBe(request.inputProps);
+  });
+
+  // steam-review Design §8 / Plan SC1 counterpart — a store-page job must
+  // reach SteamReviewComposition, never a three-scene snapshot.
+  it('routes a steam-review snapshot to SteamReviewComposition', () => {
+    const request = createEditorRenderRequest(
+      buildEditorSnapshot(steamReviewProjectFixture(), testUrlResolver()),
+      {...CONFIG, durationPreset: 20, template: 'steam-review'},
+    );
+
+    expect(request.composition.id).toBe('steam-review-editor');
+    expect(request.composition.component).toBe(SteamReviewComposition);
+    expect(request.composition.defaultProps).toBe(request.inputProps);
+    // 20s at 60fps — the timing follows the config, not a template constant.
+    expect(request.composition.durationInFrames).toBe(1200);
   });
 
   it('keeps encoding settings identical across templates', () => {
