@@ -21,6 +21,7 @@ import {
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
+  KV_MIN_SLOTS,
   KV_MOTION_MAX_SCALE,
   KV_MOTION_PRESETS,
   LOCALES,
@@ -55,6 +56,10 @@ import {
   MIN_TTS_SPEED,
   PROJECT_SCHEMA_VERSION,
   SCENE_ORDER,
+  STEAM_REVIEW_DURATION_S,
+  STEAM_REVIEW_KR_NOTICE,
+  STEAM_REVIEW_SECTION_ORDER,
+  STEAM_REVIEW_THUMBNAIL_COUNT,
   SUBTITLE_ALIGNMENTS,
   SUBTITLE_POSITIONS,
   TEMPLATE_KINDS,
@@ -71,6 +76,10 @@ export const hookMotionPresetSchema = z.enum(HOOK_MOTION_PRESETS);
 
 export const durationPresetSchema = z.union([
   z.literal(DURATION_PRESETS[0]),
+  // steam-review Design D-2 — the 20s literal joins the schema, not the
+  // `DURATION_PRESETS` tuple, so the tuple's consumers (kv-loop's preset hint,
+  // the three-scene preset list) never see it.
+  z.literal(STEAM_REVIEW_DURATION_S),
   z.literal(DURATION_PRESETS[1]),
   z.literal(DURATION_PRESETS[2]),
 ]);
@@ -218,6 +227,26 @@ export const localizedCopySchema = z.object({
    * by either existing template parses untouched.
    */
   kvLoopDisclaimer: copyTextSchema.optional(),
+  /**
+   * steam-review Design Ref: §3.2 — the store page's editable wording. Optional
+   * by the same convention as the blocks above, so stored documents parse
+   * untouched. The fixed review texts are NOT here: they are embedded constants
+   * (`domain/steamreview/reviews.ts`, Plan Q6) and never persisted.
+   */
+  steamReview: z
+    .object({
+      title: copyTextSchema,
+      /** Rendered on 16:9 only (Plan Q8); kept per locale regardless. */
+      description: copyTextSchema,
+      /** Four tag chips. `ko`'s fourth is pinned by `superRefine` (D-6). */
+      tags: z.tuple([
+        copyTextSchema,
+        copyTextSchema,
+        copyTextSchema,
+        copyTextSchema,
+      ]),
+    })
+    .optional(),
 });
 
 /**
@@ -506,8 +535,13 @@ export const kvSlotSchema = z.preprocess((input) => {
 
 export const kvLoopSettingsSchema = z.object({
   template: z.literal('kv-loop'),
-  /** Length === `sections.length`. Design D-02 — the KV count has one source. */
-  slots: z.array(kvSlotSchema).min(MIN_SECTION_COUNT).max(MAX_SECTION_COUNT),
+  /**
+   * Length === `sections.length`. Design D-02 — the KV count has one source.
+   * steam-review D-1 — the floor is `KV_MIN_SLOTS`, not `MIN_SECTION_COUNT`:
+   * the section axis now admits one section, but a loop of one key visual
+   * is still not a loop.
+   */
+  slots: z.array(kvSlotSchema).min(KV_MIN_SLOTS).max(MAX_SECTION_COUNT),
   /**
    * Per-locale key visual pixels. Sparse on purpose: a half-filled set is a
    * project mid-upload, not an invalid one, which is the same policy Day1 panels
@@ -568,11 +602,39 @@ export const kvLoopSettingsSchema = z.object({
     .default({durationMs: 0, amountPx: 0}),
 });
 
+/**
+ * steam-review Design Ref: §3.1 — the store page mockup's payload. The UI shell
+ * (layout, colors, review texts, avatars) is embedded in the app, so only the
+ * replaceable media and its framing are project data.
+ */
+export const steamReviewSettingsSchema = z.object({
+  template: z.literal('steam-review'),
+  /** Shared gameplay source. Null is fine while locale sources cover a render. */
+  source: mediaReferenceSchema.nullable(),
+  /** Plan Q4 — per-locale replacement. Sparse, like kv-loop's `images`. */
+  localeSources: z.partialRecord(localeSchema, mediaReferenceSchema).default({}),
+  /** One shared 20s window into whichever source resolves (D-5). */
+  trim: mediaTrimSchema,
+  /** Video slot framing — one base plus per-ratio overrides, like a scene. */
+  transforms: ratioTransformsSchema,
+  /** Plan Q3·Q7 — one landscape key art, shared across locales. */
+  keyArt: z.object({
+    image: mediaReferenceSchema.nullable(),
+    /** D-4 — the sidebar (2.0:1) and the 9:16 banner (3.48:1) crop apart. */
+    transforms: ratioTransformsSchema,
+  }),
+  /** Plan Q10 — four fixed slots. Null = not uploaded yet (a render blocker). */
+  thumbnails: z
+    .array(mediaReferenceSchema.nullable())
+    .length(STEAM_REVIEW_THUMBNAIL_COUNT),
+});
+
 export const templateSettingsSchema = z.discriminatedUnion('template', [
   threeSceneSettingsSchema,
   day1SettingsSchema,
   day1QuadSettingsSchema,
   kvLoopSettingsSchema,
+  steamReviewSettingsSchema,
 ]);
 
 /**
@@ -600,7 +662,9 @@ export const expectedSectionIds = (
       ? DAY1_SECTION_ORDER
       : settings.template === 'day1-quad'
         ? DAY1_QUAD_SECTION_ORDER
-        : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
+        : settings.template === 'steam-review'
+          ? STEAM_REVIEW_SECTION_ORDER
+          : Array.from({length: sectionCount}, (_, index) => kvSectionId(index));
 
 interface SectionedProject {
   sections: z.infer<typeof sectionsSchema>;
@@ -826,6 +890,78 @@ const refineKvLoop = (
   }
 };
 
+/**
+ * steam-review Design Ref: §3.1 superRefine 분기. Missing media (source, key
+ * art, thumbnails) is *not* a schema error, same as a missing Day1 panel:
+ * saving mid-upload must work, and §3.6 gates the render instead.
+ */
+const refineSteamReview = (
+  project: SectionedProject & {
+    durationPreset: number;
+    copy: {ko?: z.infer<typeof localizedCopySchema>};
+  },
+  settings: z.infer<typeof steamReviewSettingsSchema>,
+  context: z.RefinementCtx,
+) => {
+  // Plan Q2 / D-2 — narrowed here like day1-quad's preset rule: the editor
+  // coerces on the way in, so only an imported JSON can reach this.
+  if (project.durationPreset !== STEAM_REVIEW_DURATION_S) {
+    context.addIssue({
+      code: 'custom',
+      path: ['durationPreset'],
+      message: `A steam-review project runs ${STEAM_REVIEW_DURATION_S}s only.`,
+    });
+  }
+
+  if (settings.source && !settings.source.durationMs) {
+    context.addIssue({
+      code: 'custom',
+      path: ['templateSettings', 'source', 'durationMs'],
+      message: 'The gameplay source must be a video with a duration.',
+    });
+  }
+
+  refineTrimInSource(
+    settings.trim,
+    settings.source,
+    ['templateSettings', 'trim'],
+    context,
+  );
+
+  // D-5 — one shared trim window, so every locale replacement must be long
+  // enough to play it.
+  for (const [locale, reference] of Object.entries(settings.localeSources)) {
+    if (!reference) {
+      continue;
+    }
+
+    if (!reference.durationMs) {
+      context.addIssue({
+        code: 'custom',
+        path: ['templateSettings', 'localeSources', locale, 'durationMs'],
+        message: 'A locale gameplay source must be a video with a duration.',
+      });
+    } else if (reference.durationMs < settings.trim.outMs) {
+      context.addIssue({
+        code: 'custom',
+        path: ['templateSettings', 'localeSources', locale, 'durationMs'],
+        message: `The ${locale} source is shorter than the shared trim window.`,
+      });
+    }
+  }
+
+  // D-6 / Plan Q5 — the Korean loot-box notice is pinned to the fourth tag.
+  const koTags = project.copy.ko?.steamReview?.tags;
+
+  if (koTags && koTags[3] !== STEAM_REVIEW_KR_NOTICE) {
+    context.addIssue({
+      code: 'custom',
+      path: ['copy', 'ko', 'steamReview', 'tags', 3],
+      message: `The fourth Korean tag must be "${STEAM_REVIEW_KR_NOTICE}".`,
+    });
+  }
+};
+
 export const editorProjectSchema = z
   .object({
     schemaVersion: z.literal(PROJECT_SCHEMA_VERSION),
@@ -896,8 +1032,10 @@ export const editorProjectSchema = z
       refineDay1(project, settings, context);
     } else if (settings.template === 'day1-quad') {
       refineDay1Quad(project, settings, context);
-    } else {
+    } else if (settings.template === 'kv-loop') {
       refineKvLoop(project, settings, context);
+    } else {
+      refineSteamReview(project, settings, context);
     }
 
     const jobCount =
@@ -952,6 +1090,8 @@ export type Day1Settings = z.infer<typeof day1SettingsSchema>;
 export type Day1QuadSettings = z.infer<typeof day1QuadSettingsSchema>;
 export type Day1Panel = z.infer<typeof day1PanelSchema>;
 export type KvLoopSettings = z.infer<typeof kvLoopSettingsSchema>;
+export type SteamReviewSettings = z.infer<typeof steamReviewSettingsSchema>;
+export type SteamReviewCopy = NonNullable<LocalizedCopy['steamReview']>;
 export type KvSlot = z.infer<typeof kvSlotSchema>;
 export type KvRect = z.infer<typeof kvRectSchema>;
 export type KvMotion = z.infer<typeof kvMotionSchema>;

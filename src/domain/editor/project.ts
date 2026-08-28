@@ -11,6 +11,7 @@ import {
   day1SectionDurations,
 } from '../day1/playback';
 import {resolveKvSet, resolveKvTitle} from '../kvloop/assets';
+import {STEAM_REVIEW_DEFAULT_COPY} from '../steamreview/reviews';
 import {clampKvEffectRegion} from '../kvloop/effects';
 import {resolveKvMotion, withKvRoundTrip} from '../kvloop/motion';
 import {
@@ -57,6 +58,7 @@ import {
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
   KV_LOOP_RATIO,
+  KV_MIN_SLOTS,
   LOCALES,
   MAX_CTA_BACKGROUND_BLUR,
   MAX_ICON_ADJUST,
@@ -77,13 +79,16 @@ import {
   MIN_KV_EFFECT_SPAN,
   MIN_KV_GLOW_PERIOD_MS,
   MIN_SCALE,
-  MIN_SECTION_COUNT,
   MIN_SUBTITLE_FONT_SIZE,
   MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
   SCENE_LABELS,
   SCENE_ORDER,
+  STEAM_REVIEW_DURATION_S,
+  STEAM_REVIEW_SECTION_LABELS,
+  STEAM_REVIEW_SECTION_ORDER,
+  STEAM_REVIEW_THUMBNAIL_COUNT,
   kvSectionId,
   kvSectionLabel,
   type ActivePanel,
@@ -126,6 +131,7 @@ import {
   type SceneKind,
   type SceneRenderProps,
   type Sections,
+  type SteamReviewSettings,
   type SubtitleStyle,
   type TemplateKind,
   type ThreeSceneProps,
@@ -304,6 +310,26 @@ export const DEFAULT_KV_LOOP_SETTINGS: KvLoopSettings = {
 };
 
 /**
+ * steam-review Design Ref: §3.4 — the documented starting values. The trim
+ * opens on the full 20s window, the framings on plain cover, and the four
+ * thumbnail slots empty (a render blocker until filled, Plan Q10). The default
+ * copy is filled separately by `switchTemplate`, because copy lives on the
+ * project, not in the payload.
+ */
+export const DEFAULT_STEAM_REVIEW_SETTINGS: SteamReviewSettings = {
+  template: 'steam-review',
+  source: null,
+  localeSources: {},
+  trim: {inMs: 0, outMs: STEAM_REVIEW_DURATION_S * 1000},
+  transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
+  keyArt: {
+    image: null,
+    transforms: {base: {...DEFAULT_TRANSFORM}, overrides: {}},
+  },
+  thumbnails: Array.from({length: STEAM_REVIEW_THUMBNAIL_COUNT}, () => null),
+};
+
+/**
  * Narrows a project to its three-scene payload, or null for any other template.
  *
  * Day1 Design Ref: §3.2 — this is the single place the `templateSettings`
@@ -332,6 +358,13 @@ export const day1QuadOf = (
 
 export const kvLoopOf = (project: EditorProject): KvLoopSettings | null =>
   project.templateSettings.template === 'kv-loop'
+    ? project.templateSettings
+    : null;
+
+export const steamReviewOf = (
+  project: EditorProject,
+): SteamReviewSettings | null =>
+  project.templateSettings.template === 'steam-review'
     ? project.templateSettings
     : null;
 
@@ -594,7 +627,11 @@ export const applyDurationPreset = (
             settingsBefore.loopCount,
             settingsBefore.slots.length,
           )
-        : createSceneDurations(preset),
+        : settingsBefore.template === 'steam-review'
+          ? // One section, always the whole preset. Only 20s is offered
+            // (`durationPresetsForTemplate`), so this arm is a re-apply.
+            [preset * 1000]
+          : createSceneDurations(preset),
   );
   const settings = threeSceneOf(resized);
 
@@ -757,8 +794,10 @@ const clampTransform = (
  * Writes to the ratio override when one exists, otherwise to the base.
  *
  * Generic over the carrier so scenes and Day1 panels share one implementation.
+ * Exported for `steamReviewCommands`, whose video slot and key art are two more
+ * carriers of the same shape.
  */
-const writeTransform = <T extends {transforms: RatioTransforms}>(
+export const writeTransform = <T extends {transforms: RatioTransforms}>(
   target: T,
   ratio: AspectRatio,
   patch: Partial<MediaTransform>,
@@ -777,7 +816,7 @@ const writeTransform = <T extends {transforms: RatioTransforms}>(
 };
 
 /** Design Ref: §5.5 — turning an override on seeds it from what is on screen. */
-const writeRatioOverride = <T extends {transforms: RatioTransforms}>(
+export const writeRatioOverride = <T extends {transforms: RatioTransforms}>(
   target: T,
   ratio: AspectRatio,
   enabled: boolean,
@@ -1110,6 +1149,17 @@ const buildKvLoopSections = (
   }));
 
 /**
+ * steam-review Design Ref: §5 — one gameplay section covering the whole 20s
+ * preset. No boundaries, so the timeline only ever edits the trim.
+ */
+const buildSteamReviewSections = (): Sections =>
+  STEAM_REVIEW_SECTION_ORDER.map((id) => ({
+    id,
+    label: STEAM_REVIEW_SECTION_LABELS[id],
+    durationMs: STEAM_REVIEW_DURATION_S * 1000,
+  }));
+
+/**
  * Day1 Design Ref: §6.1 — switching is destructive because per-scene settings and
  * panel settings cannot be carried across. The common fields (name, copy, audio,
  * render settings, selected locale and ratio) survive; the payload and the section
@@ -1155,6 +1205,30 @@ export const switchTemplate = (
           {
             ...(project.copy[locale] as LocalizedCopy),
             day1Labels: {...DAY1_QUAD_DEFAULT_LABELS},
+          },
+        ]),
+      ) as Record<Locale, LocalizedCopy>,
+    };
+  }
+
+  // steam-review Plan Q2 / Design D-2 — the store page runs 20s only, so
+  // entering it forces the preset the same way day1-quad coerces 60s → 30s.
+  // The dialog says so before it happens (§9).
+  if (template === 'steam-review') {
+    return {
+      ...project,
+      durationPreset: STEAM_REVIEW_DURATION_S,
+      sections: buildSteamReviewSections(),
+      templateSettings: structuredClone(DEFAULT_STEAM_REVIEW_SETTINGS),
+      // §3.4 — the copy arrives filled with the reference's UnderDark wording,
+      // so the first render is directly comparable to the reference. This also
+      // seats the pinned Korean fourth tag (D-6) without the user typing it.
+      copy: Object.fromEntries(
+        LOCALES.map((locale) => [
+          locale,
+          {
+            ...(project.copy[locale] as LocalizedCopy),
+            steamReview: structuredClone(STEAM_REVIEW_DEFAULT_COPY[locale]),
           },
         ]),
       ) as Record<Locale, LocalizedCopy>,
@@ -1722,9 +1796,9 @@ export const setKvCount = (
 ): EditorProject => {
   const settings = kvLoopOf(project);
 
-  return settings &&
-    kvCount >= MIN_SECTION_COUNT &&
-    kvCount <= MAX_SECTION_COUNT
+  // steam-review D-1 — the loop's floor stays 2 (`KV_MIN_SLOTS`) after the
+  // section axis floor dropped to 1 for the one-section template.
+  return settings && kvCount >= KV_MIN_SLOTS && kvCount <= MAX_SECTION_COUNT
     ? withKvCycle(project, settings.loopCount, kvCount, settings)
     : project;
 };

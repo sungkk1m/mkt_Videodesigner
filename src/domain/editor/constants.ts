@@ -15,25 +15,52 @@ export const DURATION_PRESETS = [15, 30, 60] as const;
  */
 export const DAY1_QUAD_DURATION_PRESETS = [15, 30] as const;
 
+/**
+ * steam-review Design Ref: D-2 — 20s stays out of the `DURATION_PRESETS` tuple
+ * on purpose: the tuple feeds `kvLoopCombination`'s "raise the preset" hint and
+ * the three-scene preset list, and neither may start offering 20s. The literal
+ * joins `durationPresetSchema` instead, so only this template ever reaches it.
+ */
+export const STEAM_REVIEW_DURATION_S = 20;
+export const STEAM_REVIEW_DURATION_PRESETS = [STEAM_REVIEW_DURATION_S] as const;
+
 export const durationPresetsForTemplate = (
   template: (typeof TEMPLATE_KINDS)[number],
-): readonly (typeof DURATION_PRESETS)[number][] =>
-  template === 'day1-quad' ? DAY1_QUAD_DURATION_PRESETS : DURATION_PRESETS;
+): readonly (
+  | (typeof DURATION_PRESETS)[number]
+  | typeof STEAM_REVIEW_DURATION_S
+)[] =>
+  template === 'day1-quad'
+    ? DAY1_QUAD_DURATION_PRESETS
+    : template === 'steam-review'
+      ? STEAM_REVIEW_DURATION_PRESETS
+      : DURATION_PRESETS;
 
 /**
  * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
- * list now. The bounds are the schema's, not a template's: the existing two
- * templates still pin themselves to three section ids, and the looping template
- * takes one section per key visual (Plan L8).
+ * list. The bounds are the schema's, not a template's: templates pin their own
+ * counts in `superRefine`.
+ *
+ * steam-review Design D-1 — the floor dropped 2 → 1 for the one-section store
+ * page template. The kv-loop slot floor stays 2 via `KV_MIN_SLOTS` below, so
+ * lowering this must not loosen the loop.
  */
-export const MIN_SECTION_COUNT = 2;
+export const MIN_SECTION_COUNT = 1;
 export const MAX_SECTION_COUNT = 8;
+
+/**
+ * steam-review Design D-1 — the kv-loop slot floor, split off
+ * `MIN_SECTION_COUNT` so the section-axis floor could drop to 1 without a loop
+ * of one key visual becoming storable.
+ */
+export const KV_MIN_SLOTS = 2;
 
 export const TEMPLATE_KINDS = [
   'three-scene',
   'day1',
   'day1-quad',
   'kv-loop',
+  'steam-review',
 ] as const;
 export const DEFAULT_TEMPLATE = 'three-scene';
 
@@ -133,6 +160,19 @@ export const MIN_KV_EFFECT_SPAN = 0.02;
 export const MAX_KV_PARTICLE_SIZE_PX = 16;
 export const MIN_KV_GLOW_PERIOD_MS = 500;
 export const MAX_KV_GLOW_PERIOD_MS = 8000;
+
+/** steam-review Design Ref: §5 — one section, the gameplay window. */
+export const STEAM_REVIEW_SECTION_ORDER = ['gameplay'] as const;
+
+/**
+ * steam-review Design D-6 / Plan Q5 — the Korean build must carry the loot-box
+ * notice as its fourth tag. The schema enforces it, the tag command refuses to
+ * touch that slot, and the UI shows it locked.
+ */
+export const STEAM_REVIEW_KR_NOTICE = '확률형 아이템 포함';
+
+/** steam-review Plan Q10 — the thumbnail strip is four fixed slots. */
+export const STEAM_REVIEW_THUMBNAIL_COUNT = 4;
 
 export const DAY1_ICON_ANIMATIONS = ['pop', 'pulse', 'glow', 'none'] as const;
 export const DAY1_CARD_MOTIONS = ['ken-burns', 'fade', 'none'] as const;

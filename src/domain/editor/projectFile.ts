@@ -95,6 +95,36 @@ const markSourceUnresolved = (project: EditorProject): EditorProject => {
     };
   }
 
+  // steam-review — every replaceable pixel is playback-critical here: the
+  // gameplay sources, the key art, and the four thumbnails all render, so all
+  // of them follow the panel rule and start missing after an import.
+  if (settings.template === 'steam-review') {
+    return {
+      ...project,
+      templateSettings: {
+        ...settings,
+        source: settings.source
+          ? {...settings.source, status: 'missing'}
+          : null,
+        localeSources: Object.fromEntries(
+          Object.entries(settings.localeSources).map(([locale, reference]) => [
+            locale,
+            reference ? {...reference, status: 'missing' as const} : reference,
+          ]),
+        ),
+        keyArt: settings.keyArt.image
+          ? {
+              ...settings.keyArt,
+              image: {...settings.keyArt.image, status: 'missing'},
+            }
+          : settings.keyArt,
+        thumbnails: settings.thumbnails.map((reference) =>
+          reference ? {...reference, status: 'missing' as const} : null,
+        ),
+      },
+    };
+  }
+
   return {
     ...project,
     templateSettings: {

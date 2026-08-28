@@ -8,6 +8,7 @@ import {
   type DurationPreset,
   type EditorProject,
   type KvLoopSettings,
+  type SteamReviewSettings,
   type ThreeSceneSettings,
 } from '../../domain/editor/types';
 
@@ -73,5 +74,24 @@ export const kvLoopProjectFixture = (
   return {
     ...base,
     templateSettings: {...kvLoopSettingsOf(base), ...settings},
+  };
+};
+
+export const steamReviewSettingsOf = (
+  project: EditorProject,
+): SteamReviewSettings => project.templateSettings as SteamReviewSettings;
+
+/**
+ * A valid steam-review project, built through the real `switchTemplate` so the
+ * fixture cannot drift from what the editor produces. steam-review Design §3.4.
+ */
+export const steamReviewProjectFixture = (
+  settings: Partial<SteamReviewSettings> = {},
+): EditorProject => {
+  const base = switchTemplate(createProject(15), 'steam-review');
+
+  return {
+    ...base,
+    templateSettings: {...steamReviewSettingsOf(base), ...settings},
   };
 };

@@ -74,6 +74,23 @@ import {
   type KvEffectPatch,
   type KvLoopPatch,
 } from '../../domain/editor/project';
+import {
+  resetSteamReviewKeyArtTransform,
+  resetSteamReviewTransform,
+  setSteamReviewDescription,
+  setSteamReviewKeyArt,
+  setSteamReviewKeyArtRatioOverride,
+  setSteamReviewLocaleSource,
+  setSteamReviewRatioOverride,
+  setSteamReviewSource,
+  setSteamReviewSourceStatus,
+  setSteamReviewTag,
+  setSteamReviewThumbnail,
+  setSteamReviewTitle,
+  setSteamReviewTrimInMs,
+  updateSteamReviewKeyArtTransform,
+  updateSteamReviewTransform,
+} from '../../domain/editor/steamReviewCommands';
 import type {
   ActivePanel,
   AspectRatio,
@@ -212,6 +229,30 @@ export interface ProjectStore {
   setKvDisclaimerStyle: (
     patch: Partial<KvLoopSettings['disclaimer']>,
   ) => void;
+  /** steam-review commands. Design Ref: §3.5. */
+  setSteamReviewSource: (source: MediaReference | null) => void;
+  setSteamReviewLocaleSource: (
+    locale: Locale,
+    source: MediaReference | null,
+  ) => void;
+  setSteamReviewSourceStatus: (status: MediaStatus) => void;
+  setSteamReviewTrimIn: (ms: number) => void;
+  /** Framing commands act on the ratio currently selected in the header. */
+  setSteamReviewTransform: (patch: Partial<MediaTransform>) => void;
+  resetSteamReviewTransform: () => void;
+  toggleSteamReviewRatioOverride: (enabled: boolean) => void;
+  setSteamReviewKeyArt: (image: MediaReference | null) => void;
+  setSteamReviewKeyArtTransform: (patch: Partial<MediaTransform>) => void;
+  resetSteamReviewKeyArtTransform: () => void;
+  toggleSteamReviewKeyArtRatioOverride: (enabled: boolean) => void;
+  setSteamReviewThumbnail: (
+    index: number,
+    image: MediaReference | null,
+  ) => void;
+  /** Wording takes an explicit locale, like `setDay1LabelAt`. */
+  setSteamReviewTitleAt: (locale: Locale, value: string) => void;
+  setSteamReviewDescriptionAt: (locale: Locale, value: string) => void;
+  setSteamReviewTagAt: (locale: Locale, index: number, value: string) => void;
 }
 
 export const useProjectStore = create<ProjectStore>((set) => ({
@@ -457,4 +498,80 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: updateKvTitleTransform(state.project, patch)})),
   setKvDisclaimerStyle: (patch) =>
     set((state) => ({project: updateKvDisclaimerStyle(state.project, patch)})),
+  setSteamReviewSource: (source) =>
+    set((state) => ({project: setSteamReviewSource(state.project, source)})),
+  setSteamReviewLocaleSource: (locale, source) =>
+    set((state) => ({
+      project: setSteamReviewLocaleSource(state.project, locale, source),
+    })),
+  setSteamReviewSourceStatus: (status) =>
+    set((state) => ({
+      project: setSteamReviewSourceStatus(state.project, status),
+    })),
+  setSteamReviewTrimIn: (ms) =>
+    set((state) => ({project: setSteamReviewTrimInMs(state.project, ms)})),
+  setSteamReviewTransform: (patch) =>
+    set((state) => ({
+      project: updateSteamReviewTransform(
+        state.project,
+        state.project.selectedRatio,
+        patch,
+      ),
+    })),
+  resetSteamReviewTransform: () =>
+    set((state) => ({
+      project: resetSteamReviewTransform(
+        state.project,
+        state.project.selectedRatio,
+      ),
+    })),
+  toggleSteamReviewRatioOverride: (enabled) =>
+    set((state) => ({
+      project: setSteamReviewRatioOverride(
+        state.project,
+        state.project.selectedRatio,
+        enabled,
+      ),
+    })),
+  setSteamReviewKeyArt: (image) =>
+    set((state) => ({project: setSteamReviewKeyArt(state.project, image)})),
+  setSteamReviewKeyArtTransform: (patch) =>
+    set((state) => ({
+      project: updateSteamReviewKeyArtTransform(
+        state.project,
+        state.project.selectedRatio,
+        patch,
+      ),
+    })),
+  resetSteamReviewKeyArtTransform: () =>
+    set((state) => ({
+      project: resetSteamReviewKeyArtTransform(
+        state.project,
+        state.project.selectedRatio,
+      ),
+    })),
+  toggleSteamReviewKeyArtRatioOverride: (enabled) =>
+    set((state) => ({
+      project: setSteamReviewKeyArtRatioOverride(
+        state.project,
+        state.project.selectedRatio,
+        enabled,
+      ),
+    })),
+  setSteamReviewThumbnail: (index, image) =>
+    set((state) => ({
+      project: setSteamReviewThumbnail(state.project, index, image),
+    })),
+  setSteamReviewTitleAt: (locale, value) =>
+    set((state) => ({
+      project: setSteamReviewTitle(state.project, locale, value),
+    })),
+  setSteamReviewDescriptionAt: (locale, value) =>
+    set((state) => ({
+      project: setSteamReviewDescription(state.project, locale, value),
+    })),
+  setSteamReviewTagAt: (locale, index, value) =>
+    set((state) => ({
+      project: setSteamReviewTag(state.project, locale, index, value),
+    })),
 }));

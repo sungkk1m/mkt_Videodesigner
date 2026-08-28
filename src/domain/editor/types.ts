@@ -75,6 +75,8 @@ export type {
   SceneTransition,
   Section,
   Sections,
+  SteamReviewCopy,
+  SteamReviewSettings,
   SubtitleStyle,
   TemplateKind,
   TemplateSettings,
@@ -125,6 +127,11 @@ export const DAY1_QUAD_SECTION_LABELS = {
   'panel-c': '패널 C',
   'panel-d': '패널 D',
   endcard: '엔드카드',
+} as const;
+
+/** steam-review Design Ref: §5 — the single gameplay section's clip name. */
+export const STEAM_REVIEW_SECTION_LABELS = {
+  gameplay: '게임플레이',
 } as const;
 
 /**

@@ -23,6 +23,11 @@ export const SCENE_DURATION_PRESETS_MS: Record<
   SceneDurationsMs
 > = {
   15: [2000, 10000, 3000],
+  // steam-review Design D-2 — present because the Record's key type demands it,
+  // unreachable in practice: no template that builds three-scene sections offers
+  // the 20s preset (`durationPresetsForTemplate`), and steam-review builds its
+  // own one-section axis.
+  20: [2000, 15000, 3000],
   30: [3000, 24000, 3000],
   60: [3000, 54000, 3000],
 };

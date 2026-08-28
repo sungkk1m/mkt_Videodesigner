@@ -4,9 +4,9 @@
 import {
   KV_LOOP_MAX_LOOPS,
   KV_LOOP_MIN_LOOPS,
+  KV_MIN_SLOTS,
   LOCALES,
   MAX_SECTION_COUNT,
-  MIN_SECTION_COUNT,
   type DurationPreset,
   type KvLoopSettings,
   type Locale,
@@ -17,9 +17,11 @@ import type {AppError} from '../../shared/errors/appError';
 import {LOCALE_LABELS} from './CopyPanel';
 import {Dropzone} from './Dropzone';
 
+// steam-review D-1 — the loop's own floor, not the section axis's: the axis
+// admits one section now, but the count picker must never offer a 1-KV loop.
 const countRange = Array.from(
-  {length: MAX_SECTION_COUNT - MIN_SECTION_COUNT + 1},
-  (_, index) => MIN_SECTION_COUNT + index,
+  {length: MAX_SECTION_COUNT - KV_MIN_SLOTS + 1},
+  (_, index) => KV_MIN_SLOTS + index,
 );
 
 const loopRange = Array.from(

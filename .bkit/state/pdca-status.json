@@ -1,14 +1,20 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-08-27T02:21:00.000Z",
+  "lastUpdated": "2026-08-28T06:33:23.927244Z",
   "activeFeatures": [
     "browser-video-mvp",
     "day1-video",
     "key-visual-looping",
     "day1-quad",
-    "day1-label-effects"
+    "day1-label-effects",
+    "steam-review",
+    "editor",
+    "timeline",
+    "render",
+    "steamreview",
+    "fixtures"
   ],
-  "primaryFeature": "day1-label-effects",
+  "primaryFeature": "steam-review",
   "features": {
     "browser-video-mvp": {
       "phase": "do",
@@ -316,7 +322,7 @@
         "reference": "C:/Users/superplanet-market/Desktop/mkt_looping reference",
         "referenceMeasured": {
           "kaburi": {
-            "durationS": 19.0,
+            "durationS": 19,
             "kvCount": 4,
             "holdsS": [
               1.87,
@@ -328,13 +334,13 @@
             "locales": 4
           },
           "modakbul": {
-            "durationS": 16.0,
+            "durationS": 16,
             "kvCount": 4,
             "holdsS": [
-              2.0,
-              2.0,
-              2.0,
-              2.0
+              2,
+              2,
+              2,
+              2
             ],
             "loops": 2,
             "locales": 2
@@ -850,6 +856,112 @@
           "iteration2": "on the feature branch, awaiting the user's go-ahead to merge"
         }
       }
+    },
+    "steam-review": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [
+        "steam-store-page-mockup",
+        "three-ratios-only",
+        "fixed-20s-duration",
+        "gameplay-video-common-plus-per-locale",
+        "landscape-keyart-slot",
+        "four-thumbnails",
+        "per-locale-title-description-tags",
+        "kr-loot-box-notice-locked-tag",
+        "built-in-reviews-and-profiles",
+        "square-review-scroll-loop"
+      ],
+      "documents": {
+        "plan": "docs/01-plan/features/steam-review.plan.md",
+        "design": "docs/02-design/features/steam-review.design.md"
+      },
+      "timestamps": {
+        "started": "2026-08-28T05:40:00.000Z",
+        "lastUpdated": "2026-08-28T07:00:00.000Z"
+      },
+      "metadata": {
+        "project": "mkt_videodesigner",
+        "basedOn": "reference: Desktop/reference UnderDark steam videos (4 locales x 3 ratios, 20s)"
+      },
+      "doProgress": {
+        "completedScopes": [
+          "module-1",
+          "module-2"
+        ],
+        "remainingScopes": [
+          "module-3",
+          "module-4",
+          "module-5"
+        ]
+      }
+    },
+    "editor": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-28T06:18:06.277Z",
+        "lastUpdated": "2026-08-28T06:32:27.231Z"
+      },
+      "lastFile": "C:\\Users\\superplanet-market\\Desktop\\mkt_videodesigner\\src\\domain\\editor\\steamReviewCommands.test.ts"
+    },
+    "timeline": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-28T06:18:23.612Z",
+        "lastUpdated": "2026-08-28T06:18:23.612Z"
+      },
+      "lastFile": "C:\\Users\\superplanet-market\\Desktop\\mkt_videodesigner\\src\\domain\\timeline\\timeline.ts"
+    },
+    "render": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-28T06:20:12.613Z",
+        "lastUpdated": "2026-08-28T06:28:47.176Z"
+      },
+      "lastFile": "C:\\Users\\superplanet-market\\Desktop\\mkt_videodesigner\\src\\domain\\render\\fileName.test.ts"
+    },
+    "steamreview": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-28T06:21:11.036Z",
+        "lastUpdated": "2026-08-28T06:31:13.021Z"
+      },
+      "lastFile": "C:\\Users\\superplanet-market\\Desktop\\mkt_videodesigner\\src\\domain\\steamreview\\assets.test.ts"
+    },
+    "fixtures": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-08-28T06:30:08.040Z",
+        "lastUpdated": "2026-08-28T06:30:12.537Z"
+      },
+      "lastFile": "C:\\Users\\superplanet-market\\Desktop\\mkt_videodesigner\\src\\test\\fixtures\\project.ts"
     }
   },
   "pipeline": {
@@ -1069,7 +1181,7 @@
   "session": {
     "startedAt": "2026-07-27T07:36:48.139Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-08-27T02:21:00.000Z"
+    "lastActivity": "2026-08-28T06:32:27.231Z"
   },
   "history": [
     {
@@ -1510,6 +1622,294 @@
       "feature": "kv-object-animation",
       "phase": "completed",
       "action": "m5-real-device-gate-sc1-7-pass-d05-settled-report-written"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:06.277Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:14.977Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:23.612Z",
+      "feature": "timeline",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:47.104Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:50.638Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:18:53.584Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:05.315Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:14.846Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:23.319Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:26.972Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:41.544Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:45.070Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:47.019Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:19:59.317Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:20:02.927Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:20:12.613Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:20:26.115Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:20:28.502Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:20:38.598Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:21:11.036Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:21:48.998Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:21:56.920Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:22:10.321Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:34.739Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:38.275Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:43.211Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:44.685Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:57.813Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:23:59.862Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:24:17.995Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:24:24.336Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:24:29.279Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:24:40.375Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:24:42.223Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:25:24.071Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:25:40.150Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:25:47.188Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:25:56.357Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:26:13.320Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:27:37.671Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:28:47.176Z",
+      "feature": "render",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:30:08.040Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:30:12.537Z",
+      "feature": "fixtures",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:30:36.035Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:30:52.169Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:31:02.784Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:31:13.021Z",
+      "feature": "steamreview",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-08-28T06:32:27.231Z",
+      "feature": "editor",
+      "phase": "do",
+      "action": "updated"
     }
   ],
   "stateMachine": {

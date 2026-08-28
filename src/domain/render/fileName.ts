@@ -17,6 +17,8 @@ export const TEMPLATE_FILE_SEGMENT: Record<TemplateKind, string> = {
   day1: 'day1',
   'day1-quad': 'day1x4',
   'kv-loop': 'kvloop',
+  /** steam-review Plan Q12. */
+  'steam-review': 'steamreview',
 };
 
 export const sanitizeProjectName = (projectName: string) =>
