@@ -11,8 +11,8 @@
 | 결정 — 요청자 확인 8건 + 구현 결정 2건 | ✅ | `53a590e` · `b952909` · `06d7379` · [Plan §1.5.1](../01-plan/features/kv-ai-designation.plan.md) |
 | Plan **Approved** 승격 (v0.3.0) | ✅ | `06d7379` |
 | 소재 규모 반영 (v0.4.0) — 4장·2~3회 반복, 판정 방법 변경, 라이선스 강등 | ✅ | 이 브랜치 최신 |
-| **Design 초안** (v0.1.0, 761줄) | ✅ | `660cdce` · [design](../02-design/features/kv-ai-designation.design.md) — **§12의 확인 항목 4건이 M1 착수 전 관문** |
-| M1·M2 (스키마·도메인·드로잉) | ⏭ 착수 가능 | Design §12 확인 후. **M0을 기다리지 않는다** — 실소재 정확도에 의존하는 것이 없다 |
+| **Design** (v0.2.0 **Confirmed**) | ✅ | `660cdce` + §12 확인 · [design](../02-design/features/kv-ai-designation.design.md) — §12.1에 확인 결과 |
+| M1·M2 (스키마·도메인·드로잉) | ⏭ **바로 착수** | 관문 없음. **M0을 기다리지 않는다** — 실소재 정확도에 의존하는 것이 없다 |
 | M0 실소재 정확도 게이트 | ⏸ | 요청자 키비주얼 **4장** 대기 |
 | M3~M5 | — | 미착수 |
 
@@ -134,10 +134,9 @@ KV_AI_P0_CHROME=… node artifacts/kv-ai-p0/probe-mask.mjs   # 임계값 스윕
 ```
 /bkit:pdca do kv-ai-designation
 
-kv-ai-designation의 M1·M2를 진행합니다. Design 초안은 이미 커밋돼 있으니
-(v0.1.0) **§12의 확인 항목 4건을 저와 닫는 것부터** 시작하고, 그다음 구현으로
-갑니다. 모델·UI가 없는 층까지만 — 이 범위는 실소재 정확도와 무관하므로 M0을
-기다리지 않습니다.
+kv-ai-designation의 M1·M2를 진행합니다. Design은 v0.2.0 **Confirmed**이고
+§12의 확인 항목도 닫혔으니(§12.1) **바로 구현으로 갑니다.** 모델·UI가 없는
+층까지만 — 이 범위는 실소재 정확도와 무관하므로 M0을 기다리지 않습니다.
 
 읽을 문서 (이 셋만, 컨텍스트 절약):
 - docs/02-design/features/kv-ai-designation.design.md (설계 본문 — 이것이 주 문서)
@@ -148,11 +147,7 @@ kv-ai-designation의 M1·M2를 진행합니다. Design 초안은 이미 커밋�
 브랜치 claude/kv-ai-designation-plan-0a6o43 (Plan v0.4.0 Approved, src 무변경).
 시작 전 npm install.
 
-1) Design §12의 확인 항목 4건을 저에게 물어 닫으세요. 그 4건이 스키마 형태를
-   좌우하므로 코드보다 먼저입니다. 답이 설계와 다르면 설계를 먼저 고치고,
-   Version History에 남기세요.
-
-2) M1 — 스키마·상수·커맨드 + domain/kvloop/mask.ts, lightRegions.ts
+1) M1 — 스키마·상수·커맨드 + domain/kvloop/mask.ts, lightRegions.ts
    **글로우 필드 경로의 기계적 정정을 포함합니다** — effect.center/radius를 읽는
    네 곳이 effect.region.…이 됩니다(설계 §10의 M1 각주). 새 UI가 아니라 타입
    체크를 통과시키는 경로 변경이고, 값과 그리기 인수는 그대로입니다.
@@ -160,7 +155,7 @@ kv-ai-designation의 M1·M2를 진행합니다. Design 초안은 이미 커밋�
    같은 방출점, objectFit 매핑이 cover·contain × 종횡비 조합에서 정확,
    밝은 영역 검출이 알려진 입력에 알려진 박스.
 
-3) M2 — 마스크 드로잉(KvEffectsCanvas) + KvScene 통합
+2) M2 — 마스크 드로잉(KvEffectsCanvas) + KvScene 통합
    설계 §4.3의 artifacts/kv-ai-m2/ 하네스를 만들어 SC-A2(마스크 도달 범위 밖 무변화)와
    렌더 비용을 VP9로 실측(전례: artifacts/kv-obj-m0/). 글로우 흐림이 비싸면
    Plan §5의 "지정 시점에 한 번 구워 저장" 선회를 검토하고 수치를 문서에 남기세요.
