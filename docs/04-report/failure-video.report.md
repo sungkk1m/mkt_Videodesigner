@@ -237,6 +237,16 @@ day1-quad가 아직 없다"를 단언, 후자는 `Panel.tsx`를 day1-quad M1 스
    SC2(스탬프 적색·탈색) · SC3(레벨 20→99 펀치 + 레벨 1 컷) · SC4(캡션 바 3구간) ·
    SC5(엔드카드). 실패하면 코드 결함일 가능성이 높다 — 컴포지션 프레임까지는 이미
    수치로 맞춰 뒀다.
+
+   **이 컨테이너에서는 실행할 수 없다는 것을 2026-08-28에 재확인했다.** 두 가지가
+   각각 막는다: ① 커밋된 `playwright.config.ts`는 `channel: 'chrome'`(실제 Chrome)을
+   쓰는데 이 컨테이너에 없고, `npx playwright install chrome`은 프록시가
+   `dl.google.com`을 막아 실패한다(`curl: (56) CONNECT tunnel failed, response 403`).
+   ② 컨테이너 Chromium으로 우회해도 H.264 디코더가 없어 업로드가 필요한 3건은
+   여전히 막힌다(§2.2). 즉 **실제 Chrome이 설치된 다른 머신에서 돌려야 한다.**
+   참고로 `npm run generate:editor-fixture`는 `codec-av1.mp4`에서 멈추는데
+   (`ffmpeg-static`에 `libsvtav1` 없음, day1-quad에서 기록된 기존 사항)
+   failure 스펙이 쓰는 픽스처 3종은 그 앞에서 이미 생성된다.
 2. **실소재로 2.2× 펀치 줌 화질 확인 (R-3)** — 1080p 미만 소재에서 업스케일이 보이는지.
    보이면 대응은 소재 해상도 권고이지 상한 조정이 아니다(레퍼런스 실측값이므로).
 3. **`markSourceUnresolved`의 quad 누락** (Analysis §9 부수 관찰) — `projectFile.ts`의
