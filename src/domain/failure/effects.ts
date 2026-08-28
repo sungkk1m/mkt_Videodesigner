@@ -314,14 +314,27 @@ export const zoomPunchAt = (
 };
 
 /**
- * The punch edges for a section index. Level 1 has no incoming punch (the video
- * opens there) and the end card has no outgoing one — its boundary is a cut,
- * exactly as in Day1, because the reference has no end card to measure.
+ * The punch edges for a section index. Three boundaries, and only the middle one
+ * punches:
+ *
+ * - The video opens on level 1, so there is nothing to settle in from.
+ * - **Level 1 does not punch out** (user decision, 2026-08-28). The FAIL beat is
+ *   anchored to the end of that section (D-3), so the punch used to land on top
+ *   of it: at the 30s preset the last 8 frames of level 1 carried both, and the
+ *   footage was scaled 2.2x by the beat and 2.0x again by the punch. The
+ *   reference never shows that — there the FAIL sits mid-segment and the
+ *   transition is seconds later — so the two are separated by cutting here
+ *   instead. The stamp gets the frame to itself and the cut does the work.
+ * - The end card's boundary is a cut too, as in Day1: the reference has no end
+ *   card to measure a transition from.
+ *
+ * That leaves the level 20 -> level 99 boundary as the one punch in the video,
+ * which is also the one the reference's own second transition corresponds to.
  */
 export const failureEdgesAt = (
   index: number,
   sectionCount: number,
 ): FailureEdges => ({
-  in: index > 0 && index < sectionCount - 1,
-  out: index < sectionCount - 2,
+  in: index > 1 && index < sectionCount - 1,
+  out: index > 0 && index < sectionCount - 2,
 });

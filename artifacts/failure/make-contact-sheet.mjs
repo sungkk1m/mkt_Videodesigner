@@ -21,10 +21,11 @@ const SHOTS = [
   ['05-stamp-mid', '4.5s · 스탬프 하강', '블러 감소'],
   ['06-stamp-settled', '4.7s · 안착 + 셰이크', '−8° · 프레임 전체 흔들림'],
   ['07-stamp-hold', '5.0s · 스탬프 유지', '탈색 최대 · 스탬프는 원색'],
-  ['08-punch-out', '5.4s · 아웃고잉 펀치', 'scale 2.0 + 블러 (캡션 포함)'],
-  ['09-punch-in', '5.4s · 레벨 20 인커밍', '줌 상태에서 진입'],
-  ['10-level2-settled', '5.7s · 레벨 20 안착', '캡션 문구 교체됨'],
-  ['11-level3', '9.1s · 레벨 99', '세 번째 구간'],
+  ['08-level1-last', '5.4s · 레벨 1 마지막', '컷 — 펀치가 스탬프를 늘리지 않는다'],
+  ['09-level2-first', '5.4s · 레벨 20 첫 프레임', '컷 — 캡션 문구 교체됨'],
+  ['10-punch-out', '8.1s · 아웃고잉 펀치', 'scale 2.0 + 블러 (캡션 포함)'],
+  ['11-punch-in', '8.1s · 레벨 99 인커밍', '줌 상태에서 진입'],
+  ['11b-level3-settled', '8.8s · 레벨 99 안착', '유일한 펀치 전환이 끝난 뒤'],
   ['12-level1-landscape', '가로 1.0s · 평상', '16:9 · 가로 소스 그룹'],
   ['13-stamp-landscape', '가로 5.0s · 스탬프', '바 108px · 같은 상수'],
 ];
@@ -63,6 +64,9 @@ const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
   프레임 단위로 박제해 둔 <b>수치</b>이고, 아래 프레임은 목업이 아니라 실제
   <code>FailureComposition</code>을 Player에 마운트해 찍은 것입니다.
   소스는 컨테이너 Chromium이 디코딩할 수 있는 VP9 테스트 패턴입니다(H.264 디코더 부재).
+  <br><b>2026-08-28 수정</b>: 사용자 결정에 따라 레벨 1 → 레벨 20 경계는 펀치 전환을 빼고
+  컷으로 갑니다. FAIL 비트가 구간 끝에 못 박혀 있어 둘이 마지막 8프레임에서 겹쳤고,
+  영상 줌이 순간 4.4배가 됐습니다. 이제 영상에 남는 펀치는 레벨 20 → 레벨 99 하나입니다.
 </p>
 <div class="grid">${cards.join('')}</div>
 <table>
@@ -75,8 +79,9 @@ const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8">
   <tr><td>안착 회전 −8°</td><td>FAIL_STAMP_ROTATE_DEG −8</td><td>−8.00°</td><td class="ok">일치</td></tr>
   <tr><td>줌 1 → ≈2.2, ease-out 0.6s</td><td>FAIL_ZOOM_SCALE 2.2 / LEAD 500ms</td><td>02~04 프레임</td><td class="ok">일치</td></tr>
   <tr><td>스탬프 진입 ≈4× → 1, 불투명 0.6 → 1</td><td>ENTER_SCALE 4 / ENTER_MS 250</td><td>04~06 프레임</td><td class="ok">일치</td></tr>
-  <tr><td>전환 아웃 0.2s 줌인 + 블러</td><td>TRANSITION_OUT_MS 250</td><td>08 프레임</td><td class="ok">일치</td></tr>
-  <tr><td>전환 인 0.3s 줌아웃 안착</td><td>TRANSITION_IN_MS 300</td><td>09~10 프레임</td><td class="ok">일치</td></tr>
+  <tr><td>전환 아웃 0.2s 줌인 + 블러</td><td>TRANSITION_OUT_MS 250</td><td>10 프레임</td><td class="ok">일치</td></tr>
+  <tr><td>전환 인 0.3s 줌아웃 안착</td><td>TRANSITION_IN_MS 300</td><td>11~11b 프레임</td><td class="ok">일치</td></tr>
+  <tr><td>(사용자 결정) 레벨 1은 컷</td><td>failureEdgesAt — out=false</td><td>08~09 프레임, 스탬프 폭 1.26</td><td class="ok">적용</td></tr>
 </table>
 </body></html>`;
 

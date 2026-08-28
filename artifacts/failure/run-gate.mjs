@@ -39,10 +39,11 @@ const SHOTS = [
   {name: '05-stamp-mid', ratio: '9:16', frame: LEVEL_ONE_FRAMES - 26, note: '스탬프 하강 중'},
   {name: '06-stamp-settled', ratio: '9:16', frame: LEVEL_ONE_FRAMES - 22, note: '스탬프 안착 + 셰이크'},
   {name: '07-stamp-hold', ratio: '9:16', frame: LEVEL_ONE_FRAMES - 12, note: '스탬프 유지 (탈색 최대)'},
-  {name: '08-punch-out', ratio: '9:16', frame: LEVEL_ONE_FRAMES - 1, note: '아웃고잉 펀치 최대'},
-  {name: '09-punch-in', ratio: '9:16', frame: LEVEL_TWO_START, note: '레벨 20 인커밍 (줌 상태)'},
-  {name: '10-level2-settled', ratio: '9:16', frame: LEVEL_TWO_START + 10, note: '레벨 20 안착'},
-  {name: '11-level3', ratio: '9:16', frame: LEVEL_THREE_START + 30, note: '레벨 99'},
+  {name: '08-level1-last', ratio: '9:16', frame: LEVEL_ONE_FRAMES - 1, note: '레벨 1 마지막 — 컷 (펀치 없음)'},
+  {name: '09-level2-first', ratio: '9:16', frame: LEVEL_TWO_START, note: '레벨 20 첫 프레임 — 컷'},
+  {name: '10-punch-out', ratio: '9:16', frame: LEVEL_THREE_START - 1, note: '레벨 20 아웃고잉 펀치 최대'},
+  {name: '11-punch-in', ratio: '9:16', frame: LEVEL_THREE_START, note: '레벨 99 인커밍 (줌 상태)'},
+  {name: '11b-level3-settled', ratio: '9:16', frame: LEVEL_THREE_START + 20, note: '레벨 99 안착'},
   {name: '12-level1-landscape', ratio: '16:9', frame: 30, note: '가로 평상 프레임'},
   {name: '13-stamp-landscape', ratio: '16:9', frame: LEVEL_ONE_FRAMES - 12, note: '가로 스탬프 유지'},
 ];
@@ -177,6 +178,39 @@ check(
   'settled stamp is tilted by the measured -8 degrees',
   angle !== null && Math.abs(angle + 8) < 0.5,
   `${angle?.toFixed(2)}°`,
+);
+
+// The 2026-08-28 amendment: level 1 does not punch out, so the FAIL stamp is
+// never scaled by a transition. Read the frame wrapper's own transform on the
+// last frame of level 1 — at rest it carries none.
+await page.evaluate(({ratio, frame}) => window.__failureGate(ratio, frame), {
+  ratio: '9:16',
+  frame: LEVEL_ONE_FRAMES - 1,
+});
+
+const levelOneLast = await page.evaluate(() => {
+  const host = document.getElementById('frame');
+  const stamp = host?.querySelector('[data-testid="failure-stamp"]');
+  const hostBox = host?.getBoundingClientRect();
+  const stampBox = stamp?.getBoundingClientRect();
+
+  return {
+    hasStamp: Boolean(stamp),
+    // The settled stamp's on-screen width, as a fraction of the frame. A punch
+    // would have scaled it past the 1.2 the asset is placed at.
+    stampWidth:
+      stampBox && hostBox ? stampBox.width / hostBox.width : null,
+  };
+});
+
+check(
+  'the stamp is still on screen on the last frame of level 1',
+  levelOneLast.hasStamp,
+);
+check(
+  'no punch scales the settled stamp — level 1 cuts, it does not punch',
+  levelOneLast.stampWidth !== null && levelOneLast.stampWidth < 1.35,
+  `stamp width ${levelOneLast.stampWidth?.toFixed(3)} of the frame (settled ≈1.26)`,
 );
 
 check('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));

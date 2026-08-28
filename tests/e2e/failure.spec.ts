@@ -303,10 +303,10 @@ test.describe('failure — the growth-story template', () => {
     ).toBeLessThan(0.01);
 
     // --- SC3: the punch transition ------------------------------------------
-    // §6.2 — the outgoing frame is scaled 2x over the last 0.25s, which lifts
-    // the caption bar's top edge off its resting row. At rest the row at y=1700
-    // is footage and the row at y=1750 is bar; at full zoom the bar has been
-    // scaled past both.
+    // §6.2, as amended 2026-08-28 — the level 20 -> level 99 boundary is the one
+    // that punches. The outgoing frame is scaled 2x over the last 0.25s, which
+    // lifts the caption bar off its resting row: at rest y=1750 is bar, at full
+    // zoom the bar has been scaled past it.
     const edgeAt = async (seconds: number) => {
       const pixels = await sampleRegion(outputPath, seconds, {
         x: 500,
@@ -318,17 +318,27 @@ test.describe('failure — the growth-story template', () => {
       return meanRgb(pixels as never);
     };
 
-    const resting = await edgeAt(LEVEL_ONE_END - 1);
-    const punched = await edgeAt(LEVEL_ONE_END - 0.02);
+    const resting = await edgeAt(LEVEL_TWO_END - 1);
+    const punched = await edgeAt(LEVEL_TWO_END - 0.02);
 
     // At rest this is the black bar; mid-punch it is anything but.
     resting.forEach((channel) => expect(channel).toBeLessThan(24));
     expect(Math.max(...punched)).toBeGreaterThan(40);
 
-    // The incoming frame settles back: 0.4s into level 2 the bar is home again.
-    const settled = await edgeAt(LEVEL_ONE_END + 0.5);
+    // The incoming frame settles back: 0.5s into level 99 the bar is home again.
+    const settled = await edgeAt(LEVEL_TWO_END + 0.5);
 
     settled.forEach((channel) => expect(channel).toBeLessThan(24));
+
+    // And the level 1 -> level 20 boundary is a clean cut, which is the whole
+    // point of the amendment: the FAIL stamp is still settled on the last frame
+    // of level 1, so a punch there would have scaled it with the frame.
+    const beforeCut = await edgeAt(LEVEL_ONE_END - 0.02);
+    const afterCut = await edgeAt(LEVEL_ONE_END + 0.02);
+
+    for (const bar of [beforeCut, afterCut]) {
+      bar.forEach((channel) => expect(channel).toBeLessThan(24));
+    }
 
     // --- SC5: the end card ---------------------------------------------------
     // The last 3s are the end card, which has no caption bar over it: with no
@@ -345,7 +355,6 @@ test.describe('failure — the growth-story template', () => {
     const beforeEndCard = meanRgb((await barSample(26)) as never);
 
     beforeEndCard.forEach((channel) => expect(channel).toBeLessThan(24));
-    expect(LEVEL_TWO_END).toBeLessThan(28.5);
   });
 
   test('leaves the other templates untouched (SC6)', async ({page}) => {

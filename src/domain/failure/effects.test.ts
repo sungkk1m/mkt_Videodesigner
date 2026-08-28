@@ -330,12 +330,30 @@ describe('zoomPunchAt', () => {
 });
 
 describe('failureEdgesAt', () => {
-  // FR-05 — the two level boundaries punch; the end card's boundary is a cut,
-  // exactly as in Day1, because the reference has no end card to measure.
-  it('punches the level boundaries and cuts to the end card', () => {
-    expect(failureEdgesAt(0, 4)).toEqual({in: false, out: true});
-    expect(failureEdgesAt(1, 4)).toEqual({in: true, out: true});
+  /**
+   * FR-05, as amended by the user on 2026-08-28: only the level 20 -> level 99
+   * boundary punches.
+   *
+   * Level 1 does not punch out because the FAIL beat is anchored to the end of
+   * that section, and the two used to land on the same frames. The end card's
+   * boundary is a cut for the Day1 reason.
+   */
+  it('punches only the middle boundary', () => {
+    expect(failureEdgesAt(0, 4)).toEqual({in: false, out: false});
+    expect(failureEdgesAt(1, 4)).toEqual({in: false, out: true});
     expect(failureEdgesAt(2, 4)).toEqual({in: true, out: false});
     expect(failureEdgesAt(3, 4)).toEqual({in: false, out: false});
+  });
+
+  /**
+   * The point of the change, stated as an invariant rather than as a constant:
+   * no frame of level 1 carries a punch, so nothing multiplies the FAIL zoom.
+   */
+  it('leaves every frame of the FAIL section free of the punch', () => {
+    const edges = failureEdgesAt(0, 4);
+
+    for (let frame = 0; frame < SECTION_FRAMES; frame += 1) {
+      expect(zoomPunchAt(frame, SECTION_FRAMES, FPS, edges)).toBeNull();
+    }
   });
 });
