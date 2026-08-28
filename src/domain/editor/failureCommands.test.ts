@@ -10,24 +10,41 @@ import {
   day1PanelsOf,
   day1QuadOf,
   endCardSettingsOf,
+  failureMissingPanels,
   failureOf,
+  failurePanelAt,
+  failurePanelsShorterThanSection,
+  moveTimelineBoundary,
   panelKeysOf,
   parseProject,
+  relinkFailurePanelSource,
+  resetFailureTransform,
   setDay1EndCardTrimInMs,
   setDay1EndCardTrimLengthMs,
   setDay1EndCardVideo,
   setDay1PanelSource,
   setDay1TrimInMs,
+  setFailureLabelText,
+  setFailurePanelSource,
+  setFailurePanelSourceStatus,
+  setFailureRatioOverride,
+  setFailureTrimInMs,
+  setFailureTrimOutMs,
   switchTemplate,
   threeSceneOf,
   updateDay1EndCard,
   updateDay1LabelStyle,
   updateDay1Split,
+  updateFailureCaption,
+  updateFailureFail,
+  updateFailureTransform,
 } from './project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {
   DEFAULT_DAY1_PANEL_TRANSFORM,
   FAILURE_SECTION_ORDER,
+  MAX_CAPTION_FONT_SIZE,
+  MAX_OFFSET_PERCENT,
 } from './types';
 import {
   day1ProjectFixture,
@@ -246,6 +263,340 @@ describe('end-card commands shared with the failure payload', () => {
       outMs: 5500,
     });
     expect(parseProject(moved).ok).toBe(true);
+  });
+});
+
+// Design §5.6 — the segment commands, over the orientation axis.
+describe('failure segment commands', () => {
+  const withSource = (
+    project: EditorProject,
+    orientation: 'vertical' | 'horizontal',
+    key: 'panelA' | 'panelB' | 'panelC',
+    durationMs = 30_000,
+  ) =>
+    setFailurePanelSource(
+      project,
+      orientation,
+      key,
+      testMediaReference({id: `${orientation}_${key}`, durationMs}),
+    );
+
+  it('writes one orientation without touching the other', () => {
+    const project = withSource(failureProjectFixture(), 'vertical', 'panelB');
+    const settings = failureSettingsOf(project);
+
+    expect(settings.vertical.panelB.source?.id).toBe('vertical_panelB');
+    expect(settings.vertical.panelA.source).toBeNull();
+    expect(settings.horizontal.panelB.source).toBeNull();
+    expect(settings.horizontal).toEqual(
+      failureSettingsOf(failureProjectFixture()).horizontal,
+    );
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('holds both orientations of the same segment at once', () => {
+    const both = withSource(
+      withSource(failureProjectFixture(), 'vertical', 'panelA'),
+      'horizontal',
+      'panelA',
+    );
+    const settings = failureSettingsOf(both);
+
+    expect(settings.vertical.panelA.source?.id).toBe('vertical_panelA');
+    expect(settings.horizontal.panelA.source?.id).toBe('horizontal_panelA');
+  });
+
+  it('opens a new source on the whole section, lossless', () => {
+    const project = withSource(failureProjectFixture(), 'vertical', 'panelA');
+    const panel = failurePanelAt(project, 'vertical', 'panelA');
+
+    // Section 0 of the 30s preset is 5.4s, and the source is longer.
+    expect(panel?.trim).toEqual({inMs: 0, outMs: 5400});
+    expect(panel?.transforms.base).toEqual(DEFAULT_DAY1_PANEL_TRANSFORM);
+  });
+
+  it('resets the trim and framing on a new source, but not on a relink', () => {
+    const framed = updateFailureTransform(
+      setFailureTrimInMs(
+        withSource(failureProjectFixture(), 'vertical', 'panelA'),
+        'vertical',
+        'panelA',
+        4000,
+      ),
+      'vertical',
+      'panelA',
+      '9:16',
+      {fit: 'cover', scale: 1.5},
+    );
+
+    expect(failurePanelAt(framed, 'vertical', 'panelA')?.trim.inMs).toBe(4000);
+
+    const relinked = relinkFailurePanelSource(
+      framed,
+      'vertical',
+      'panelA',
+      testMediaReference({id: 'vertical_panelA', durationMs: 30_000}),
+    );
+
+    expect(failurePanelAt(relinked, 'vertical', 'panelA')?.trim.inMs).toBe(4000);
+    expect(
+      failurePanelAt(relinked, 'vertical', 'panelA')?.transforms.base.scale,
+    ).toBe(1.5);
+
+    const replaced = withSource(framed, 'vertical', 'panelA');
+
+    expect(failurePanelAt(replaced, 'vertical', 'panelA')?.trim.inMs).toBe(0);
+    expect(
+      failurePanelAt(replaced, 'vertical', 'panelA')?.transforms.base,
+    ).toEqual(DEFAULT_DAY1_PANEL_TRANSFORM);
+  });
+
+  it('keeps the trim window inside the source and as long as the section', () => {
+    const project = withSource(
+      failureProjectFixture(),
+      'vertical',
+      'panelC',
+      20_000,
+    );
+    // Section 2 of the 30s preset is 18.9s, so a 20s source leaves 1.1s of slack.
+    const late = setFailureTrimInMs(project, 'vertical', 'panelC', 999_999);
+
+    expect(failurePanelAt(late, 'vertical', 'panelC')?.trim).toEqual({
+      inMs: 1100,
+      outMs: 20_000,
+    });
+
+    const fromEnd = setFailureTrimOutMs(project, 'vertical', 'panelC', 19_000);
+
+    expect(failurePanelAt(fromEnd, 'vertical', 'panelC')?.trim).toEqual({
+      inMs: 100,
+      outMs: 19_000,
+    });
+  });
+
+  it('reframes and resets one slot at a time', () => {
+    const project = updateFailureTransform(
+      withSource(failureProjectFixture(), 'horizontal', 'panelB'),
+      'horizontal',
+      'panelB',
+      '16:9',
+      {fit: 'cover', scale: 2, x: 10},
+    );
+
+    expect(
+      failurePanelAt(project, 'horizontal', 'panelB')?.transforms.base,
+    ).toEqual({fit: 'cover', scale: 2, x: 10, y: 0});
+    expect(
+      failurePanelAt(project, 'vertical', 'panelB')?.transforms.base,
+    ).toEqual(DEFAULT_DAY1_PANEL_TRANSFORM);
+
+    const reset = resetFailureTransform(project, 'horizontal', 'panelB', '16:9');
+
+    expect(
+      failurePanelAt(reset, 'horizontal', 'panelB')?.transforms.base,
+    ).toEqual(DEFAULT_DAY1_PANEL_TRANSFORM);
+  });
+
+  it('seeds a ratio override from what is on screen, and clears it', () => {
+    const framed = updateFailureTransform(
+      withSource(failureProjectFixture(), 'vertical', 'panelA'),
+      'vertical',
+      'panelA',
+      '9:16',
+      {scale: 1.4},
+    );
+    const on = setFailureRatioOverride(
+      framed,
+      'vertical',
+      'panelA',
+      '9:16',
+      true,
+    );
+
+    expect(
+      failurePanelAt(on, 'vertical', 'panelA')?.transforms.overrides['9:16'],
+    ).toMatchObject({scale: 1.4});
+
+    const off = setFailureRatioOverride(on, 'vertical', 'panelA', '9:16', false);
+
+    expect(
+      failurePanelAt(off, 'vertical', 'panelA')?.transforms.overrides['9:16'],
+    ).toBeUndefined();
+    expect(parseProject(off).ok).toBe(true);
+  });
+
+  it('carries a source status change without disturbing the edit', () => {
+    const project = setFailurePanelSourceStatus(
+      withSource(failureProjectFixture(), 'vertical', 'panelA'),
+      'vertical',
+      'panelA',
+      'missing',
+    );
+
+    expect(failurePanelAt(project, 'vertical', 'panelA')?.source?.status).toBe(
+      'missing',
+    );
+  });
+
+  it('clamps the caption style and the FAIL focus', () => {
+    const caption = updateFailureCaption(failureProjectFixture(), {
+      fontSize: 9999,
+      textColor: '#ff0000',
+    });
+
+    expect(failureSettingsOf(caption).caption).toEqual({
+      fontSize: MAX_CAPTION_FONT_SIZE,
+      textColor: '#ff0000',
+      barColor: '#000000',
+    });
+
+    const fail = updateFailureFail(failureProjectFixture(), {
+      stampEnabled: false,
+      focusX: -300,
+      focusY: 300,
+    });
+
+    expect(failureSettingsOf(fail).fail).toMatchObject({
+      stampEnabled: false,
+      zoomEnabled: true,
+      focusX: -MAX_OFFSET_PERCENT,
+      focusY: MAX_OFFSET_PERCENT,
+    });
+    expect(parseProject(fail).ok).toBe(true);
+  });
+
+  it('edits a caption locale at a time', () => {
+    const project = setFailureLabelText(
+      failureProjectFixture(),
+      'en',
+      'b',
+      'LEVEL 25',
+    );
+
+    expect((project.copy.en as LocalizedCopy).failureLabels).toEqual({
+      a: 'LEVEL 1',
+      b: 'LEVEL 25',
+      c: 'LEVEL 99',
+    });
+    expect((project.copy.ko as LocalizedCopy).failureLabels?.b).toBe('LEVEL 20');
+    expect(parseProject(project).ok).toBe(true);
+  });
+
+  it('no-ops on a foreign template', () => {
+    const day1 = day1ProjectFixture();
+
+    // `setFailurePanelSource` runs the shared reconcile pass, which rebuilds
+    // the Day1 payload, so this one is compared by value rather than identity —
+    // exactly as the Day1 command is against a three-scene project.
+    expect(
+      setFailurePanelSource(day1, 'vertical', 'panelA', testMediaReference()),
+    ).toStrictEqual(day1);
+    expect(setFailureTrimInMs(day1, 'vertical', 'panelA', 1000)).toBe(day1);
+    expect(updateFailureCaption(day1, {fontSize: 40})).toBe(day1);
+    expect(updateFailureFail(day1, {stampEnabled: false})).toBe(day1);
+    expect(failurePanelAt(day1, 'vertical', 'panelA')).toBeNull();
+  });
+});
+
+// Design §5.6 — a boundary drag has to re-clamp both orientations, not just the
+// one on screen: the other group's sources render the other ratio, and a window
+// left pointing past a shortened section would only surface at render time.
+describe('reconcileFailureTrims', () => {
+  it('re-clamps all six segments after a boundary move', () => {
+    const seeded = (['vertical', 'horizontal'] as const).reduce(
+      (project, orientation) =>
+        (['panelA', 'panelB', 'panelC'] as const).reduce(
+          (current, key) =>
+            setFailurePanelSource(
+              current,
+              orientation,
+              key,
+              testMediaReference({
+                id: `${orientation}_${key}`,
+                durationMs: 30_000,
+              }),
+            ),
+          project,
+        ),
+      failureProjectFixture(),
+    );
+
+    expect(failurePanelAt(seeded, 'vertical', 'panelA')?.trim.outMs).toBe(5400);
+    expect(failurePanelAt(seeded, 'horizontal', 'panelA')?.trim.outMs).toBe(5400);
+
+    // Drag the level-1 / level-20 boundary back to 2s.
+    const moved = moveTimelineBoundary(seeded, 0, 2000);
+
+    expect(moved.sections[0]?.durationMs).toBe(2000);
+    expect(failurePanelAt(moved, 'vertical', 'panelA')?.trim.outMs).toBe(2000);
+    expect(failurePanelAt(moved, 'horizontal', 'panelA')?.trim.outMs).toBe(2000);
+    // The segment on the other side of the boundary grew, and follows too.
+    expect(failurePanelAt(moved, 'vertical', 'panelB')?.trim.outMs).toBe(
+      moved.sections[1]?.durationMs,
+    );
+    expect(parseProject(moved).ok).toBe(true);
+  });
+});
+
+// Design §7.5 / Plan Q2 — the preflight asks per ratio, so a vertical-only
+// batch never demands horizontal footage and adding 16:9 to it does.
+describe('failure render preflight', () => {
+  const verticalOnly = () =>
+    (['panelA', 'panelB', 'panelC'] as const).reduce(
+      (project, key) =>
+        setFailurePanelSource(
+          project,
+          'vertical',
+          key,
+          testMediaReference({id: `vertical_${key}`, durationMs: 30_000}),
+        ),
+      failureProjectFixture(),
+    );
+
+  it('passes a 9:16-only render with the vertical group filled', () => {
+    expect(failureMissingPanels(verticalOnly(), ['9:16'])).toEqual([]);
+  });
+
+  it('blocks the moment 16:9 joins the batch', () => {
+    const missing = failureMissingPanels(verticalOnly(), ['9:16', '16:9']);
+
+    expect(missing).toEqual([
+      {orientation: 'horizontal', key: 'panelA'},
+      {orientation: 'horizontal', key: 'panelB'},
+      {orientation: 'horizontal', key: 'panelC'},
+    ]);
+  });
+
+  it('names every empty slot of an untouched project', () => {
+    expect(failureMissingPanels(failureProjectFixture(), ['9:16'])).toHaveLength(
+      3,
+    );
+    expect(failureMissingPanels(failureProjectFixture(), [])).toEqual([]);
+  });
+
+  it('reports a source that cannot fill its section, and only once', () => {
+    const short = setFailurePanelSource(
+      verticalOnly(),
+      'vertical',
+      'panelC',
+      testMediaReference({id: 'vertical_panelC', durationMs: 5000}),
+    );
+
+    // Section 2 of the 30s preset is 18.9s.
+    expect(failurePanelsShorterThanSection(short, ['9:16'])).toEqual([
+      {orientation: 'vertical', key: 'panelC'},
+    ]);
+    // An empty slot belongs to `failureMissingPanels`, not to this list.
+    expect(
+      failurePanelsShorterThanSection(failureProjectFixture(), ['9:16']),
+    ).toEqual([]);
+  });
+
+  it('returns nothing at all on a foreign template', () => {
+    expect(failureMissingPanels(day1ProjectFixture(), ['9:16'])).toEqual([]);
+    expect(
+      failurePanelsShorterThanSection(day1ProjectFixture(), ['9:16']),
+    ).toEqual([]);
   });
 });
 
