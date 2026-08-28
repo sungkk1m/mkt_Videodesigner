@@ -11,6 +11,7 @@ import {
 
 import {Day1Composition} from '../../compositions/Day1Composition';
 import {Day1QuadComposition} from '../../compositions/Day1QuadComposition';
+import {FailureComposition} from '../../compositions/FailureComposition';
 import {KvLoopComposition} from '../../compositions/KvLoopComposition';
 import {ThreeSceneComposition} from '../../compositions/ThreeSceneComposition';
 import {
@@ -27,7 +28,13 @@ import {
   day1PanelsOf,
   day1QuadOf,
   day1PanelsShorterThanSection,
+  buildFailureProps,
+  failureMissingPanels,
+  failureOf,
+  failurePanelAt,
+  failurePanelsShorterThanSection,
   panelKeysOf,
+  type FailurePanelKey,
   hasRatioOverride,
   kvLoopOf,
   outputDimensions,
@@ -39,8 +46,11 @@ import {
   ASPECT_RATIOS,
   DEFAULT_TRANSFORM,
   durationPresetsForTemplate,
+  FAILURE_PANEL_KEYS,
+  FAILURE_RATIOS,
   KV_LOOP_RATIO,
   kvSectionId,
+  type AspectRatio,
   type DurationPreset,
   type EditorProject,
   type LocalizedCopy,
@@ -84,6 +94,7 @@ import './editor.css';
 import {CopyPanel} from './CopyPanel';
 import {Day1AssetPanel} from './Day1AssetPanel';
 import {Day1Inspector} from './Day1Inspector';
+import {FailureInspector} from './FailureInspector';
 import {KvLoopAssetPanel} from './KvLoopAssetPanel';
 import {KvEffectOverlay} from './KvEffectOverlay';
 import {KvLoopInspector} from './KvLoopInspector';
@@ -96,6 +107,13 @@ import {SceneInspector} from './SceneInspector';
 import {SourceRepair} from './SourceRepair';
 import {TemplateSelector} from './TemplateSelector';
 import {Timeline} from './Timeline';
+import {
+  FAILURE_SLOT_KEYS,
+  decodeFailureSlot,
+  failureSlotKey,
+  type FailureSlotKey,
+} from './failureSlots';
+import {failureOrientationFor} from '../../domain/failure/orientation';
 import {useDay1Assets, type Day1AssetCommands} from './useDay1Assets';
 import {useKvLoopAssets, type KvLoopAssetCommands} from './useKvLoopAssets';
 import {
@@ -120,6 +138,20 @@ const formatMegabytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} 
 
 /** How often a scrub may actually seek the Player. See `seekToMs`. */
 const SCRUB_SEEK_WINDOW_MS = 150;
+
+/** Stable empty list, so the failure asset hook's effect does not re-run
+    every render on a project that has no failure slots. */
+const EMPTY_FAILURE_SLOTS: readonly FailureSlotKey[] = [];
+
+/** failure-video Design §7.3 — the level a slot fills, not a panel letter. */
+const FAILURE_ASSET_LABELS = {
+  panelA: '레벨 1 · 실패하는 구간',
+  panelB: '레벨 20 · 두 번째',
+  panelC: '레벨 99 · 마지막',
+} as const;
+
+const FAILURE_ASSET_HINT =
+  '세 구간이 차례로 재생되고, 레벨 1 구간 마지막 1초에 FAIL 도장이 찍힙니다. 구간 길이는 타임라인의 경계를 끌어 조절합니다.';
 
 type LeftTab = 'assets' | 'copy' | 'audio' | 'hook';
 
@@ -287,6 +319,34 @@ export const EditorWorkspace = ({
     [store],
   );
 
+  // failure-video Design §7.3 — the same asset hook over composite slot keys, so
+  // both orientations restore and relink through one policy.
+  const failureCommands = useMemo<Day1AssetCommands<FailureSlotKey>>(
+    () => ({
+      setPanelSource: (slot, reference) => {
+        const {orientation, key} = decodeFailureSlot(slot);
+
+        store().setFailurePanelSource(orientation, key, reference);
+      },
+      relinkPanel: (slot, reference) => {
+        const {orientation, key} = decodeFailureSlot(slot);
+
+        store().relinkFailurePanel(orientation, key, reference);
+      },
+      setPanelStatus: (slot, status) => {
+        const {orientation, key} = decodeFailureSlot(slot);
+
+        store().setFailurePanelStatus(orientation, key, status);
+      },
+      // The end card is shared whole, so its commands are the Day1 ones.
+      setEndCardAsset: (slot, reference) =>
+        slot === 'video'
+          ? store().setDay1EndCardVideo(reference)
+          : store().setDay1EndCard({[slot]: reference}),
+    }),
+    [store],
+  );
+
   const source = useEditorSource({
     resolver: mediaResolver,
     handleStore: mediaHandleStore,
@@ -310,6 +370,12 @@ export const EditorWorkspace = ({
    */
   const panelled = day1PanelsOf(project);
   const kvLoop = kvLoopOf(project);
+  const failure = failureOf(project);
+  /**
+   * failure-video Design D-1 — the preview ratio *is* the orientation toggle, so
+   * everything the editor shows for this template derives from one value.
+   */
+  const failureOrientation = failureOrientationFor(project.selectedRatio);
   const selectedIndex = sceneIndexOf(selectedKind);
   const selectedScene = threeScene?.scenes[selectedIndex] ?? null;
   const selectedSectionMs = project.sections[selectedIndex]?.durationMs ?? 0;
@@ -327,6 +393,25 @@ export const EditorWorkspace = ({
     panelOf: (panel) => day1PanelAt(project, panel),
     commands: day1Commands,
   });
+
+  // Design §7.3 — all six slots, not the visible three: the inactive
+  // orientation's sources render the other ratio, and a batch that renders both
+  // needs them restored without the operator having toggled the preview first.
+  const failureAssets = useDay1Assets<FailureSlotKey>({
+    resolver: mediaResolver,
+    handleStore: mediaHandleStore,
+    session,
+    slots: failure ? FAILURE_SLOT_KEYS : EMPTY_FAILURE_SLOTS,
+    panelOf: (slot) => {
+      const {orientation, key} = decodeFailureSlot(slot);
+
+      return failurePanelAt(project, orientation, key);
+    },
+    commands: failureCommands,
+  });
+  /** The active orientation's URL for a segment, which is what the UI shows. */
+  const failurePanelUrl = (key: FailurePanelKey) =>
+    failureAssets.panelUrl(failureSlotKey(failureOrientation, key));
 
   // The selection is React state, so it outlives the axis it was made on: a
   // restored project arrives with the initial `panel-a` whatever its template,
@@ -422,6 +507,20 @@ export const EditorWorkspace = ({
     panelled?.endCard.banner?.id,
     panelled?.endCard.appIcon?.id,
     panelled?.endCard.video?.id,
+    // failure-video Design §7.1 — BOTH orientations, for the same reason the
+    // quad template lists all four panels: retaining only the visible group
+    // would revoke the other one's object URLs the moment it was uploaded, and
+    // every slot behind the ratio toggle would fall back to the relink prompt.
+    ...(failure
+      ? FAILURE_SLOT_KEYS.map((slot) => {
+          const {orientation, key} = decodeFailureSlot(slot);
+
+          return failurePanelAt(project, orientation, key)?.source?.id;
+        })
+      : []),
+    failure?.endCard.banner?.id,
+    failure?.endCard.appIcon?.id,
+    failure?.endCard.video?.id,
     // key-visual-looping Design Ref: §6.2 — every locale's key visuals, not just
     // the selected set. A locale tab holds its own pixels and an untranslated one
     // previews from `en` (FR-L04), so retaining only the visible set would revoke
@@ -465,6 +564,10 @@ export const EditorWorkspace = ({
     () => buildKvLoopProps(project, resolveUrl),
     [project, resolveUrl],
   );
+  const failureProps = useMemo(
+    () => buildFailureProps(project, resolveUrl),
+    [project, resolveUrl],
+  );
 
   const output = outputDimensions(project.selectedRatio);
   const selectedTransform = selectedScene
@@ -481,6 +584,16 @@ export const EditorWorkspace = ({
         (panel) => day1Assets.panelUrl(panel) === null,
       )
     : [];
+  // failure-video Design §7.5 / Plan Q2 — the single render button produces one
+  // ratio, so it only asks for that ratio's orientation. The Batch dialog is the
+  // one that asks for every selected ratio's group (`preflightIssues`).
+  const failureMissing = failureMissingPanels(project, [project.selectedRatio]);
+  const failureUnresolved = failure
+    ? FAILURE_PANEL_KEYS.filter((key) => failurePanelUrl(key) === null)
+    : [];
+  const failureShort = failurePanelsShorterThanSection(project, [
+    project.selectedRatio,
+  ]);
   // key-visual-looping FR-L13 — two key visuals is the floor, and each of them
   // has to have decoded. Overlays are not part of either count (Plan L5).
   const missingKvImages = kvLoopMissingImages(project);
@@ -499,13 +612,18 @@ export const EditorWorkspace = ({
   // four panels uploaded.
   const renderableSource = panelled
     ? unresolvedPanels.length === 0
-    : kvLoop
-      ? missingKvImages === 0 && unresolvedKvImages.length === 0
-      : source.sourceUrl !== null;
+    : failure
+      ? failureMissing.length === 0 && failureUnresolved.length === 0
+      : kvLoop
+        ? missingKvImages === 0 && unresolvedKvImages.length === 0
+        : source.sourceUrl !== null;
   // Day1 Trim UX FR-S03 — `preflightIssues` gates Batch, but the single render
   // button keeps its own list, so the short-source block has to be stated twice
   // or it only half-applies.
-  const shortPanels = day1PanelsShorterThanSection(project);
+  const shortPanels = [
+    ...day1PanelsShorterThanSection(project),
+    ...failureShort,
+  ];
 
   useEffect(() => {
     void videoRenderer.probe().then(setCapabilities);
@@ -818,7 +936,7 @@ export const EditorWorkspace = ({
                 ? '대기'
                 : '렌더 불가';
 
-  if (!threeScene && !panelled && !kvLoop) {
+  if (!threeScene && !panelled && !kvLoop && !failure) {
     return (
       <div className="workspace workspace--notice">
         <p className="notice notice--error" data-testid="template-unsupported">
@@ -829,7 +947,10 @@ export const EditorWorkspace = ({
     );
   }
 
-  const allowedTabs = panelled
+  // failure-video — the same two tabs Day1 keeps: the copy panel's fields are
+  // all three-scene concepts, and this template's wording (the captions) lives
+  // in the inspector next to the segments it labels.
+  const allowedTabs = panelled || failure
     ? DAY1_LEFT_TABS
     : kvLoop
       ? KV_LOOP_LEFT_TABS
@@ -898,6 +1019,17 @@ export const EditorWorkspace = ({
           {panelled && missingPanels.length > 0 ? (
             <span className="editor__blocker" data-testid="day1-render-blocker">
               영상 {missingPanels.length}개가 더 필요합니다
+            </span>
+          ) : null}
+          {/* Plan Q2 — name the orientation, because the other group being full
+              is exactly the state that makes an unqualified count confusing. */}
+          {failure && failureMissing.length > 0 ? (
+            <span
+              className="editor__blocker"
+              data-testid="failure-render-blocker"
+            >
+              {failureOrientation === 'horizontal' ? '가로' : '세로'}용 영상{' '}
+              {failureMissing.length}개가 더 필요합니다
             </span>
           ) : null}
           {kvLoop && missingKvImages > 0 ? (
@@ -1051,6 +1183,69 @@ export const EditorWorkspace = ({
             supportsFilePicker={day1Assets.supportsFilePicker}
             uploadError={day1Assets.uploadError}
           />
+        ) : failure && activeTab === 'assets' ? (
+          /* Design §7.3 — the same asset panel, bound to the active
+             orientation's three slots. Only the labels and the test-id prefix
+             differ, which is what M1 opened as props. */
+          <>
+            <p className="panel__hint" data-testid="failure-orientation-note">
+              지금은 <b>{failureOrientation === 'horizontal' ? '가로(16:9)' : '세로(9:16)'}</b>용
+              영상을 올리는 중입니다. 다른 방향은 우상단 비율을 바꿔 따로
+              올리세요 — 자동으로 돌려 쓰지 않습니다.
+            </p>
+            <Day1AssetPanel
+              autosaveError={
+                persistence.saveState.status === 'failed'
+                  ? persistence.saveState.error
+                  : null
+              }
+              busy={failureAssets.busy}
+              canGrantPermission={(panel) =>
+                failureAssets.canGrantPermission(
+                  failureSlotKey(failureOrientation, panel as FailurePanelKey),
+                )
+              }
+              disabled={isRendering}
+              missingPanels={failureMissing.map((slot) => slot.key)}
+              onGrantPermission={(panel) =>
+                void failureAssets.grantPanelPermission(
+                  failureSlotKey(failureOrientation, panel as FailurePanelKey),
+                )
+              }
+              onPickFile={(panel) =>
+                void failureAssets.pickAndUploadPanel(
+                  failureSlotKey(failureOrientation, panel as FailurePanelKey),
+                )
+              }
+              onRelink={(panel, file) =>
+                void failureAssets.relinkPanel(
+                  failureSlotKey(failureOrientation, panel as FailurePanelKey),
+                  file,
+                )
+              }
+              onUpload={(panel, file) =>
+                void failureAssets.uploadPanel(
+                  failureSlotKey(failureOrientation, panel as FailurePanelKey),
+                  file,
+                )
+              }
+              hint={FAILURE_ASSET_HINT}
+              panelLabels={FAILURE_ASSET_LABELS}
+              panelSource={(panel) =>
+                failurePanelAt(
+                  project,
+                  failureOrientation,
+                  panel as FailurePanelKey,
+                )?.source ?? null
+              }
+              panelUrl={(panel) => failurePanelUrl(panel as FailurePanelKey)}
+              panels={FAILURE_PANEL_KEYS}
+              relinkVerdict={failureAssets.relinkVerdict}
+              supportsFilePicker={failureAssets.supportsFilePicker}
+              testIdPrefix="failure-asset"
+              uploadError={failureAssets.uploadError}
+            />
+          </>
         ) : kvLoop && activeTab === 'assets' ? (
           <KvLoopAssetPanel
             autosaveError={
@@ -1272,13 +1467,27 @@ export const EditorWorkspace = ({
                 data-testid={`ratio-${ratio}`}
                 // key-visual-looping FR-L14 — vertical only, and the reason is
                 // stated next to the control rather than left to be inferred.
-                disabled={isRendering || (kvLoop !== null && ratio !== KV_LOOP_RATIO)}
+                // failure-video Plan Q2 — the same treatment over a subset: 1:1
+                // is off, and the two that remain each pick a source group.
+                disabled={
+                  isRendering ||
+                  (kvLoop !== null && ratio !== KV_LOOP_RATIO) ||
+                  (failure !== null &&
+                    !(FAILURE_RATIOS as readonly AspectRatio[]).includes(ratio))
+                }
                 key={ratio}
                 onClick={() => store().setRatio(ratio)}
                 title={
                   kvLoop && ratio !== KV_LOOP_RATIO
                     ? '루핑 템플릿은 세로 전용입니다'
-                    : undefined
+                    : failure &&
+                        !(FAILURE_RATIOS as readonly AspectRatio[]).includes(
+                          ratio,
+                        )
+                      ? '실패 템플릿은 세로·가로만 지원합니다'
+                      : failure
+                        ? '이 비율의 소재 그룹으로 전환합니다'
+                        : undefined
                 }
                 type="button"
               >
@@ -1289,6 +1498,13 @@ export const EditorWorkspace = ({
           {kvLoop ? (
             <span className="stage__chip" data-testid="kv-ratio-locked">
               세로 전용
+            </span>
+          ) : null}
+          {/* D-1 — the ratio toggle doubles as the orientation toggle here, so
+              the chip says which source group the buttons are now editing. */}
+          {failure ? (
+            <span className="stage__chip" data-testid="failure-ratio-orientation">
+              {failureOrientation === 'horizontal' ? '가로 소재' : '세로 소재'}
             </span>
           ) : null}
           <span className="stage__divider" />
@@ -1352,6 +1568,18 @@ export const EditorWorkspace = ({
               durationInFrames={totalFrames}
               fps={project.fps}
               inputProps={kvLoopProps}
+              ref={playerRef}
+              style={{height: '100%', width: '100%'}}
+            />
+          ) : failure && failureProps ? (
+            <Player
+              acknowledgeRemotionLicense
+              component={FailureComposition}
+              compositionHeight={output.height}
+              compositionWidth={output.width}
+              durationInFrames={totalFrames}
+              fps={project.fps}
+              inputProps={failureProps}
               ref={playerRef}
               style={{height: '100%', width: '100%'}}
             />
@@ -1479,6 +1707,66 @@ export const EditorWorkspace = ({
           titleInheritedFrom={kvTitle?.inheritedFrom ?? null}
           titleReference={kvTitle?.reference ?? null}
           titleUrl={kvAssets.titleUrl()}
+        />
+      ) : failure ? (
+        <FailureInspector
+          activeTransformOf={(key) =>
+            activeTransform(
+              failurePanelAt(project, failureOrientation, key) ??
+                failure[failureOrientation].panelA,
+              project.selectedRatio,
+            )
+          }
+          copy={project.copy}
+          disabled={isRendering}
+          endCardDurationMs={
+            project.sections[project.sections.length - 1]?.durationMs ?? 0
+          }
+          frameSampler={frameSampler}
+          hasRatioOverride={(key) =>
+            hasRatioOverride(
+              failurePanelAt(project, failureOrientation, key) ??
+                failure[failureOrientation].panelA,
+              project.selectedRatio,
+            )
+          }
+          onCaption={(patch) => store().setFailureCaption(patch)}
+          onCaptionText={(locale, slot, value) =>
+            store().setFailureLabelAt(locale, slot, value)
+          }
+          onEndCard={(patch) => store().setDay1EndCard(patch)}
+          onEndCardAsset={(slot, file) =>
+            void failureAssets.setEndCardAsset(slot, file)
+          }
+          onEndCardTrimIn={(ms) => store().setDay1EndCardTrimIn(ms)}
+          onEndCardTrimLength={(ms) => store().setDay1EndCardTrimLength(ms)}
+          onFail={(patch) => store().setFailureFail(patch)}
+          onResetTransform={(key) =>
+            store().resetFailureTransform(failureOrientation, key)
+          }
+          onToggleRatioOverride={(key, enabled) =>
+            store().toggleFailureRatioOverride(failureOrientation, key, enabled)
+          }
+          onTransform={(key, patch) =>
+            store().setFailureTransform(failureOrientation, key, patch)
+          }
+          onTrimIn={(key, ms) =>
+            store().setFailureTrimIn(failureOrientation, key, ms)
+          }
+          orientation={failureOrientation}
+          panelOf={(key) => failurePanelAt(project, failureOrientation, key)}
+          ratio={project.selectedRatio}
+          resolveEndCardUrl={(slot) => resolveUrl(failure.endCard[slot])}
+          resolvePanelUrl={failurePanelUrl}
+          segmentDurationsMs={
+            Object.fromEntries(
+              FAILURE_PANEL_KEYS.map((key, index) => [
+                key,
+                project.sections[index]?.durationMs ?? 0,
+              ]),
+            ) as Record<FailurePanelKey, number>
+          }
+          settings={failure}
         />
       ) : panelled ? (
         <Day1Inspector
@@ -1617,7 +1905,7 @@ export const EditorWorkspace = ({
           // day1-quad — the quad template selects on the shared section axis
           // exactly like Day1 and the loop; `day1 || kvLoop` sent its clip
           // clicks down the three-scene arm.
-          panelled || kvLoop
+          panelled || kvLoop || failure
             ? setSelectedDay1Section(sectionId)
             : setSelectedKind(sectionId as SceneKind)
         }
@@ -1626,7 +1914,7 @@ export const EditorWorkspace = ({
         // told how many times it plays. Every other template passes nothing.
         repeat={kvLoop ? {count: kvLoop.loopCount} : undefined}
         sections={project.sections}
-        selectedId={panelled || kvLoop ? selectedSectionId : selectedKind}
+        selectedId={panelled || kvLoop || failure ? selectedSectionId : selectedKind}
         totalDurationMs={totalMs}
         totalFrames={totalFrames}
       />

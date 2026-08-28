@@ -19,10 +19,12 @@ import {
   moveKvImage,
   moveTimelineBoundary,
   relinkDay1PanelSource,
+  relinkFailurePanelSource,
   relinkSource,
   removeKvEffect,
   renameProject,
   resetDay1Transform,
+  resetFailureTransform,
   resetKvSlotTransform,
   resetSceneTransform,
   setCopyField,
@@ -34,6 +36,11 @@ import {
   setDay1EndCardTrimLengthMs,
   setDay1EndCardVideo,
   setDay1TrimInMs,
+  setFailureLabelText,
+  setFailurePanelSource,
+  setFailurePanelSourceStatus,
+  setFailureRatioOverride,
+  setFailureTrimInMs,
   setKvCount,
   setKvImage,
   setKvImageStatus,
@@ -61,6 +68,9 @@ import {
   updateDay1LabelStyle,
   updateDay1Split,
   updateDay1Transform,
+  updateFailureCaption,
+  updateFailureFail,
+  updateFailureTransform,
   updateHookSettings,
   updateKvDisclaimerStyle,
   updateKvEffect,
@@ -71,6 +81,7 @@ import {
   updateSubtitleStyle,
   type Day1EndCardPatch,
   type Day1PanelKey,
+  type FailurePanelKey,
   type KvEffectPatch,
   type KvLoopPatch,
 } from '../../domain/editor/project';
@@ -83,6 +94,9 @@ import type {
   Day1PanelSlot,
   Day1Settings,
   DurationPreset,
+  FailureOrientation,
+  FailureSettings,
+  FailureSlot,
   KvEffect,
   KvLoopSettings,
   KvMotion,
@@ -211,6 +225,53 @@ export interface ProjectStore {
   setKvTitleTransform: (patch: Partial<MediaTransform>) => void;
   setKvDisclaimerStyle: (
     patch: Partial<KvLoopSettings['disclaimer']>,
+  ) => void;
+  /**
+   * failure-video commands. Design §5.6 — every segment command carries its
+   * orientation, because a failure slot is `(orientation, key)`. Framing follows
+   * the header's ratio, like every other framing command here.
+   */
+  setFailurePanelSource: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    source: MediaReference | null,
+  ) => void;
+  relinkFailurePanel: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    source: MediaReference,
+  ) => void;
+  setFailurePanelStatus: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    status: MediaStatus,
+  ) => void;
+  setFailureTrimIn: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    ms: number,
+  ) => void;
+  setFailureTransform: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    patch: Partial<MediaTransform>,
+  ) => void;
+  resetFailureTransform: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+  ) => void;
+  toggleFailureRatioOverride: (
+    orientation: FailureOrientation,
+    key: FailurePanelKey,
+    enabled: boolean,
+  ) => void;
+  setFailureCaption: (patch: Partial<FailureSettings['caption']>) => void;
+  setFailureFail: (patch: Partial<FailureSettings['fail']>) => void;
+  /** Caption wording takes an explicit locale — the inspector edits all four. */
+  setFailureLabelAt: (
+    locale: Locale,
+    slot: FailureSlot,
+    value: string,
   ) => void;
 }
 
@@ -457,4 +518,62 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set((state) => ({project: updateKvTitleTransform(state.project, patch)})),
   setKvDisclaimerStyle: (patch) =>
     set((state) => ({project: updateKvDisclaimerStyle(state.project, patch)})),
+  setFailurePanelSource: (orientation, key, source) =>
+    set((state) => ({
+      project: setFailurePanelSource(state.project, orientation, key, source),
+    })),
+  relinkFailurePanel: (orientation, key, source) =>
+    set((state) => ({
+      project: relinkFailurePanelSource(state.project, orientation, key, source),
+    })),
+  setFailurePanelStatus: (orientation, key, status) =>
+    set((state) => ({
+      project: setFailurePanelSourceStatus(
+        state.project,
+        orientation,
+        key,
+        status,
+      ),
+    })),
+  setFailureTrimIn: (orientation, key, ms) =>
+    set((state) => ({
+      project: setFailureTrimInMs(state.project, orientation, key, ms),
+    })),
+  setFailureTransform: (orientation, key, patch) =>
+    set((state) => ({
+      project: updateFailureTransform(
+        state.project,
+        orientation,
+        key,
+        state.project.selectedRatio,
+        patch,
+      ),
+    })),
+  resetFailureTransform: (orientation, key) =>
+    set((state) => ({
+      project: resetFailureTransform(
+        state.project,
+        orientation,
+        key,
+        state.project.selectedRatio,
+      ),
+    })),
+  toggleFailureRatioOverride: (orientation, key, enabled) =>
+    set((state) => ({
+      project: setFailureRatioOverride(
+        state.project,
+        orientation,
+        key,
+        state.project.selectedRatio,
+        enabled,
+      ),
+    })),
+  setFailureCaption: (patch) =>
+    set((state) => ({project: updateFailureCaption(state.project, patch)})),
+  setFailureFail: (patch) =>
+    set((state) => ({project: updateFailureFail(state.project, patch)})),
+  setFailureLabelAt: (locale, slot, value) =>
+    set((state) => ({
+      project: setFailureLabelText(state.project, locale, slot, value),
+    })),
 }));

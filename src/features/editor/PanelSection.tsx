@@ -15,7 +15,6 @@ import {
   type MediaTransform,
   type PanelRect,
 } from '../../domain/editor/types';
-import {quadLayout, splitLayout} from '../../domain/day1/layout';
 import {InspectorSection} from './InspectorSection';
 import {TrimStrip} from './TrimStrip';
 import type {FrameSampler} from '../../domain/ports';
@@ -26,7 +25,7 @@ import {
   formatSeconds,
 } from './inspectorFields';
 
-const PANEL_TITLES: Record<Day1PanelKey, string> = {
+export const PANEL_TITLES: Record<Day1PanelKey, string> = {
   panelA: '패널 A',
   panelB: '패널 B',
   panelC: '패널 C',
@@ -39,20 +38,6 @@ export const PANEL_TEST_KEY: Record<Day1PanelKey, Day1PanelSlot> = {
   panelB: 'b',
   panelC: 'c',
   panelD: 'd',
-};
-
-/** day1-quad Design §5.1 — a panel's own slot in the output, for the trim preview. */
-const PANEL_RECT = (
-  panels: readonly Day1PanelKey[],
-  key: Day1PanelKey,
-  ratio: AspectRatio,
-  lineWidthPx: number,
-): PanelRect => {
-  const index = panels.indexOf(key);
-
-  return panels.length > 2
-    ? (quadLayout(ratio, lineWidthPx).cells[index] as PanelRect)
-    : (splitLayout(ratio, lineWidthPx)[index === 0 ? 'a' : 'b'] as PanelRect);
 };
 
 /** day1-video — what each fit does to a source that is not the panel's shape. */
@@ -68,9 +53,10 @@ export const PanelSection = ({
   hasOverride,
   panel,
   panelData,
-  panelKeys,
-  lineWidthPx,
+  rect,
   ratio,
+  testIdPrefix = 'day1',
+  title,
   transform,
   url,
   onResetTransform,
@@ -84,9 +70,23 @@ export const PanelSection = ({
   hasOverride: boolean;
   panel: Day1PanelKey;
   panelData: Day1Panel;
-  panelKeys: readonly Day1PanelKey[];
-  lineWidthPx: number;
+  /**
+   * The panel's own slot in the output, so the strip's preview can show the crop
+   * the render will make instead of the whole source. Half of a 9:16 frame is
+   * landscape, which is why letterboxing a portrait source into a 16:9 box left
+   * most of the box black; a quad cell is a quarter and carries the output's own
+   * aspect ratio (day1-quad Design §5.1). Passed in rather than derived, because
+   * which layout a panel belongs to is the caller's question — the failure
+   * template's segments fill the whole video band.
+   */
+  rect: PanelRect;
   ratio: AspectRatio;
+  /**
+   * failure-video Design §7.2 — defaults to the Day1 wording and test ids, so
+   * the two panelled inspectors render exactly what they did.
+   */
+  testIdPrefix?: string;
+  title?: string;
   transform: MediaTransform;
   /** Session URL of this panel's video, or null while it is unresolved. */
   url: string | null;
@@ -97,12 +97,6 @@ export const PanelSection = ({
 }) => {
   const key = PANEL_TEST_KEY[panel];
   const {source, trim} = panelData;
-  // day1-video — the panel's own slot in the output, so the strip's preview can
-  // show the crop the render will make instead of the whole source. Half of a
-  // 9:16 frame is landscape, which is why letterboxing a portrait source into a
-  // 16:9 box left most of the box black. A quad cell is a quarter, and carries
-  // the output's own aspect ratio (day1-quad Design §5.1).
-  const rect = PANEL_RECT(panelKeys, panel, ratio, lineWidthPx);
   const sourceMs = source?.durationMs ?? 0;
   const controlsDisabled = disabled || sourceMs <= 0;
   // FR-S02. Mirrors `day1PanelsShorterThanSection`, which the render gate uses.
@@ -112,8 +106,8 @@ export const PanelSection = ({
     <InspectorSection
       badge={hasOverride ? `${ratio} 전용` : `${formatSeconds(durationMs)}s`}
       defaultOpen
-      id={`day1-panel-${key}`}
-      title={PANEL_TITLES[panel]}
+      id={`${testIdPrefix}-panel-${key}`}
+      title={title ?? PANEL_TITLES[panel]}
     >
       {sourceMs > 0 ? null : (
         <p className="notice notice--warning">
@@ -132,7 +126,7 @@ export const PanelSection = ({
         sectionDurationMs={durationMs}
         sourceDurationMs={sourceMs}
         sourceId={source?.id ?? null}
-        testIdPrefix={`day1-${key}`}
+        testIdPrefix={`${testIdPrefix}-${key}`}
         url={url}
       />
 
@@ -145,7 +139,7 @@ export const PanelSection = ({
         max={sourceMs}
         min={0}
         onCommit={onTrimIn}
-        testId={`day1-${key}-trim-in`}
+        testId={`${testIdPrefix}-${key}-trim-in`}
         valueMs={trim.inMs}
       />
       {/* Day1 Trim UX FR-T07 — `reconcileTrim` derives the out point from the in
@@ -153,12 +147,12 @@ export const PanelSection = ({
       <p className="field field--readout">
         <span>
           Trim Out (초)
-          <strong data-testid={`day1-${key}-trim-out`}>
+          <strong data-testid={`${testIdPrefix}-${key}-trim-out`}>
             {formatSeconds(trim.outMs)}
           </strong>
         </span>
       </p>
-      <p className="panel__hint" data-testid={`day1-${key}-trim-range`}>
+      <p className="panel__hint" data-testid={`${testIdPrefix}-${key}-trim-range`}>
         소스 구간 {formatSeconds(trim.inMs)}s – {formatSeconds(trim.outMs)}s · 구간{' '}
         {formatSeconds(durationMs)}s
         {sourceMs > 0 ? ` · 원본 ${formatSeconds(sourceMs)}s` : ''}
@@ -168,7 +162,7 @@ export const PanelSection = ({
           three-scene wording this names both ways out, because a Day1 section is
           resized by dragging the timeline boundary (Plan SC5). */}
       {isShortSource ? (
-        <p className="notice notice--warning" data-testid={`day1-${key}-trim-short`}>
+        <p className="notice notice--warning" data-testid={`${testIdPrefix}-${key}-trim-short`}>
           원본이 구간보다 짧아 남은 시간은 검은 화면으로 출력됩니다. 구간 길이를
           줄이거나 더 긴 영상을 사용하세요.
         </p>
@@ -187,7 +181,7 @@ export const PanelSection = ({
             className={`segmented__item${
               transform.fit === fit ? ' segmented__item--on' : ''
             }`}
-            data-testid={`day1-${key}-fit-${fit}`}
+            data-testid={`${testIdPrefix}-${key}-fit-${fit}`}
             disabled={controlsDisabled}
             key={fit}
             onClick={() => onTransform({fit})}
@@ -205,7 +199,7 @@ export const PanelSection = ({
       <label className="field field--toggle">
         <input
           checked={hasOverride}
-          data-testid={`day1-${key}-ratio-override`}
+          data-testid={`${testIdPrefix}-${key}-ratio-override`}
           disabled={controlsDisabled}
           onChange={(event) => onToggleRatioOverride(event.target.checked)}
           type="checkbox"
@@ -219,7 +213,7 @@ export const PanelSection = ({
         min={MIN_SCALE}
         onChange={(scale) => onTransform({scale})}
         step={0.01}
-        testId={`day1-${key}-scale`}
+        testId={`${testIdPrefix}-${key}-scale`}
         value={transform.scale}
       />
       <PlainField
@@ -230,7 +224,7 @@ export const PanelSection = ({
         onChange={(x) => onTransform({x})}
         step={1}
         suffix="%"
-        testId={`day1-${key}-x`}
+        testId={`${testIdPrefix}-${key}-x`}
         value={transform.x}
       />
       <PlainField
@@ -241,7 +235,7 @@ export const PanelSection = ({
         onChange={(y) => onTransform({y})}
         step={1}
         suffix="%"
-        testId={`day1-${key}-y`}
+        testId={`${testIdPrefix}-${key}-y`}
         value={transform.y}
       />
       <button

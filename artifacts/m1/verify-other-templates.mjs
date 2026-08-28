@@ -149,7 +149,13 @@ check('quad → three-scene restores 15/30/60 and unlocks ratios',
 // A stored project written by this build must come back after a reload — the
 // schema extraction must not have broken parse for any template.
 await switchTo('day1');
-await page.waitForTimeout(800);
+// `AUTOSAVE_DEBOUNCE_MS` is 800, and the write itself takes a moment after that.
+// The original 800ms wait was exactly the debounce with nothing left for the
+// save, so it raced: the reload landed first and restored the *previous*
+// template, which looks exactly like a parse failure and is not one. Waiting on
+// the "저장됨" badge does not fix it either — the badge is still showing the
+// previous save when the switch lands, so that wait returns immediately.
+await page.waitForTimeout(3000);
 await page.reload({waitUntil: 'load'});
 await page.getByTestId('template-selector').waitFor({timeout: 30_000});
 const restored = await page.getByTestId('template-selector').inputValue();

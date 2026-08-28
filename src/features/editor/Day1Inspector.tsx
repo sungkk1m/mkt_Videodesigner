@@ -24,8 +24,10 @@ import {
   type Locale,
   type LocalizedCopy,
   type MediaTransform,
+  type PanelRect,
   type SubtitleStyle,
 } from '../../domain/editor/types';
+import {quadLayout, splitLayout} from '../../domain/day1/layout';
 import {ColorField} from './ColorField';
 import {EndCardSection} from './EndCardSection';
 import {InspectorSection} from './InspectorSection';
@@ -40,6 +42,20 @@ const LABEL_PLACEHOLDERS: Record<Day1PanelSlot, string> = {
   b: 'DAY 30',
   c: 'DAY 3',
   d: 'DAY 7',
+};
+
+/** day1-quad Design §5.1 — a panel's own slot in the output, for the trim preview. */
+const PANEL_RECT = (
+  panels: readonly Day1PanelKey[],
+  key: Day1PanelKey,
+  ratio: AspectRatio,
+  lineWidthPx: number,
+): PanelRect => {
+  const index = panels.indexOf(key);
+
+  return panels.length > 2
+    ? (quadLayout(ratio, lineWidthPx).cells[index] as PanelRect)
+    : (splitLayout(ratio, lineWidthPx)[index === 0 ? 'a' : 'b'] as PanelRect);
 };
 
 const LOCALE_LABELS: Record<Locale, string> = {
@@ -144,7 +160,6 @@ export const Day1Inspector = ({
               frameSampler={frameSampler}
               hasOverride={hasRatioOverride(panel)}
               key={panel}
-              lineWidthPx={split.lineWidthPx}
               onResetTransform={() => onResetTransform(panel)}
               onToggleRatioOverride={(enabled) =>
                 onToggleRatioOverride(panel, enabled)
@@ -153,8 +168,8 @@ export const Day1Inspector = ({
               onTrimIn={(ms) => onTrimIn(panel, ms)}
               panel={panel}
               panelData={panelData}
-              panelKeys={panelKeys}
               ratio={ratio}
+              rect={PANEL_RECT(panelKeys, panel, ratio, split.lineWidthPx)}
               transform={activeTransformOf(panel)}
               url={resolvePanelUrl(panel)}
             />

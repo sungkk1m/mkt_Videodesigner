@@ -24,11 +24,12 @@ check('selector is a <select>', (await sel.evaluate((el) => el.tagName)) === 'SE
 const options = await sel.evaluate((el) =>
   [...el.options].map((o) => ({value: o.value, label: o.textContent})),
 );
-// Four entries since M5 turned `day1-quad` on; M1-3 ran with it still hidden.
+// Four entries since day1-quad M5 turned it on; five since failure-video M5
+// dropped its own `SELECTABLE_TEMPLATES` guard.
 check(
   'lists every template',
   JSON.stringify(options.map((o) => o.value)) ===
-    JSON.stringify(['three-scene', 'day1', 'day1-quad', 'kv-loop']),
+    JSON.stringify(['three-scene', 'day1', 'day1-quad', 'kv-loop', 'failure']),
   JSON.stringify(options),
 );
 check('starts on three-scene', (await sel.inputValue()) === 'three-scene');

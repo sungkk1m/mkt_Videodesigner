@@ -31,12 +31,18 @@ export interface Day1AssetPanelProps {
    */
   panels: readonly Day1PanelKey[];
   /**
-   * failure-video Design §7.3 — heading per panel. Defaults to the Day1 wording,
-   * so the two panelled templates render exactly what they did.
+   * failure-video Design §7.3 — heading per panel. Anything not given falls back
+   * to the Day1 wording, so the two panelled templates render exactly what they
+   * did and a template with fewer slots supplies only the ones it has.
    */
-  panelLabels?: Record<Day1PanelKey, string>;
-  /** Test id and dropzone prefix, for the same reason. */
+  panelLabels?: Partial<Record<Day1PanelKey, string>>;
+  /** Test id prefix, for the same reason. */
   testIdPrefix?: string;
+  /**
+   * The line under the uploads explaining how they play. Defaults to Day1's
+   * "A plays first, B holds in greyscale", which is only true of a split frame.
+   */
+  hint?: string;
   /** Resolves a panel off the project, so this component never indexes the payload. */
   panelSource: (panel: Day1PanelKey) => MediaReference | null;
   disabled: boolean;
@@ -156,9 +162,12 @@ const PanelBlock = ({
   );
 };
 
+const DAY1_HINT =
+  '패널 A가 먼저 컬러로 재생되고, 그 사이 패널 B는 첫 프레임에서 흑백으로 멈춥니다. 전환 시점은 타임라인의 경계를 끌어 조절합니다.';
+
 export const Day1AssetPanel = ({
   panels,
-  panelLabels = PANEL_LABELS,
+  panelLabels,
   panelSource,
   disabled,
   busy,
@@ -169,6 +178,7 @@ export const Day1AssetPanel = ({
   supportsFilePicker,
   panelUrl,
   canGrantPermission,
+  hint = DAY1_HINT,
   testIdPrefix = 'day1-panel',
   onUpload,
   onPickFile,
@@ -189,7 +199,7 @@ export const Day1AssetPanel = ({
         canGrantPermission={canGrantPermission(panel)}
         disabled={disabled}
         key={panel}
-        label={panelLabels[panel]}
+        label={panelLabels?.[panel] ?? PANEL_LABELS[panel]}
         onGrantPermission={() => onGrantPermission(panel)}
         onPickFile={() => onPickFile(panel)}
         onRelink={(file) => onRelink(panel, file)}
@@ -204,10 +214,7 @@ export const Day1AssetPanel = ({
       />
     ))}
 
-    <p className="panel__hint">
-      패널 A가 먼저 컬러로 재생되고, 그 사이 패널 B는 첫 프레임에서 흑백으로
-      멈춥니다. 전환 시점은 타임라인의 경계를 끌어 조절합니다.
-    </p>
+    <p className="panel__hint">{hint}</p>
 
     {supportsFilePicker ? (
       <p className="panel__hint">

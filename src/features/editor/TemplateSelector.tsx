@@ -31,17 +31,6 @@ const TEMPLATE_LOSS: Record<TemplateKind, string> = {
   failure: '구간별 세로·가로 영상과 캡션·FAIL 효과·엔드카드 설정',
 };
 
-/**
- * failure-video Design §11 M2 — adding a kind to `TEMPLATE_KINDS` puts it in
- * this dropdown immediately, which is how the quad template once shipped a
- * half-built arm to the operator. The failure template stays out of the list
- * until M5 wires its inspector and asset panel; M5 deletes this filter.
- */
-const UNRELEASED_TEMPLATES: readonly TemplateKind[] = ['failure'];
-
-const SELECTABLE_TEMPLATES = TEMPLATE_KINDS.filter(
-  (template) => !UNRELEASED_TEMPLATES.includes(template),
-);
 
 export interface TemplateSelectorProps {
   current: TemplateKind;
@@ -91,7 +80,7 @@ export const TemplateSelector = ({
         }}
         value={current}
       >
-        {SELECTABLE_TEMPLATES.map((template) => (
+        {TEMPLATE_KINDS.map((template) => (
           <option key={template} value={template}>
             {TEMPLATE_LABELS[template]}
           </option>

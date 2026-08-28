@@ -19,15 +19,18 @@ import {
   activeTransform,
   day1PanelAt,
   day1PanelsOf,
+  failureOf,
   panelKeysOf,
-  type Day1PanelKey,
 } from '../../domain/editor/project';
-import type {
-  AspectRatio,
-  Day1Panel,
-  EditorProject,
-  MediaReference,
-  PanelRect,
+import {failureLayout} from '../../domain/failure/layout';
+import {failureOrientationFor} from '../../domain/failure/orientation';
+import {
+  FAILURE_PANEL_KEYS,
+  type AspectRatio,
+  type Day1Panel,
+  type EditorProject,
+  type MediaReference,
+  type PanelRect,
 } from '../../domain/editor/types';
 import type {SourceProxyBuilder} from '../../domain/ports';
 import type {FrameRate} from '../../domain/render/profile';
@@ -92,6 +95,73 @@ interface Slot {
   prepared: Prepared;
 }
 
+/**
+ * failure-video Design §7.4 — the template's slots for one render, as
+ * `(payload key, box, panel)` triples. One shape for both worlds, so the
+ * transcode below never learns what a template is.
+ *
+ * The failure arm is safe against the runtime effects for a measured reason
+ * (D-10, and the unit tests assert it): the FAIL punch zoom and the transition
+ * punch are both scale >= 1, so every frame shows a subset of what the proxy
+ * kept. The shake is applied at the section-wrapper level, not inside the panel,
+ * so what appears at the frame's edge during it is the canvas colour, not the
+ * proxy's boundary — the reference shows edge gaps during its own shake too.
+ */
+interface ProxySlot {
+  /** Where the prepared panel is written back into the payload. */
+  path: readonly string[];
+  box: PanelRect;
+  panel: Day1Panel;
+}
+
+const proxySlotsOf = (
+  project: EditorProject,
+  ratio: AspectRatio,
+): readonly ProxySlot[] => {
+  const failure = failureOf(project);
+
+  if (failure) {
+    const orientation = failureOrientationFor(ratio);
+    const box = failureLayout(ratio).video;
+
+    return FAILURE_PANEL_KEYS.map((key) => ({
+      path: [orientation, key],
+      box,
+      panel: failure[orientation][key],
+    }));
+  }
+
+  const settings = day1PanelsOf(project);
+
+  if (!settings) {
+    return [];
+  }
+
+  const keys = panelKeysOf(settings);
+
+  return keys.flatMap((key) => {
+    const panel = day1PanelAt(project, key);
+
+    if (!panel) {
+      return [];
+    }
+
+    const index = keys.indexOf(key);
+    // day1-quad Design §7.4 — the panel's own box. `planPanelProxy` takes only
+    // a box and a transform, so it needs no change for four cells.
+    const box =
+      keys.length > 2
+        ? (quadLayout(ratio, settings.split.lineWidthPx).cells[
+            index
+          ] as PanelRect)
+        : splitLayout(ratio, settings.split.lineWidthPx)[
+            index === 0 ? 'a' : 'b'
+          ];
+
+    return [{path: [key], box, panel}];
+  });
+};
+
 
 export const createPanelProxies = ({
   builder,
@@ -109,34 +179,11 @@ export const createPanelProxies = ({
   const notes = new Map<string, string>();
 
   const preparePanel = async (
-    {project, ratio, fps, signal}: PrepareRequest,
-    key: Day1PanelKey,
+    {ratio, fps, signal}: PrepareRequest,
+    {path, box, panel}: ProxySlot,
   ): Promise<Prepared | null> => {
-    const settings = day1PanelsOf(project);
-    const panel = day1PanelAt(project, key);
-    const source = panel?.source;
-
-    if (!settings || !panel) {
-      return null;
-    }
-
-    // day1-quad Design §7.4 — the panel's own box. `planPanelProxy` below takes
-    // only a box and a transform, so it needs no change for four cells.
-    const keys = panelKeysOf(settings);
-    const boxOf = (): PanelRect => {
-      const index = keys.indexOf(key);
-
-      if (keys.length > 2) {
-        return quadLayout(ratio, settings.split.lineWidthPx).cells[
-          index
-        ] as PanelRect;
-      }
-
-      const split = splitLayout(ratio, settings.split.lineWidthPx);
-
-      return index === 0 ? split.a : split.b;
-    };
-
+    const source = panel.source;
+    const key = path.join('.');
     const slot = `${key}:${ratio}`;
 
     if (!source?.width || !source.height) {
@@ -152,14 +199,13 @@ export const createPanelProxies = ({
     }
 
     const plan = planPanelProxy(
-      boxOf(),
+      box,
       {width: source.width, height: source.height},
       activeTransform(panel, ratio),
     );
 
     if (!plan) {
       const size = {width: source.width, height: source.height};
-      const box = boxOf();
 
       // day1-video — `panelVisibleRect` below is cover geometry, so under
       // `contain` it would describe a rectangle nobody asked for. Say the real
@@ -278,19 +324,18 @@ export const createPanelProxies = ({
 
   return {
     prepare: async (request) => {
-      const {project} = request;
-      const settings = day1PanelsOf(project);
+      const {project, ratio} = request;
+      // day1-quad Design §7.4 — the template's own slot list, so the quad's
+      // panels C and D get proxies too. This was a two-element constant, which
+      // silently left half a quad render on its original sources.
+      const slots = proxySlotsOf(project, ratio);
 
-      if (!settings) {
+      if (slots.length === 0) {
         return {project, resolveUrl};
       }
 
-      // day1-quad Design §7.4 — the template's own key list, so the quad's
-      // panels C and D get proxies too. This was a two-element constant, which
-      // silently left half a quad render on its original sources.
-      const keys = panelKeysOf(settings);
       const panels = await Promise.all(
-        keys.map((key) => preparePanel(request, key)),
+        slots.map((slot) => preparePanel(request, slot)),
       );
 
       if (panels.every((panel) => panel === null)) {
@@ -302,16 +347,27 @@ export const createPanelProxies = ({
           .filter((panel): panel is Prepared => panel !== null)
           .map((panel) => [panel.source.id, panel.url]),
       );
-      const patched = {...settings};
+      // Written back along each slot's own path, so the failure payload's
+      // `{orientation}.{key}` nesting needs no special case here.
+      const patched = {...project.templateSettings};
 
-      keys.forEach((key, index) => {
+      slots.forEach((slot, index) => {
         const prepared = panels[index];
 
-        if (prepared) {
-          // The key came from this payload's own list, so it is a field of it.
-          (patched as Record<string, unknown>)[key] = {
-            ...prepared.panel,
-            source: prepared.source,
+        if (!prepared) {
+          return;
+        }
+
+        const [head, ...rest] = slot.path;
+        const replacement = {...prepared.panel, source: prepared.source};
+        const target = patched as Record<string, unknown>;
+
+        if (rest.length === 0) {
+          target[head as string] = replacement;
+        } else {
+          target[head as string] = {
+            ...(target[head as string] as Record<string, unknown>),
+            [rest[0] as string]: replacement,
           };
         }
       });
