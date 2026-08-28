@@ -28,6 +28,8 @@ artifacts/m0/results.json
 artifacts/failure/frames/
 artifacts/failure/sources
 artifacts/failure/stamp-on-grounds.png
+artifacts/failure/bench-full.log
+artifacts/failure/*.mp4
 # kv-loop-reference-motion M0 spike output — a regenerable VP9 render.
 artifacts/kv-m0/out/
 # kv-object-animation M0 spike output — regenerable VP9 renders and fixtures.

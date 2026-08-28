@@ -97,6 +97,7 @@ import {
   MIN_TRANSITION_MS,
   PROJECT_SCHEMA_VERSION,
   RATIO_DIMENSIONS,
+  ratiosForTemplate,
   SCENE_LABELS,
   SCENE_ORDER,
   kvSectionId,
@@ -532,6 +533,16 @@ export const toggleRenderRatio = (
   ratio: AspectRatio,
 ): EditorProject => {
   const current = project.render.selectedRatios;
+  const allowed = ratiosForTemplate(project.templateSettings.template);
+
+  // A ratio the template's own refinement rejects is refused rather than
+  // corrected, the same contract `withKvCycle` has for an impossible loop.
+  // Adding one used to produce a project that saved and then could not be
+  // parsed back, so the next load silently opened an empty three-scene project.
+  if (!current.includes(ratio) && !allowed.includes(ratio)) {
+    return project;
+  }
+
   const next = current.includes(ratio)
     ? current.filter((entry) => entry !== ratio)
     : [...current, ratio];
@@ -809,10 +820,14 @@ export const setSelectedLocale = (
   locale: Locale,
 ): EditorProject => ({...project, selectedLocale: locale});
 
+/** The preview ratio is refined too, so it is guarded the same way. */
 export const setSelectedRatio = (
   project: EditorProject,
   ratio: AspectRatio,
-): EditorProject => ({...project, selectedRatio: ratio});
+): EditorProject =>
+  ratiosForTemplate(project.templateSettings.template).includes(ratio)
+    ? {...project, selectedRatio: ratio}
+    : project;
 
 /**
  * The framing in effect for a ratio: its override, or the shared base.

@@ -7,6 +7,7 @@ import {describe, expect, it, vi} from 'vitest';
 import {
   buildDay1Props,
   buildDay1QuadProps,
+  buildFailureProps,
   day1Of,
 } from '../../domain/editor/project';
 import type {
@@ -21,6 +22,8 @@ import {createAppError} from '../../shared/errors/appError';
 import {
   day1ProjectFixture,
   day1QuadProjectFixture,
+  failureProjectFixture,
+  failureSettingsOf,
 } from '../../test/fixtures/project';
 import {testMediaReference} from '../../test/fixtures/media';
 import {createPanelProxies} from './panelProxies';
@@ -440,5 +443,123 @@ describe('createPanelProxies — four panels', () => {
 
     expect(builder.build).not.toHaveBeenCalled();
     expect(proxies.notes().join(' ')).toMatch(/skipped|already/i);
+  });
+});
+
+// failure-video Design §7.4 — the third slot shape: addressed by
+// `(orientation, key)` rather than by a flat panel key, and boxed by the video
+// band rather than by a split or a grid.
+describe('createPanelProxies — failure segments', () => {
+  /** A landscape capture in a 9:16 video band: `cover` throws most of it away. */
+  const landscapeSource = (id: string): MediaReference =>
+    testMediaReference({id, width: 1920, height: 1080, durationMs: 324_000});
+
+  const failureProject = (
+    source: (id: string) => MediaReference = landscapeSource,
+  ): EditorProject => {
+    const panel = (id: string) => ({
+      source: source(id),
+      trim: {inMs: 0, outMs: 2000},
+      transforms: {
+        base: {fit: 'cover' as const, scale: 1, x: 0, y: 0},
+        overrides: {},
+      },
+    });
+
+    return failureProjectFixture({
+      vertical: {
+        panelA: panel('v_a'),
+        panelB: panel('v_b'),
+        panelC: panel('v_c'),
+      },
+      horizontal: {
+        panelA: panel('h_a'),
+        panelB: panel('h_b'),
+        panelC: panel('h_c'),
+      },
+    });
+  };
+
+  const prepareFailure = async (
+    ratio: '9:16' | '16:9',
+    // A source that is genuinely off-shape for the band being rendered, so the
+    // crop is worth making: landscape footage in the tall 9:16 band, portrait
+    // footage in the wide 16:9 one.
+    source: (id: string) => MediaReference = ratio === '9:16'
+      ? landscapeSource
+      : portraitSource,
+  ) => {
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => {},
+    });
+    const prepared = await proxies.prepare({
+      project: {...failureProject(source), selectedRatio: ratio},
+      ratio,
+      fps: 30,
+      signal: signal(),
+    });
+
+    return {builder, proxies, prepared};
+  };
+
+  it('crops the three segments of the orientation being rendered', async () => {
+    const {builder, proxies, prepared} = await prepareFailure('9:16');
+
+    // Three, not six: the other orientation is not in this render at all.
+    expect(builder.build).toHaveBeenCalledTimes(3);
+    expect(
+      builder.build.mock.calls.map((call) => call[0].url),
+    ).toEqual(['blob:v_a', 'blob:v_b', 'blob:v_c']);
+
+    const props = buildFailureProps(prepared.project, prepared.resolveUrl);
+
+    props?.panels.forEach((panel) => {
+      expect(panel.url).toMatch(/^blob:proxy-/);
+    });
+    // The notes name the orientation, so a debug report says which group ran.
+    expect(proxies.notes().join(' ')).toMatch(/vertical\.panelA/);
+  });
+
+  it('follows the ratio to the other source group', async () => {
+    const {builder, prepared} = await prepareFailure('16:9');
+
+    expect(
+      builder.build.mock.calls.map((call) => call[0].url),
+    ).toEqual(['blob:h_a', 'blob:h_b', 'blob:h_c']);
+
+    const props = buildFailureProps(prepared.project, prepared.resolveUrl);
+
+    expect(props?.orientation).toBe('horizontal');
+  });
+
+  it('writes the proxy back without touching the other orientation', async () => {
+    const {prepared} = await prepareFailure('9:16');
+    const settings = failureSettingsOf(prepared.project);
+
+    expect(settings.vertical.panelA.source?.id).not.toBe('v_a');
+    // The group this render does not read is handed back exactly as it was.
+    expect(settings.horizontal.panelA.source?.id).toBe('h_a');
+    expect(settings.horizontal.panelA.trim).toEqual({inMs: 0, outMs: 2000});
+  });
+
+  it('leaves the stored project untouched, as it does for every template', async () => {
+    const project = failureProject();
+    const builder = fakeBuilder();
+    const proxies = createPanelProxies({
+      builder,
+      resolveUrl: (reference) => (reference ? `blob:${reference.id}` : null),
+      release: () => {},
+    });
+
+    await proxies.prepare({project, ratio: '9:16', fps: 30, signal: signal()});
+
+    expect(failureSettingsOf(project).vertical.panelA.source?.id).toBe('v_a');
+    expect(failureSettingsOf(project).vertical.panelA.trim).toEqual({
+      inMs: 0,
+      outMs: 2000,
+    });
   });
 });

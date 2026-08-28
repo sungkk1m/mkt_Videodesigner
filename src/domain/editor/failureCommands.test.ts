@@ -30,8 +30,10 @@ import {
   setFailureRatioOverride,
   setFailureTrimInMs,
   setFailureTrimOutMs,
+  setSelectedRatio,
   switchTemplate,
   threeSceneOf,
+  toggleRenderRatio,
   updateDay1EndCard,
   updateDay1LabelStyle,
   updateDay1Split,
@@ -634,5 +636,79 @@ describe('template isolation — failure', () => {
     expect(failureSettingsOf(first).vertical).not.toBe(
       failureSettingsOf(second).vertical,
     );
+  });
+});
+
+/**
+ * The bug the ratio narrowing introduced, and the rule that closes it.
+ *
+ * `refineFailure` rejects a project whose ratios include 1:1, but
+ * `toggleRenderRatio` and `setSelectedRatio` were template-agnostic — so the
+ * Batch dialog could put one there. The document autosaved, failed to parse on
+ * the next load, and the editor opened an empty three-scene project instead:
+ * the operator's work was gone with nothing said. The looping template had the
+ * same hole, since its own refine pins the ratio to 9:16.
+ */
+describe('ratio commands refuse what the schema rejects', () => {
+  it('refuses to add 1:1 to a failure batch', () => {
+    const project = failureProjectFixture();
+    const toggled = toggleRenderRatio(project, '1:1');
+
+    expect(toggled).toBe(project);
+    expect(parseProject(toggled).ok).toBe(true);
+  });
+
+  it('still adds and removes the ratios the template does allow', () => {
+    const withBoth = toggleRenderRatio(failureProjectFixture(), '16:9');
+
+    expect(withBoth.render.selectedRatios).toEqual(['9:16', '16:9']);
+    expect(parseProject(withBoth).ok).toBe(true);
+
+    const backToOne = toggleRenderRatio(withBoth, '16:9');
+
+    expect(backToOne.render.selectedRatios).toEqual(['9:16']);
+  });
+
+  it('refuses 1:1 as the preview ratio, and takes 16:9', () => {
+    const project = failureProjectFixture();
+
+    expect(setSelectedRatio(project, '1:1')).toBe(project);
+    expect(setSelectedRatio(project, '16:9').selectedRatio).toBe('16:9');
+    expect(parseProject(setSelectedRatio(project, '16:9')).ok).toBe(true);
+  });
+
+  it('closes the same hole on the looping template', () => {
+    const loop = kvLoopProjectFixture();
+
+    expect(toggleRenderRatio(loop, '16:9')).toBe(loop);
+    expect(setSelectedRatio(loop, '16:9')).toBe(loop);
+  });
+
+  it('leaves every ratio available to the templates that take them all', () => {
+    for (const project of [
+      createProject(15),
+      day1ProjectFixture(),
+      day1QuadProjectFixture(),
+    ]) {
+      const toggled = toggleRenderRatio(project, '1:1');
+
+      expect(toggled.render.selectedRatios).toContain('1:1');
+      expect(setSelectedRatio(project, '1:1').selectedRatio).toBe('1:1');
+      expect(parseProject(toggled).ok).toBe(true);
+    }
+  });
+
+  // A ratio already stored stays removable even if it should not be there —
+  // otherwise an imported document could never be brought back into range.
+  it('lets a forbidden ratio already in the list be removed', () => {
+    const project = failureProjectFixture();
+    const stuck: EditorProject = {
+      ...project,
+      render: {...project.render, selectedRatios: ['9:16', '1:1']},
+    };
+
+    expect(toggleRenderRatio(stuck, '1:1').render.selectedRatios).toEqual([
+      '9:16',
+    ]);
   });
 });

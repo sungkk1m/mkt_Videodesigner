@@ -47,10 +47,8 @@ import {
   DEFAULT_TRANSFORM,
   durationPresetsForTemplate,
   FAILURE_PANEL_KEYS,
-  FAILURE_RATIOS,
-  KV_LOOP_RATIO,
   kvSectionId,
-  type AspectRatio,
+  ratiosForTemplate,
   type DurationPreset,
   type EditorProject,
   type LocalizedCopy,
@@ -570,6 +568,7 @@ export const EditorWorkspace = ({
   );
 
   const output = outputDimensions(project.selectedRatio);
+  const allowedRatios = ratiosForTemplate(project.templateSettings.template);
   const selectedTransform = selectedScene
     ? activeTransform(selectedScene, project.selectedRatio)
     : DEFAULT_TRANSFORM;
@@ -1465,28 +1464,21 @@ export const EditorWorkspace = ({
                   project.selectedRatio === ratio ? ' segmented__item--on' : ''
                 }`}
                 data-testid={`ratio-${ratio}`}
-                // key-visual-looping FR-L14 — vertical only, and the reason is
-                // stated next to the control rather than left to be inferred.
-                // failure-video Plan Q2 — the same treatment over a subset: 1:1
-                // is off, and the two that remain each pick a source group.
-                disabled={
-                  isRendering ||
-                  (kvLoop !== null && ratio !== KV_LOOP_RATIO) ||
-                  (failure !== null &&
-                    !(FAILURE_RATIOS as readonly AspectRatio[]).includes(ratio))
-                }
+                // key-visual-looping FR-L14 / failure-video Plan Q2 — a ratio
+                // the template's schema rejects is not offered. One rule for
+                // both, from the same constant the refine reads.
+                disabled={isRendering || !allowedRatios.includes(ratio)}
                 key={ratio}
                 onClick={() => store().setRatio(ratio)}
                 title={
-                  kvLoop && ratio !== KV_LOOP_RATIO
-                    ? '루핑 템플릿은 세로 전용입니다'
-                    : failure &&
-                        !(FAILURE_RATIOS as readonly AspectRatio[]).includes(
-                          ratio,
-                        )
-                      ? '실패 템플릿은 세로·가로만 지원합니다'
+                  allowedRatios.includes(ratio)
+                    ? failure
+                      ? '이 비율의 소재 그룹으로 전환합니다'
+                      : undefined
+                    : kvLoop
+                      ? '루핑 템플릿은 세로 전용입니다'
                       : failure
-                        ? '이 비율의 소재 그룹으로 전환합니다'
+                        ? '실패 템플릿은 세로·가로만 지원합니다'
                         : undefined
                 }
                 type="button"

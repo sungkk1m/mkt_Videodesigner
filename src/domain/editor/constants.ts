@@ -32,6 +32,27 @@ export const durationPresetsForTemplate = (
       : DURATION_PRESETS;
 
 /**
+ * The output ratios a template can hold, as the schema's refinements state them
+ * (`refineKvLoop`, `refineFailure`). The preset function above's counterpart,
+ * and it exists for the same three consumers: the ratio controls, the commands
+ * that write a ratio, and the refine that rejects one.
+ *
+ * It was the missing fourth surface that made this a bug rather than a rule:
+ * the constant and the refine agreed, `switchTemplate` coerced on the way in,
+ * and the Batch dialog then let the operator tick a ratio the refine forbids.
+ * The document autosaved, failed to parse on the next load, and the editor
+ * opened an empty three-scene project instead — the work was simply gone.
+ */
+export const ratiosForTemplate = (
+  template: (typeof TEMPLATE_KINDS)[number],
+): readonly (typeof ASPECT_RATIOS)[number][] =>
+  template === 'kv-loop'
+    ? [KV_LOOP_RATIO]
+    : template === 'failure'
+      ? FAILURE_RATIOS
+      : ASPECT_RATIOS;
+
+/**
  * key-visual-looping Design Ref: §3.1 — the section axis is a variable length
  * list now. The bounds are the schema's, not a template's: the existing two
  * templates still pin themselves to three section ids, and the looping template
